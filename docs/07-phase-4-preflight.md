@@ -222,6 +222,23 @@ Three consequences follow, and they rule out most of the obvious approaches:
 
 The likely shape, for whoever picks this up: on job creation in ProLine, create or locate the CompanyCam project and stamp the ProLine job ID somewhere structured — `05-data-model.md` §1's `proline_project_id` already has the slot, and stamping it at creation is what makes the hand-typed `#NNNN` convention unnecessary rather than merely unreliable.
 
+#### 2.4.3.1 Parallel effort: Production HQ sheet retrofit — tracked, not available
+
+**Status as of 2026-09-16: in progress, unfinished, explicitly not to be built against.** Recorded here only so it is not rediscovered later as a surprise, and so that when it does land it gets evaluated rather than adopted by default.
+
+Jacob has a separate effort running through **Grok Bot** (Skybird's other automation — the same one that maintains the CompanyCam Showcases referenced in `01-api-audit.md` §6) to retrofit the **Production HQ sheet** with real ProLine job numbers and CompanyCam project IDs across **196 real job rows**, plus a daily check for new rows going forward.
+
+If it completes and verifies, it may turn out to be a cleaner source than the ProLine API path for both the bridge question (§2.4.2) and product/colour enrichment (§2.4.1). **That is a later decision. Nothing in Phase 4 should assume it exists.**
+
+Two distinctions worth having written down *before* that decision is taken, because they are easy to lose once a populated sheet is sitting there looking authoritative:
+
+- **A backfilled lookup table is a reconciliation, not a bridge.** §2.4.3's constraint is about the moment a job is created — the link has to be *made* then, pushing outward from ProLine or GHL. A sheet that maps job number ↔ project ID after the fact solves *lookup* for rows that already exist; it does not make new jobs linked at creation. The daily check is polling, so it carries a lag, and a project showcased before its row is reconciled still has nothing to read. That may be perfectly acceptable — showcasing happens well after a job completes — but it should be an accepted property, not an unexamined one.
+- **Its accuracy depends on what the retrofit matched on.** If the 196 rows were reconciled using the hand-typed `#NNNN` in CompanyCam project names, the result inherits that convention's 18% miss rate (§2.4.2) rather than fixing it, and the misses will be invisible in a populated-looking sheet. If it matched some other way, that way is the interesting part. Worth asking when it lands: *what did it match on, and what happened to rows it could not match?*
+
+The verification bar, when the time comes: spot-check a sample against ProLine directly, and confirm how unmatched and ambiguous rows are represented — blank, flagged, or guessed. §2.6's duplicate (two active CompanyCam projects at one address under variants of one name) is a good adversarial test case.
+
+A further consideration for whoever takes the later decision: `05-data-model.md` §0 deliberately puts the five entities in three homes. Reading page-build data from a fourth (a Google Sheet) is a real architectural choice, not a free shortcut — defensible if the sheet is treated as a *source* that n8n reads once at draft time and writes into WordPress meta, less so if the page ever depends on it at render time.
+
 **What this does *not* affect:** Phase 6's reward triggers. Those depend on ProLine stage and payment events reaching n8n (`01-api-audit.md` §4.1), and on tying a referral to a GHL contact — neither of which touches CompanyCam. The missing bridge is an *enrichment* problem (product, color, warranty for page copy and alt text), not a *reward-triggering* problem. Worth keeping those separate so this does not read as a blocker for Phase 6 planning.
 
 ### 2.5 "#2561" is part of the project name, not the CompanyCam ID
@@ -414,6 +431,8 @@ Per the working rule of stopping at gates rather than running ahead.
 | 4 | Staging access + `skybird-projects` plugin ownership (§4.2) | Euan | Everything that writes to WordPress |
 | 8b | **ProLine read path** (`01-api-audit.md` §4.2 Q2): are `manufacturer` / `product_line` / `color` / `warranty` readable per job, and under what names? Must now be established from the ProLine account directly | Jacob/John | The *automated* product and alt-text pull. Does **not** block the Phase 4 draft, per §2.4.2's sequencing |
 | 6 | Who owns `handsome-salmon-665.convex.site`? (§2.3) | Jacob/John | Nothing directly — but it receives every photo created in Skybird's CompanyCam and no doc explains it. Worth identifying before adding a fourth webhook |
+
+**Tracked, not open:** the Production HQ sheet retrofit (§2.4.3.1) — 196 job rows being backfilled with ProLine job numbers and CompanyCam project IDs via Grok Bot, plus daily checks. In progress and **not to be built against**. It may later supersede item 8b as the enrichment source; that decision waits until it is finished and verified, against the criteria in §2.4.3.1.
 
 Item 4 unblocks writing to WordPress. Item 8b is parallel work, not a gate. With the bridge confirmed absent, widening Phase 4 to include the ProLine pull would mean building a new cross-system integration before producing a single draft page — so the sequencing in §2.4.2 is now the clear call rather than a preference.
 
