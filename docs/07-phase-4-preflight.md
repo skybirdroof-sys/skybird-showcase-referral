@@ -15,7 +15,8 @@ Phase 4's goal is one real CompanyCam project → one real WordPress draft. This
 2. **The `project.label_added` webhook was never registered.** `06-trigger-design.md` §1 described this leg as proven end to end on 2026-09-14; confirmed with Jacob on 2026-09-16 that the test was a **manual pull** (§2.3). The delivery leg — subscription, label filtering, HMAC-SHA1 signature validation, fast ack — is unproven, and proving it is Phase 4's first deliverable.
 3. **`01-api-audit.md` §2.2 could not be resolved by checking the live site.** `skybirdroofing.net` is blocked by this environment's network egress policy (§3). The research thread that produced `03-structure-signoff.md` §4 had that access; this session does not.
 4. **Four smaller factual corrections to the Phase 1 docs** surfaced from live data (§2). All are the kind that break code silently if copied as written.
-5. **The n8n question is not answerable from here either** (§5), but it reduces to two things someone can check in about five minutes from the n8n UI.
+5. **n8n is settled: Jacob builds and activates the workflow himself** (§5). Phase 4's automation layer needs no Pitch Peak involvement.
+6. **Alt text is sourced from the ProLine job record**, not CompanyCam photo descriptions (which are empty) and not a parsed contract (considered and rejected — §2.4.1). That makes ProLine a Phase 4-adjacent dependency, and §2.4.2 shows it is less reachable than assumed: there is no confirmed CompanyCam→ProLine bridge, and the name-parse workaround holds for only 82% of projects — failing on exactly the well-photographed ones. §2.4.2 proposes sequencing that keeps this off Phase 4's critical path.
 
 ---
 
@@ -130,7 +131,61 @@ Step 2 is the one most likely to be skipped and most likely to bite: without the
 
 All four curated photos have `description: null`. The curation workflow in use does not write captions.
 
-Phase 4 therefore has to **generate** alt text from what is actually available — city/service area, product line, and shot type — rather than read it. This matters for the `06-trigger-design.md` §3 review check "no homeowner PII … including in image filenames/alt text if those were auto-generated from CompanyCam data": there is no CompanyCam-sourced text to leak, but there is also nothing to fall back on.
+Phase 4 therefore has to **generate** alt text rather than read it. The decision on where the source data comes from is §2.4.1.
+
+#### 2.4.1 Alt-text source — decided 2026-09-16 (Jacob)
+
+**Source: the ProLine job record. Not CompanyCam photo descriptions, and not a parsed contract.**
+
+Alt text is generated from `manufacturer`, `product_line`, `color` and `warranty` on the ProLine job, combined with the service-area city:
+
+> `New GAF Timberline HDZ shingle roof, Charcoal, Wake Forest NC`
+
+This aligns 07 with what the other docs already said, and isolates `01-api-audit.md` §1.2 as the outlier:
+
+- `05-data-model.md` §1 already sources `manufacturer`, `product_line`, `color`, `warranty` from "the job record / ProLine."
+- `06-trigger-design.md` §3's review checklist already says these fields must "match what was actually installed — **pull from the job record, don't guess from photos**."
+
+So this is not a new dependency; it is the existing one, now also carrying alt text.
+
+**Rejected, deliberately: uploading the customer's contract into the CompanyCam project and parsing it for product details.** Recorded here so it reads as a considered and closed decision rather than an oversight, and so it does not get re-proposed as an obvious shortcut later.
+
+1. **It breaks the data-ownership rule.** CompanyCam owns photos; ProLine owns the job. A contract in CompanyCam blurs that boundary and duplicates job data across two systems that will drift out of sync. The build-in-house decision was substantially about owning clean data (`handoff-buy-vs-build-decision.md`); duplicating the job record into the photo system undercuts that.
+2. **A contract carries exactly the PII this pipeline is built to exclude** — full name, exact street address, price. `06-trigger-design.md` §3 makes "no homeowner PII anywhere on the page, including in image filenames/alt text" a hard review check, and the brief's §24 rule is non-negotiable.
+
+Worth adding to Jacob's second reason, because it is the part that would have bitten in implementation: the contract route would have put PII *into* the pipeline and then required a scrubbing step on every generated string to get it back out. Scrubbing is a control that fails silently — one unusual address format and a street address ships in an `alt` attribute. Sourcing from structured product fields means **the PII is never in the pipeline to begin with**, so there is nothing to scrub and nothing to fail. That is a materially stronger privacy posture, not just a tidier one.
+
+**The dependency this creates, and why it is not yet safe to assume — see §2.4.2.**
+
+#### 2.4.2 The ProLine dependency is real and currently unverified
+
+Sourcing from ProLine is the right call, but Phase 4 should not be planned as though the data is already reachable. Two things stand between the decision and working code, and **neither is verified today**:
+
+1. **There is no confirmed CompanyCam → ProLine bridge.** §2.2 above found `integrations[]` absent entirely on the test project. Given a CompanyCam project, nothing currently identifies which ProLine job it corresponds to.
+2. **ProLine's read API is undocumented.** `01-api-audit.md` §4.1 states plainly: public REST docs not found; direct endpoints unverified; the documented surface is the Zapier app and help center. Whether `manufacturer` / `product_line` / `color` / `warranty` are readable per job — and under what field names — is `01-api-audit.md` §4.2 Q2, still open.
+
+**The name-parse bridge: checked, and weaker than it looks.** §2.5 suggested that parsing the trailing `#NNNN` from the CompanyCam project name could bridge to ProLine without `integrations[]`. Measured against the 100 most recently updated projects on 2026-09-16:
+
+| | Count | Median photos | Zero-photo |
+|---|---|---|---|
+| Name ends in `#NNNN` | 82 | 28.5 | 31 |
+| No number | 18 | 49.0 | 1 |
+
+Job numbers run 2588–2676 across this page, all distinct — consistent with a sequential per-job counter, and consistent with the test project's `#2561` being slightly older.
+
+**But the convention is not enforced, and the exceptions are not junk.** The initial assumption was that unnumbered projects would be informal stubs. The opposite holds: unnumbered projects have a *higher* median photo count (49 vs 28.5) and almost none are empty (1 of 18, against 31 of 82). They are substantive projects that simply never got a number. Examples from the page: `Jamie Payton`, `Lisette Lopez`, `Phillip Smith`, `Angelica Juarez`. Job numbers are also **not** strictly monotonic with project creation date, so the number is assigned by some ProLine-side event rather than at CompanyCam project creation.
+
+**Conclusion: a name parse is a usable hint, not a reliable bridge.** It resolves roughly 4 in 5 projects and fails silently on the rest — and the ones it fails on are exactly the well-photographed projects most likely to be showcase candidates. It cannot be the sole mechanism. Treat a parsed `#NNNN` as a pre-filled lookup key when present, and require the reviewer to supply or confirm the ProLine job when it is absent. Worth asking John whether the number is meant to be universal (in which case the 18 are a data-hygiene problem) or genuinely optional (in which case no automatic bridge will ever be complete).
+
+**Recommended sequencing, so this does not become a Phase 4 blocker:**
+
+Phase 4's stated goal is one CompanyCam project → one WordPress **draft**, with a human review gate before publish. `06-trigger-design.md` §3 *already* requires a reviewer to verify product/color against the job record. So for the Phase 4 MVP:
+
+- Build the draft with the product fields **empty**, and the reviewer fills them from ProLine at the existing review step. No new gate — the human was already required to check exactly these fields.
+- Generate alt text at **publish** time from whatever is in the fields, with a deliberately PII-free fallback when they are empty: `Completed roof replacement in Youngsville, NC`. Accurate, useful, and safe by construction.
+- Prove the ProLine read path as its own piece of work, then swap manual entry for the automated pull. Nothing in the page template changes when that lands.
+
+This keeps Phase 4's scope where the kickoff doc put it — one project, one draft, end to end — instead of expanding it into "first, reverse-engineer ProLine's API." If Jacob wants the ProLine pull inside Phase 4 rather than after it, that is a scope call worth making explicitly, and §4.2 Q1–Q2 become blockers rather than parallel work.
 
 ### 2.5 "#2561" is part of the project name, not the CompanyCam ID
 
@@ -138,7 +193,7 @@ All the handoff docs refer to the test project as "#2561". The CompanyCam projec
 
 Any code, webhook filter, or n8n expression must key off `110848078`. Nothing looks up `2561`.
 
-Incidentally, `2561` in the project name may be the ProLine job number the §2.2 `integrations[]` lookup was meant to find — if so, a name-parse is a cheap fallback bridge. Unverified; noting it, not proposing it yet.
+Incidentally, `2561` in the project name is very likely the ProLine job number the §2.2 `integrations[]` lookup was meant to find. Measured across 100 projects in §2.4.2: the convention holds for 82% but is not enforced, and the exceptions are substantive projects — so it is a hint, not a bridge.
 
 ### 2.6 A duplicate project exists at the same address
 
@@ -246,7 +301,17 @@ Also worth sending, though not from §2.2: `03-structure-signoff.md` §5 notes t
 
 ## 5. n8n: can this workflow be built in Skybird's own account?
 
-**Not determinable from here** — `app.n8n.cloud` is blocked (§3), `docs.n8n.io` is blocked, and there is no n8n connector in this session. Taking the instruction seriously not to assume either way, here is what actually decides it.
+**Resolved 2026-09-16 (Jacob): he builds and activates the workflow himself.** He has built in n8n before, and the account under `skybirdroof@gmail.com` can host this end to end. Phase 4 proceeds on that basis — no Pitch Peak involvement needed for the automation layer, which matches the ownership rationale in §4.2(8).
+
+**One sub-check still outstanding, informational:** whether the existing agency-managed ProLine flow is visible in that same account. Jacob is checking. It does not gate Phase 4 — this workflow shares no credentials with the ProLine flow (it needs a new CompanyCam Application Key, a new WordPress Application Password, and a per-instance webhook URL, and reads or writes nothing in ProLine). It matters for two later things: whether the `01-api-audit.md` §4.2 Q1 inspection ("what does the existing flow actually call?") can be done in-house, and whether Phase 4's workflow shares an instance with agency-managed production automation, which is a coordination question rather than a permissions one.
+
+That §4.2 Q1 inspection is now more valuable than it was, because §2.4.2 makes ProLine a Phase 4-adjacent dependency rather than a Phase 5 one: if the existing flow already authenticates to ProLine and calls a working endpoint, it is the fastest available answer to "how do we read a job record," and it is sitting in an n8n instance rather than in undocumented API reference.
+
+The original determination procedure is kept below, since it still applies to the outstanding sub-check.
+
+---
+
+Background, retained: this was **not determinable from this session** — `app.n8n.cloud` is blocked (§3), `docs.n8n.io` is blocked, and there is no n8n connector here.
 
 The relevant fact from the existing docs is narrow: `01-api-audit.md` §0 and §4.2 Q1 establish that an **agency-managed n8n → ProLine flow exists** and should be inspected before deciding how leads enter. Nothing in `docs/` says whether that flow lives in the same n8n instance as the account under `skybirdroof@gmail.com`.
 
@@ -297,19 +362,22 @@ Per the working rule of stopping at gates rather than running ahead.
 |---|---|---|
 | 1 | Egress (§3) | Allow the five domains in the environment's network policy. Takes effect in a **new session**, not this one |
 | 2 | Webhook discrepancy (§2.3) | The 9/14 test was a **manual pull**. The delivery leg is unproven and is Phase 4's first deliverable |
+| 3 | n8n (§5) | **Jacob builds and activates it himself.** No Pitch Peak involvement in the automation layer |
 | 5 | Gallery/cover overlap (§1.3) | **Cover + the 3 others.** Cover is the featured image; the gallery excludes it |
+| 7 | Alt-text source (§2.4.1) | **ProLine job record.** Contract-upload into CompanyCam considered and **rejected** — data-ownership boundary, and it would put PII into the pipeline that then had to be scrubbed back out |
 
 **Still open:**
 
 | # | Item | Owner | Blocks |
 |---|---|---|---|
-| 3 | n8n: one instance or two? (§5) | Jacob — two checks in the n8n UI, ~5 min | Where the workflow is built, and who can build it |
 | 4 | Staging access + `skybird-projects` plugin ownership (§4.2) | Euan | Everything that writes to WordPress |
-| 6 | Who owns `handsome-salmon-665.convex.site`? (§2.3) | Jacob/John | Nothing directly — but it is receiving every photo created in Skybird's CompanyCam, and no doc explains it. Worth identifying before adding a fourth webhook |
+| 8 | **ProLine read path** (§2.4.2): no confirmed CompanyCam→ProLine bridge, and no documented read API | Jacob/John | The *automated* product/alt-text pull. Does **not** block the Phase 4 draft, per the sequencing below |
+| 6 | Who owns `handsome-salmon-665.convex.site`? (§2.3) | Jacob/John | Nothing directly — but it receives every photo created in Skybird's CompanyCam and no doc explains it. Worth identifying before adding a fourth webhook |
+| 3b | Is the agency ProLine flow visible in Jacob's n8n? (§5) | Jacob — checking | Nothing in Phase 4. Informational, but it is the likely shortcut to item 8 |
 
-Item 3 unblocks building the trigger. Item 4 unblocks writing to WordPress. Item 6 is a question to answer, not a blocker.
+Item 4 unblocks writing to WordPress. Item 8 is parallel work, not a gate — unless Phase 4's scope is deliberately widened to include the ProLine pull, which is a call worth making explicitly rather than by drift.
 
-**The critical path, once egress is live:** new session → run §4.1 (five §2.2 items resolved, ~2 min) → send Euan the §4.2 message (two questions + pin precision + the Mr. Roofing reference) → confirm the n8n instance → create the `project.label_added` subscription and prove the four steps in §2.3.
+**The critical path, once egress is live:** new session → run §4.1 (five §2.2 items resolved, ~2 min) → send Euan the §4.2 message → Jacob creates the `project.label_added` subscription in his n8n and proves the four steps in §2.3 → build the draft with product fields filled at the existing review gate (§2.4.2) → prove the ProLine read path separately and swap manual entry for the automated pull.
 
 ---
 

@@ -50,7 +50,7 @@ Source: https://help.companycam.com/en/articles/15928195-connecting-the-companyc
 > |---|---|
 > | `featured_image[]` | **`feature_image[]`** — singular "feature", no "d". Same `{type, uri, url}` shape. Copying the wrong spelling yields `undefined`, not an error |
 > | `integrations[]` present | **Absent entirely** on the test project — not an empty array. No automatic ProLine bridge via this path; re-check with the Application Key before closing §4.2 Q4 |
-> | `description` usable as alt-text seed | **`null` on all four curated photos.** There is no caption data. Alt text must be generated from city + product + shot type |
+> | `description` usable as alt-text seed | **`null` on all four curated photos.** There is no caption data. **Decided 2026-09-16: alt text is generated from the ProLine job record** (`manufacturer`, `product_line`, `color`, `warranty`) plus the service-area city — not from CompanyCam at all. See `07-phase-4-preflight.md` §2.4.1, which also records the contract-upload approach as considered and rejected |
 
 **Project** — `GET /projects/{id}`
 Source: https://companycam.readme.io/reference/getproject.md
