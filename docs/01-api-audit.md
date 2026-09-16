@@ -44,6 +44,14 @@ Source: https://help.companycam.com/en/articles/15928195-connecting-the-companyc
 
 ### 1.2 Objects and fields (legacy v2, base `https://api.companycam.com/v2`)
 
+> **Corrections from live data, 2026-09-16.** Three of the field notes below were written from the legacy docs and do not match what the current API returns for project `110848078`. Details and evidence in `07-phase-4-preflight.md` §2; summary here so nobody codes from the stale spelling:
+>
+> | Documented below | Actually returned |
+> |---|---|
+> | `featured_image[]` | **`feature_image[]`** — singular "feature", no "d". Same `{type, uri, url}` shape. Copying the wrong spelling yields `undefined`, not an error |
+> | `integrations[]` present | **Absent entirely** on the test project — not an empty array. No automatic ProLine bridge via this path; re-check with the Application Key before closing §4.2 Q4 |
+> | `description` usable as alt-text seed | **`null` on all four curated photos.** There is no caption data. Alt text must be generated from city + product + shot type |
+
 **Project** — `GET /projects/{id}`
 Source: https://companycam.readme.io/reference/getproject.md
 

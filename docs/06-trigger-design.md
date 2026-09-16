@@ -30,6 +30,15 @@ Photos curated in CompanyCam
 
 This is Option A from the original brief, confirmed against the live CompanyCam API (not the deprecated one) on 2026-09-14, and proven working end to end on a real project the same day.
 
+> **Correction, 2026-09-16 (Jacob).** "Proven working end to end" above describes the *data* flow, not the *delivery* leg. The 9/14 test added the label and then pulled the project by hand — no webhook was ever registered or delivered. Confirmed live on 2026-09-16: the CompanyCam account has three webhook subscriptions, all pointing at a Convex endpoint for `photo`/`document`/`video` events, and none subscribed to any `project.*` scope (`07-phase-4-preflight.md` §2.3).
+>
+> What this changes: the three steps from `project.label_added` through signature validation to the n8n entry point are **unproven and are Phase 4's first deliverable**, not a re-wiring of something known good. In particular Phase 4 must prove, on a real delivery:
+> - the subscription fires on a label add (and, importantly, does *not* fire for the other labels already in the account — the payload carries the project, so n8n has to filter on the label itself);
+> - `X-CompanyCam-Signature` validates as base64 HMAC-SHA1 of the raw body (raw, not re-serialized JSON);
+> - n8n returns HTTP 200 fast and does the work afterward, per the 25-error disable rule in `01-api-audit.md` §1.3.
+>
+> The signing token is shown **only once, at webhook-create time**. Whoever creates the subscription must capture it into the n8n credential store in the same sitting.
+
 ## 2. Why the project label, not a photo tag, is the actual trigger
 
 Photo tags (`Showcase`, `Showcase Cover`) describe *content* — they say what belongs on the page. The project label (`Website Showcase`) is a separate, deliberate signal that curation is *finished* and the project is ready to move. This separation matters: someone can tag photos over several days while a project wraps up, without accidentally kicking off a draft before they're done. The label is the one, single "go" moment — added once, by a person, on purpose.

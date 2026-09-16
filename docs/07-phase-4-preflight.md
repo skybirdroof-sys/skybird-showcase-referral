@@ -12,7 +12,7 @@ Phase 4's goal is one real CompanyCam project → one real WordPress draft. This
 ## 0. Headline
 
 1. **The CompanyCam side of the trigger is real and correctly staged.** Tags, label, curated photo set, and test project all verified live today against the current API (§1). Nothing on that side blocks Phase 4.
-2. **The `project.label_added` webhook is not registered.** `06-trigger-design.md` §1 describes this leg as proven end to end on 2026-09-14, but there is no such subscription in the account right now (§2.3). Flagged, not overridden — see the question in §7.
+2. **The `project.label_added` webhook was never registered.** `06-trigger-design.md` §1 described this leg as proven end to end on 2026-09-14; confirmed with Jacob on 2026-09-16 that the test was a **manual pull** (§2.3). The delivery leg — subscription, label filtering, HMAC-SHA1 signature validation, fast ack — is unproven, and proving it is Phase 4's first deliverable.
 3. **`01-api-audit.md` §2.2 could not be resolved by checking the live site.** `skybirdroofing.net` is blocked by this environment's network egress policy (§3). The research thread that produced `03-structure-signoff.md` §4 had that access; this session does not.
 4. **Four smaller factual corrections to the Phase 1 docs** surfaced from live data (§2). All are the kind that break code silently if copied as written.
 5. **The n8n question is not answerable from here either** (§5), but it reduces to two things someone can check in about five minutes from the n8n UI.
@@ -67,7 +67,10 @@ Sorted by `captured_at`, the shape is one photo from job start (2026-07-30, two 
 
 **Two design details this surfaces:**
 
-- **The cover is a member of the `Showcase` set, not separate from it.** Phase 4 has to decide whether the gallery renders all 4 (cover repeated as gallery item 3) or the 3 non-cover photos. Not a blocker; needs a deliberate choice rather than whatever the first loop happens to do.
+- **The cover is a member of the `Showcase` set, not separate from it.**
+  **Decided 2026-09-16 (Jacob): cover + the 3 others.** The `Showcase Cover` photo becomes the WordPress featured image and social thumbnail; the on-page gallery renders the `Showcase` set *minus* the cover. No photo appears twice on the page.
+  Implementation rule for Phase 4: `gallery = photos tagged Showcase, excluding the photo tagged Showcase Cover`, sorted by `captured_at` ascending. On this project that is 3 gallery photos (`3421903489`, `3547119850`, `3553086721`) plus `3553007383` as `featured_media`.
+  Edge case to handle rather than assume away: if a project has **no** `Showcase Cover` tag, or **more than one**, the draft should fail the review gate loudly instead of silently picking one. `06-trigger-design.md` §3 already requires a reviewer to confirm the cover is a genuine hero shot — it cannot confirm a cover that the automation guessed.
 - **`description` is `null` on all four.** See §2.4.
 
 ---
@@ -106,7 +109,18 @@ So `proline_project_id` in `05-data-model.md` §1 has no automatic source via th
 
 All three predate this project (2026-08-03) and point at a Convex deployment, not n8n.
 
-This does not contradict the *scope* being available — `project.label_added` is a valid scope per `01-api-audit.md` §1.3, confirmed against the live webhooks page. What is missing is the *subscription*. Most likely the 9/14 test used a temporary endpoint that was torn down, or "proven end to end" meant the label was added and the project then pulled by hand. Either reading is fine; what matters is that **Phase 4 starts by creating this subscription, and the signing token is shown only once at create time** (`01-api-audit.md` §1.3) — so whoever creates it must capture the token in the same step.
+This does not contradict the *scope* being available — `project.label_added` is a valid scope per `01-api-audit.md` §1.3, confirmed against the live webhooks page. What is missing is the *subscription*.
+
+**Resolved 2026-09-16 (Jacob): the 9/14 test was a manual pull.** The label was added and the project then fetched by hand. No webhook was ever registered, so nothing was torn down and nothing was delivered.
+
+The consequence is the one that matters for planning: **the delivery leg is unproven, and proving it is Phase 4's first deliverable** — not a re-wiring of something known good. `06-trigger-design.md` §1 now carries the same correction. Concretely, Phase 4 step 1 is:
+
+1. Create the `project.label_added` subscription pointed at the n8n production webhook URL, **capturing the signing token at create time** — it is shown once and never again (`01-api-audit.md` §1.3).
+2. Prove a real delivery fires on a label add, and that n8n filters correctly: the payload carries the *project*, and seven other project labels already exist in the account (§1.1 lists only the Showcase vocabulary; the full list includes `Gutter Cleaning`, `JobNimbus Job`, `Pipedrive Deal` and four `… Lead` labels). A subscription to `project.label_added` fires for **any** label add, so n8n must check that the added label is `Website Showcase` before doing anything.
+3. Prove `X-CompanyCam-Signature` validates as base64 HMAC-SHA1 of the **raw** request body — n8n must hash the raw bytes, not a re-serialized JSON object, or the signature will never match.
+4. Prove n8n acks HTTP 200 quickly and does the work afterward, per the 25-error-disable rule.
+
+Step 2 is the one most likely to be skipped and most likely to bite: without the label filter, tagging any project as a `Pipedrive Deal` would start building a WordPress draft.
 
 **Also worth knowing before adding a fourth webhook:** `handsome-salmon-665.convex.site` is receiving every photo created in Skybird's CompanyCam. That may be entirely expected (a prototype, another vendor integration), but no doc in `docs/` mentions it. Flagging so it gets identified rather than assumed.
 
@@ -155,11 +169,23 @@ Both available paths (direct request through the agent proxy, and the sanctioned
 
 **What still works:** the MCP connectors (CompanyCam, GitHub, Google Workspace). That is why §1 was possible and §3's checks were not.
 
-**Three ways forward, in order of preference:**
+**Decided 2026-09-16 (Jacob): allow the domains in the environment's network policy.**
 
-1. **Allow the domains in the environment's network policy** — `skybirdroofing.net` at minimum; `api.companycam.com`, `app.n8n.cloud`, `developers.companycam.com` and `docs.n8n.io` if Phase 4 is to be driven from here. Configured where the environment was created; see https://code.claude.com/docs/en/claude-code-on-the-web. This restores the Phase 1–3 working mode.
-2. **Run the §4 checklist yourself and paste the output.** It is copy-pasteable and needs no credentials.
-3. **Send the whole of §2.2 to Euan.** Works, but spends his attention on ~5 of 7 items that a URL fetch answers for free — the opposite of how `03-structure-signoff.md` §5 handled it.
+The allowlist Phase 4 needs:
+
+| Host | Needed for |
+|---|---|
+| `skybirdroofing.net` | §4.1 — resolving five of the seven §2.2 items, and later the WordPress REST writes |
+| `api.companycam.com` | Direct API spot-checks with the Application Key (§2.2's `integrations[]` re-check) |
+| `app.n8n.cloud` | Inspecting and building the workflow (§5) |
+| `developers.companycam.com` | The current API reference and OpenAPI spec (`01-api-audit.md` §1.6 item 3) |
+| `docs.n8n.io` | n8n roles, and the Data Tables plan question in §5 |
+
+Network policy is set where the environment was created — see https://code.claude.com/docs/en/claude-code-on-the-web. **It will not take effect in this running session**; the change applies to a new session against the updated environment. Re-tested at the end of this session and all three primary hosts were still denied, which is expected.
+
+So the working sequence is: update the environment → start a new session on this branch → §4.1 runs in a couple of minutes → only §4.2's two questions go to Euan. That restores the Phase 1–3 working mode that produced `03-structure-signoff.md` §4.
+
+Should the allowlist turn out not to be available, the fallbacks are (a) run the §4.1 commands yourself and paste the output — no credentials needed, or (b) send all of §2.2 to Euan, which works but spends his attention on five items a public URL fetch answers for free.
 
 ---
 
@@ -263,15 +289,27 @@ Note the current CompanyCam MCP session authenticates as Jacob (`admin`), which 
 
 ## 7. Gate — what is needed before Phase 4 writes code
 
-Per the working rule of stopping at gates rather than running ahead:
+Per the working rule of stopping at gates rather than running ahead.
 
-1. **Egress, or a decision to work around it** (§3). Allow the domains, run §4.1 yourself, or accept that the WordPress side proceeds only after Euan answers everything. This is the one that governs pace.
-2. **The `project.label_added` webhook discrepancy** (§2.3). Was the 9/14 test a temporary endpoint since torn down, or was "end to end" a manual pull? It changes whether Phase 4's first step is *re-creating* a known-good subscription or *creating and proving* one for the first time. It also decides whether `handsome-salmon-665.convex.site` needs identifying first.
-3. **n8n instance** (§5). Two checks, five minutes, and it determines where the workflow is built and who can build it.
-4. **Euan's two questions** (§4.2) — staging access and plugin ownership — plus the pin-precision item and the Mr. Roofing reference link, in one message.
-5. **Gallery/cover overlap** (§1.3). Does the page render 4 photos or 3? A one-line answer that prevents a rebuild.
+**Closed 2026-09-16 (Jacob):**
 
-Answers to 1–3 unblock building the trigger. Answer 4 unblocks writing to WordPress. Answer 5 is needed before the page template.
+| # | Item | Resolution |
+|---|---|---|
+| 1 | Egress (§3) | Allow the five domains in the environment's network policy. Takes effect in a **new session**, not this one |
+| 2 | Webhook discrepancy (§2.3) | The 9/14 test was a **manual pull**. The delivery leg is unproven and is Phase 4's first deliverable |
+| 5 | Gallery/cover overlap (§1.3) | **Cover + the 3 others.** Cover is the featured image; the gallery excludes it |
+
+**Still open:**
+
+| # | Item | Owner | Blocks |
+|---|---|---|---|
+| 3 | n8n: one instance or two? (§5) | Jacob — two checks in the n8n UI, ~5 min | Where the workflow is built, and who can build it |
+| 4 | Staging access + `skybird-projects` plugin ownership (§4.2) | Euan | Everything that writes to WordPress |
+| 6 | Who owns `handsome-salmon-665.convex.site`? (§2.3) | Jacob/John | Nothing directly — but it is receiving every photo created in Skybird's CompanyCam, and no doc explains it. Worth identifying before adding a fourth webhook |
+
+Item 3 unblocks building the trigger. Item 4 unblocks writing to WordPress. Item 6 is a question to answer, not a blocker.
+
+**The critical path, once egress is live:** new session → run §4.1 (five §2.2 items resolved, ~2 min) → send Euan the §4.2 message (two questions + pin precision + the Mr. Roofing reference) → confirm the n8n instance → create the `project.label_added` subscription and prove the four steps in §2.3.
 
 ---
 
