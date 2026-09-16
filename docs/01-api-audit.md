@@ -230,6 +230,17 @@ Source (inbound webhook example): https://success.roofle.com/knowledge/proline-i
 
 ### 4.2 What John needs to find out (with Euan or from the ProLine account)
 
+> **Update 2026-09-16 (Jacob). Q1 and Q4 are closed; do not work them.**
+>
+> The existing n8n → ProLine flow is the **SalesRabbit → ProLine → CompanyCam** automation: built years ago by people no longer at Skybird, and **SalesRabbit is being phased out entirely**. It is not the process to design against, and it should not be investigated.
+>
+> - **Q1 (what does the existing flow call?) — withdrawn.** The answer would describe a retiring system.
+> - **Q4 (does the native integration populate `integrations[]`?) — answered: no, and it never will for new jobs.** There is no CompanyCam↔ProLine link at all going forward.
+>
+> Jobs now enter ProLine two ways, neither of which creates or links a CompanyCam project: **(a)** written up in GoHighLevel and sent to ProLine once booked, or **(b)** typed directly into ProLine by a rep in the field. Any future bridge must attach to one of those two moments — see `07-phase-4-preflight.md` §2.4.3 for the design constraint.
+>
+> **Q2 and Q3 stand**, and Q2 is now on the critical path for automated page copy. Both must be answered from the ProLine account directly rather than by reading an existing integration.
+
 1. What does the existing n8n → ProLine flow actually call — a ProLine inbound webhook URL, the API key against a REST endpoint, or Zapier in the middle?
 2. Does ProLine have a custom field on contacts/projects for lead source or referral source? Name it exactly.
 3. Which ProLine stages correspond to: inspection completed · agreement signed · installed · paid in full.

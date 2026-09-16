@@ -28,7 +28,7 @@ Permalink: `/projects/{slug}/` — flat, per Euan's sign-off in `03-structure-si
 | Field | Type | Notes |
 |---|---|---|
 | `companycam_project_id` | meta | Bridge back to CompanyCam, for any future re-sync |
-| `proline_project_id` | meta | If the ProLine↔CompanyCam native integration populates `integrations[]` (unverified — flagged in `01-api-audit.md` §4.2, still needs Euan/John to check) |
+| `proline_project_id` | meta | **Correction 2026-09-16:** there is no ProLine↔CompanyCam link for new jobs — `integrations[]` is absent and will stay absent (`07-phase-4-preflight.md` §2.4.2). Keep the field: it is the right slot for a future bridge attached to the GHL→ProLine handoff or direct ProLine entry (§2.4.3). Nothing populates it today, so nothing may depend on it |
 | `service_area` | taxonomy term | One of the 8 service areas. Drives which widget the project appears in and the back-link target |
 | `city`, `neighborhood`, `zip` | meta | Display text only — never the street address (brief §24) |
 | `approx_lat`, `approx_lng` | meta | The offset coordinates from `04-pin-precision-research.md` — generated once, stored, never regenerated. **The true CompanyCam coordinates are never written to WordPress at all** — no reason to let the real location exist anywhere on the public-facing system, even server-side. If it's not stored here, it can't leak from here. |
