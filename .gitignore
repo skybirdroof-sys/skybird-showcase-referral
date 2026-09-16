@@ -1,0 +1,7 @@
+# Credentials never belong in this repo — see README "Hard rules"
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+secrets/
