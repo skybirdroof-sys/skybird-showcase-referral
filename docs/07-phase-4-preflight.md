@@ -302,6 +302,10 @@ Should the allowlist turn out not to be available, the fallbacks are (a) run the
 
 The seven open items split cleanly. Five are facts discoverable from the public site without credentials. Two are genuinely Euan's.
 
+> **Superseded in practice, 2026-09-17 (Jacob).** All of §4.1 has been folded into the message to Euan (`08-euan-questions.md`), drafted and awaiting send. The split below still describes the right *method*, and §4.1 remains the fastest way to verify or re-check any of these later — but the items are no longer being held back from him.
+>
+> Two reasons: we cannot answer them from here while egress is blocked (§3), and for most of them his answer is genuinely better than a public fetch. A fetch shows `acf/v3` but not whether it is **ACF Pro** — which decides whether Gallery and Repeater exist or have to be built by hand (`01-api-audit.md` §2.1). A fetch shows whether *anonymous* REST works, not whether a security plugin restricts Application Passwords, which is the thing that will actually break. Worth remembering for later escalations: "can I look it up?" and "is looking it up as good?" are different questions.
+
 ### 4.1 Discoverable without credentials — anyone, or this session once unblocked
 
 Each is a plain GET. No login, no API key, read-only.

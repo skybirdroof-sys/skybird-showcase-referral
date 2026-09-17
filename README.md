@@ -21,7 +21,7 @@ Built in-house on Skybird-owned infrastructure. See
 | [`docs/handoff-buy-vs-build.md`](docs/handoff-buy-vs-build.md) | — | Context carried into the vendor evaluation |
 | [`docs/handoff-buy-vs-build-decision.md`](docs/handoff-buy-vs-build-decision.md) | — | **Decision: build in-house.** Closed |
 | [`docs/07-phase-4-preflight.md`](docs/07-phase-4-preflight.md) | 4 | **At a gate** — open items in §7 |
-| [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | Draft message to Pitch Peak — not sent |
+| [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | Drafted in Gmail — awaiting send |
 
 ## The trigger, in one line
 
