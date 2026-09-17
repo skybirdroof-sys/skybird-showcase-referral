@@ -78,6 +78,20 @@ Both proposed layouts work; no need to choose one for the parser's sake:
   four owners' averages client-side — but Talon's value is preferred, always.
 - `Project count` is parsed and not yet displayed.
 
+### Tabs the board does *not* read
+
+`runway_flat` and `run_log` are Talon's own working tabs. The board never
+fetches them and the Function won't proxy them, so their shape is entirely
+Talon's business — change them freely.
+
+### Annotation rows are safe
+
+State the blank-clock rule on the `Rest Index` tab as agreed. A row whose value
+isn't a number and whose name isn't one of the four owners (`Rule | blank clocks
+excluded…`, `Notes: sorted longest days-in-stage first`) is ignored rather than
+drawn as a person. The four owners always render — as `—` while unwritten — and
+an extra person with a real number still renders. Covered by a test.
+
 ### `Meta` — `Key | Value`
 
 `last_updated_et`, `period_label`, `refresh_seconds` (clamped 120–300s).
@@ -122,7 +136,7 @@ Overnight and weekend retention of Friday's numbers is correct and shows no
 badge. If you want age-based flagging, say what threshold and the board can add
 it.
 
-## 3. Sharing: link-view, or a service account?
+## 3. Sharing — decision: link-view for v1
 
 The Function fetches the `gviz` CSV endpoint, which is **unauthenticated**, so
 today it needs the file set to **Anyone with the link → Viewer**. Exposure is
@@ -133,8 +147,10 @@ passphrase.
 If policy says the file must not be link-readable, the board can switch to the
 Sheets API v4 with a service account (`values.get`, share the file to the
 service account's email, key in Netlify env). That's a contained change to one
-function — say the word and it's maybe an hour. **Recommendation for v1:
-link-view.**
+function — maybe an hour. Not needed for v1.
+
+**Decision: ship v1 on link-view.** Revisit if the KPI tab ever carries
+something that shouldn't be readable by anyone holding the file id.
 
 ## 4. Fixture vs live mode
 
@@ -152,7 +168,9 @@ without it.
 
 ## Upstream suggestions (write path, not display)
 
-The board now defends against all of these, but the fixes belong in Talon:
+Talon has accepted 1–4 and 6–7 below in principle, pending Jacob's ship order;
+#5 (`runway_flat`) lands on the KPI Board rather than in Morning Runway. Kept
+here for the record:
 
 1. **Write `Today %` as a number from the locked set**, and validate before
    writing. The corrupted-into-a-timestamp cell suggests a Date landing in a

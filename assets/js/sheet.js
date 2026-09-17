@@ -147,6 +147,13 @@ function parseRest(csv) {
       continue;
     }
 
+    // Annotation rows: Talon states the blank-clock rule on this tab, and a
+    // `Rule | blank clocks excluded` row must not become a person chip reading
+    // "RULE —". A row is a person only if its value is a number, or the name is
+    // a configured owner (who stays visible as an em dash while unwritten).
+    const isOwner = CONFIG.restOwners.some((owner) => norm(owner) === key);
+    if (parseValue(row.days) === null && !isOwner) continue;
+
     people.push(row);
   }
 

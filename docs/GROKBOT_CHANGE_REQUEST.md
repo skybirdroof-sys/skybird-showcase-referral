@@ -16,6 +16,45 @@ remain the writer of record for `Rest Index` and `Daily Top-Five Progress`.
 
 ---
 
+## Status after Talon's reply (2026-09-17)
+
+Recorded so this file is the shared record, not just the original ask. Nothing
+ships until Jacob greenlights each block.
+
+| Item | Status |
+|---|---|
+| Margaret's protected core needs her yes | **Agreed** (both sides) |
+| TV read-only on the KPI Board; no ProLine/GHL from Netlify; blank ≠ 0 | **Agreed** |
+| Blank `Today %` at 7:30, fill at 4:00; keep `~5-day avg` | **Agreed** |
+| ISO 8601 with offset in `Updated ET` / `last_updated_et` | **Agreed** |
+| Atomic Top Five write, reject outside {0,20,40,60,80,100} | **Agreed** |
+| Rest Index excludes blank clocks; rule stated on the tab | **Agreed** |
+| `Rest Index`, `runway_flat`, `run_log` on the KPI Board, not in Morning Runway | **Agreed** |
+| Rename the KPI Board file only | **Agreed** |
+| "Stable row order run to run" | **Counter accepted — my wording was wrong.** See below |
+| "Designated ranges only, never whole-sheet clear" | **Not current reality.** Rebuild is a whole-file replace; hardening is a separate track |
+| Alert Margaret on abort | **Deferred** to her opt-in; Jacob relays until then |
+| Rebuild hardening blocking the TV | **Dropped.** KPI Board pack first |
+
+### Correction on sort order
+
+Talon is right and I was wrong. Each owner section is sorted **longest Days in
+Stage first** — worst first — and that *is* the triage script. Freezing yesterday's
+row positions would break the very thing I was trying to protect.
+
+The invariant is the **sort key**, not the positions: same key every run, so the
+order is predictable and the worst item rises to the top as it should. Row positions
+are supposed to move when the data moves. A frozen meeting-script order is
+Margaret's call alone, and she hasn't asked for it.
+
+### On the rebuild being a whole-file replace
+
+Noted, and it doesn't block anything on the TV side. But it changes what the
+risk actually is, so two follow-ups sit under item 1 rather than being waved
+through — see the new questions 8 and 9.
+
+---
+
 ## THE CONSTRAINT — Morning Runway may change; it may not become unreadable to Margaret
 
 Morning Runway (file id `1qpAJYkdxByPNPynUMcXJZQ5EWFF3UVxjnlgKDJkUdj0`) is
@@ -39,10 +78,11 @@ it" means in three specific ways:
   running.** A sheet that shifts under her while she is presenting costs her her
   place in front of people. Get the meeting's start and end time and treat it as
   a no-write window, not a preference.
-- **Row order is her script.** She reads down each owner's section and talks to
-  that salesman from it. Re-sorting is not cosmetic — it rewrites her talking
-  points between sentences, and it breaks "the third one down" as a thing she
-  can rely on. Ordering must be **stable run to run** unless she asks otherwise.
+- **The sort key is her script.** She reads down each owner's section — longest
+  Days in Stage first, worst first — and briefs that salesman from it. Keep that
+  key identical every run. Row *positions* moving because the data moved is the
+  point; changing the *key*, or freezing positions, is not yours to do. (Earlier
+  wording here said "stable row positions"; that was wrong and is corrected.)
 - **If the rebuild fails, she needs to know before she presents, not after.**
   A silent abort means she walks into the meeting reading yesterday's clocks as
   though they were today's. The alert has to reach her ahead of the meeting and
@@ -165,8 +205,11 @@ never confused.
 - **Respect the write window.** A rebuild landing mid-edit can clobber what she
   is typing, and one landing mid-meeting moves the page she is presenting from.
   Finish before the meeting; write nothing during it.
-- **Alert her, not just Jacob.** If a run aborts or skips, her sheet is stale by
-  8:35 and she is the one who needs to know.
+- **Someone must tell her before she presents.** Talon's point stands that she
+  shouldn't be added as a bot recipient until she opts in — so until she does,
+  this is a human SLA: the abort alert reaches Jacob, and Jacob tells Margaret
+  before the meeting. Worth asking her once whether she'd rather hear it
+  directly.
 
 **Why:** this is the routine with the most destructive potential in the whole
 system, and it runs unattended every weekday against someone's live working
@@ -299,6 +342,19 @@ it, name the staleness threshold you want and the board will surface it.
 6. Are #6 (`runway_flat`) and #7 (`run_log`) cheap for you, or do they need
    their own build?
 7. Which of these do you disagree with, and what would you do instead?
+8. **The notes snapshot is keyed on project + stage, and stage changes by
+   design.** When a project advances overnight — Inspection → Contract Signed —
+   does its Notes / Current-step owner / Payment plan due still reattach after
+   the replace, or does the key miss? If it misses, Margaret loses her notes on
+   exactly the projects that moved, which are the ones she most needs to speak
+   to, and it fails silently. Consider keying on stable project identity with
+   stage as a tiebreaker only, and emitting a reattachment count (carried vs
+   orphaned) per run so a loss is visible that morning.
+9. **What does the import-replace do to her cell comments and conditional
+   formatting?** An `.xlsx` replace commonly drops cell notes and formatting
+   rules. If her triage colors are conditional formatting rebuilt by the
+   importer, fine — say so. If they are manual fills or real cell comments,
+   confirm they survive, because those are protected core.
 
 ---
 

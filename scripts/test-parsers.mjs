@@ -200,6 +200,29 @@ test('Rest Index tab with a Key/Value summary block parses cleanly', () => {
   assert.equal(model.meta.periodLabel, 'as-of Morning Runway rebuild');
 });
 
+test('annotation rows on the Rest Index tab never become person chips', () => {
+  // Talon will state the blank-clock rule on this tab; free text must not render.
+  const csv = [
+    'Person,Days at rest avg,Project count,Updated ET',
+    'Jacob,2.6,10,2026-09-17T07:10:00-04:00',
+    'John,,,2026-09-17T07:10:00-04:00',
+    'Henry,1.9,12,2026-09-17T07:10:00-04:00',
+    'Anas,3.2,15,2026-09-17T07:10:00-04:00',
+    'Travis,1.2,4,2026-09-17T07:10:00-04:00',
+    'Rule,blank clocks excluded from the average,,',
+    'Notes: sorted longest days-in-stage first,,,',
+    'Rest Index,2.6,,2026-09-17T07:10:00-04:00',
+  ].join('\n');
+  const model = buildModelFromCsv({ rest: csv });
+  assert.equal(model.rest.index, 2.6);
+  assert.deepEqual(
+    model.rest.people.map((p) => p.person),
+    ['Jacob', 'John', 'Henry', 'Anas', 'Travis'],
+    'owners stay (blank or not), an extra person with a number stays, prose is dropped'
+  );
+  assert.equal(model.rest.people.find((p) => p.person === 'John').days, null);
+});
+
 test('Meta tab wins over the Rest Index summary block', () => {
   const rest = ['Person,Days at rest avg', 'period_label,from summary block'].join('\n');
   const meta = ['Key,Value', 'period_label,from Meta tab'].join('\n');
