@@ -1,9 +1,14 @@
 # 08 — Message to Euan
 
 Skybird Project Showcase + Referral System · Phase 4
-**Status: drafted in Gmail 2026-09-17, awaiting Jacob's send.** To: euan@pitchpeakmarketing.com (Euan Swan, Pitch Peak Marketing).
+**Status: SENT 2026-09-17 13:19 UTC**, as a reply in the 9/14–9/15 sign-off thread (`Skybird*** Project Showcase site structure — need your sign-off before we build`). To: euan@pitchpeakmarketing.com (Euan Swan, Pitch Peak Marketing).
 
-This file mirrors the draft verbatim so the repo and what actually goes out do not diverge.
+This file mirrors the message verbatim so the repo and what actually went out do not diverge.
+
+> **Send defect, 2026-09-17 — a corrected resend is drafted and awaiting Jacob.**
+> The message was sent with an HTML body that had been HTML-escaped before submission, so the markup was delivered as literal visible text (`<div style="...">`, `<p>Hi Euan,</p>`) rather than rendered formatting, and the plain-text alternative was dropped rather than used as the fallback. The reference-site link was also rewritten into unusable nested-markdown form.
+> Content and recipient were correct; only the rendering was broken. A plain-text-only resend is drafted in the same thread with a one-line apology at the top.
+> **Lesson for any future send from this project: pass `body` only, plain text.** The HTML path added no value here — the message is a list of questions — and introduced the one failure mode that reached an external partner.
 
 ---
 
