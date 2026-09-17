@@ -53,18 +53,33 @@
         <ul class="rest__chips" id="rest-chips"></ul>
       </section>
 
-      <!-- Center focal: Talon mist orb -->
-      <div class="orb-stage" aria-hidden="true">
-        <div class="orb">
-          <span class="orb__mist orb__mist--a"></span>
-          <span class="orb__mist orb__mist--b"></span>
-          <span class="orb__mist orb__mist--c"></span>
-          <span class="orb__core"></span>
-          <span class="orb__ring"></span>
+      <!-- Center focal: Talon HUD instrument cluster.
+           Ring layers are built by assets/js/hud.js from the RINGS config;
+           the core below is hand-tunable markup. -->
+      <div class="hud-stage" aria-hidden="true">
+        <div class="hud" id="hud">
+          <div class="hud__core">
+            <svg class="hud__core-svg" viewBox="0 0 200 200">
+              <g class="hud__hex">
+                <polygon class="hud__hex-outer"
+                  points="152,100 126,145 74,145 48,100 74,55 126,55" />
+                <polygon class="hud__hex-inner"
+                  points="129.4,117 100,134 70.6,117 70.6,83 100,66 129.4,83" />
+              </g>
+              <g class="hud__cross">
+                <line x1="100" y1="30" x2="100" y2="44" />
+                <line x1="100" y1="156" x2="100" y2="170" />
+                <line x1="30" y1="100" x2="44" y2="100" />
+                <line x1="156" y1="100" x2="170" y2="100" />
+                <circle class="hud__cross-ring" cx="100" cy="100" r="24" />
+              </g>
+              <circle class="hud__dot" cx="100" cy="100" r="5" />
+            </svg>
+          </div>
         </div>
-        <div class="orb__label">
-          <span class="orb__word">TALON</span>
-          <span class="orb__sub">Skybird Roofing</span>
+        <div class="hud__label">
+          <span class="hud__word">TALON</span>
+          <span class="hud__sub">Skybird Roofing</span>
         </div>
       </div>
 

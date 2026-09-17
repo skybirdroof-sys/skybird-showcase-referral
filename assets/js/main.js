@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
 import { loadLive, loadFixture, normalizeModel, NoSourceError } from './sheet.js';
 import { buildTiles, renderModel, setStale } from './render.js';
 import { ensureAccess } from './gate.js';
+import { startHud } from './hud.js';
 import { clamp } from './format.js';
 
 const params = new URLSearchParams(location.search);
@@ -88,6 +89,7 @@ function onVisibility() {
 async function start() {
   buildTiles();
   await ensureAccess();
+  startHud();
 
   // Paint the empty skeleton immediately so the TV is never a black screen.
   renderModel(emptyModel(), { stale: false, lastFetchAt: null });

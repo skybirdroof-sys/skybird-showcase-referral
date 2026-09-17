@@ -12,6 +12,11 @@
   --panel-line: rgba(47, 230, 255, 0.16);
 
   --cyan: #2fe6ff;
+  /* Centre HUD runs blue -> green; amber stays reserved for alert tiles. */
+  --hud-blue: #2fe6ff;
+  --hud-blue-deep: #2b8cff;
+  --hud-green: #3ff0b4;
+  --hud-green-deep: #10c88c;
   --cyan-dim: rgba(47, 230, 255, 0.55);
   --cyan-glow: rgba(47, 230, 255, 0.28);
   --amber: #ffb020;
@@ -370,123 +375,177 @@ body { -webkit-font-smoothing: antialiased; }
 .top5__week.is-empty { color: var(--ink-3); }
 
 /* ------------------------------------------------------------ center focal */
+/* Concentric HUD instrument cluster. Every moving layer is a single masked div
+   whose only animated property is `transform`, so the whole cluster stays on the
+   compositor and a Chromebox doesn't break a sweat. Motion (speed ramps,
+   reversals, bursts) is driven from assets/js/hud.js via the Web Animations API,
+   not CSS keyframes, so rates can change without the rings jumping. */
 
-.orb-stage {
+/* Rows rather than an absolute label, so the rings can never crowd the
+   wordmark however the cluster is resized. */
+.hud-stage {
   position: relative;
   display: grid;
-  place-items: center;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  align-items: center;
+  gap: calc(var(--u) * 0.6);
   min-height: 0;
 }
 
-.orb {
+.hud {
   position: relative;
-  width: calc(var(--u) * 26);
-  height: calc(var(--u) * 26);
+  width: calc(var(--u) * 25);
+  height: calc(var(--u) * 25);
   max-width: 100%;
   max-height: 100%;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 50%,
-    rgba(47, 230, 255, 0.09) 0 26%,
-    rgba(47, 230, 255, 0.05) 48%,
-    transparent 72%);
 }
 
-.orb__mist,
-.orb__core,
-.orb__ring {
+/* Every ring is the full box, masked down to an annulus between --in and --out
+   (percentages of the radius). --c is its colour, --period/--duty the tick
+   pitch and tick width in degrees. */
+.hud__ring {
   position: absolute;
-  border-radius: 50%;
-}
-
-/* Mist = off-centre colour blobs on slowly counter-rotating layers. Rotating
-   asymmetric blobs read as drifting vapour; a soft radial mask keeps the centre
-   open for the wordmark and dissolves the outer edge so it never looks like a
-   solid sphere. */
-.orb__mist {
   inset: 0;
-  mix-blend-mode: screen;
+  border-radius: 50%;
+  --in: 80%;
+  --out: 88%;
+  --c: var(--hud-blue);
+  --period: 4deg;
+  --duty: 1.4deg;
+  --from: 0deg;
+  /* Angular window: rings can occupy an arc instead of a full circle, the way
+     a real instrument band does. 360deg = all the way round. */
+  --win-from: 0deg;
+  --win-span: 360deg;
   will-change: transform;
-  -webkit-mask-image: radial-gradient(circle at 50% 50%,
-    rgba(0, 0, 0, 0.25) 0 10%, #000 34%, rgba(0, 0, 0, 0.7) 66%, transparent 92%);
-  mask-image: radial-gradient(circle at 50% 50%,
-    rgba(0, 0, 0, 0.25) 0 10%, #000 34%, rgba(0, 0, 0, 0.7) 66%, transparent 92%);
+  -webkit-mask-image:
+    radial-gradient(circle closest-side at 50% 50%,
+      transparent 0 var(--in), #000 var(--in) var(--out), transparent var(--out)),
+    conic-gradient(from var(--win-from) at 50% 50%,
+      #000 0 var(--win-span), transparent var(--win-span) 360deg);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(circle closest-side at 50% 50%,
+      transparent 0 var(--in), #000 var(--in) var(--out), transparent var(--out)),
+    conic-gradient(from var(--win-from) at 50% 50%,
+      #000 0 var(--win-span), transparent var(--win-span) 360deg);
+  mask-composite: intersect;
 }
 
-.orb__mist--a {
-  filter: blur(calc(var(--u) * 1.1));
-  background:
-    radial-gradient(34% 10% at 28% 42%, rgba(47, 230, 255, 0.95), transparent 72%),
-    radial-gradient(34% 10% at 72% 58%, rgba(47, 230, 255, 0.8), transparent 72%),
-    radial-gradient(10% 30% at 58% 26%, rgba(150, 248, 255, 0.7), transparent 74%),
-    radial-gradient(10% 30% at 42% 74%, rgba(150, 248, 255, 0.6), transparent 74%);
-  animation: spin 46s linear infinite;
+/* Fine graticule / tick rings. */
+.hud__ring--ticks {
+  background: repeating-conic-gradient(from var(--from) at 50% 50%,
+    var(--c) 0 var(--duty), transparent var(--duty) var(--period));
 }
 
-.orb__mist--b {
-  inset: calc(var(--u) * 1.2);
-  filter: blur(calc(var(--u) * 1.5));
-  opacity: 0.5;
-  background:
-    radial-gradient(24% 9% at 76% 60%, rgba(255, 176, 32, 0.9), transparent 74%),
-    radial-gradient(24% 9% at 24% 40%, rgba(255, 176, 32, 0.6), transparent 74%),
-    radial-gradient(8% 20% at 44% 76%, rgba(255, 200, 96, 0.5), transparent 76%);
-  animation: spin-rev 68s linear infinite;
+/* Radial bar readouts: same pitch, different annulus depths, so overlapping
+   layers read as one bar chart with varying bar heights. */
+.hud__ring--bars {
+  background: repeating-conic-gradient(from var(--from) at 50% 50%,
+    var(--c) 0 var(--duty), transparent var(--duty) var(--period));
 }
 
-.orb__mist--c {
-  inset: calc(var(--u) * 3.4);
-  filter: blur(calc(var(--u) * 0.7));
-  opacity: 0.85;
-  background:
-    radial-gradient(28% 8% at 34% 38%, rgba(225, 253, 255, 0.9), transparent 72%),
-    radial-gradient(28% 8% at 66% 62%, rgba(190, 250, 255, 0.75), transparent 72%),
-    radial-gradient(8% 24% at 62% 32%, rgba(47, 230, 255, 0.7), transparent 74%),
-    radial-gradient(8% 24% at 38% 68%, rgba(47, 230, 255, 0.6), transparent 74%);
-  animation: spin-rev 26s linear infinite;
+/* Arc segments and brackets get their gradients built in hud.js. */
+.hud__ring--arcs { background: var(--bg); }
+
+/* Radar sweep: a fading wedge, normally almost invisible. */
+.hud__ring--sweep {
+  background: conic-gradient(from 0deg at 50% 50%,
+    rgba(63, 240, 180, 0.45) 0deg,
+    rgba(63, 240, 180, 0.22) 18deg,
+    rgba(47, 230, 255, 0.1) 46deg,
+    rgba(47, 230, 255, 0.03) 78deg,
+    transparent 104deg,
+    transparent 360deg);
+  opacity: 0.2;
 }
 
-/* Bright thought-core at the centre of the mist. */
-.orb__core {
-  width: 34%;
-  height: 34%;
-  background: radial-gradient(circle at 50% 48%,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(170, 245, 255, 0.5) 26%,
-    rgba(47, 230, 255, 0.18) 54%,
-    transparent 74%);
-  filter: blur(calc(var(--u) * 0.7));
-  animation: breathe 7.5s ease-in-out infinite;
-}
-
-/* No ring: any circular stroke or bloom edge makes the mist read as a solid
-   sphere. Kept as a hook in case Jacob wants a HUD ring later. */
-.orb__ring { display: none; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes spin-rev { to { transform: rotate(-360deg); } }
-@keyframes breathe {
-  50% { opacity: 0.74; transform: scale(1.06); }
-}
-
-.orb__label {
+/* Static haze so the cluster sits in a pool of light instead of on flat black. */
+.hud__haze {
   position: absolute;
-  bottom: 0;
+  inset: calc(var(--u) * -2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side at 50% 50%,
+      rgba(47, 230, 255, 0.1) 0 26%,
+      rgba(16, 200, 140, 0.07) 46%,
+      transparent 74%);
+}
+
+/* --- core ------------------------------------------------------------- */
+
+.hud__core {
+  position: absolute;
+  width: 46%;
+  height: 46%;
+  display: grid;
+  place-items: center;
+}
+
+.hud__core-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hud__hex {
+  fill: none;
+  stroke: var(--hud-blue);
+  stroke-width: 1.6;
+  transform-origin: 100px 100px;
+}
+
+.hud__hex-outer { stroke: rgba(47, 230, 255, 0.55); }
+
+.hud__hex-inner {
+  stroke: rgba(63, 240, 180, 0.7);
+  stroke-width: 1.2;
+}
+
+.hud__cross {
+  fill: none;
+  stroke: rgba(63, 240, 180, 0.6);
+  stroke-width: 1.6;
+  transform-origin: 100px 100px;
+}
+
+.hud__cross-ring {
+  stroke: rgba(47, 230, 255, 0.35);
+  stroke-width: 1;
+}
+
+.hud__dot {
+  fill: #eafff8;
+  filter: drop-shadow(0 0 calc(var(--u) * 0.9) rgba(63, 240, 180, 0.9));
+  transform-origin: 100px 100px;
+  animation: core-pulse 6.5s ease-in-out infinite;
+}
+
+@keyframes core-pulse {
+  50% { opacity: 0.6; transform: scale(1.35); }
+}
+
+/* --- wordmark --------------------------------------------------------- */
+
+.hud__label {
   display: grid;
   justify-items: center;
   gap: calc(var(--u) * 0.2);
 }
 
-.orb__word {
+.hud__word {
   font-size: calc(var(--u) * 1.9);
   font-weight: 800;
   letter-spacing: calc(var(--u) * 0.5);
   color: var(--ink);
-  text-shadow: 0 0 calc(var(--u) * 1.6) var(--cyan-glow);
+  text-shadow: 0 0 calc(var(--u) * 1.6) rgba(63, 240, 180, 0.35);
 }
 
-.orb__sub {
+.hud__sub {
   font-size: calc(var(--u) * 0.85);
   font-weight: 700;
   letter-spacing: calc(var(--u) * 0.24);
@@ -656,14 +715,14 @@ body { -webkit-font-smoothing: antialiased; }
   .board { height: auto; min-height: 100%; overflow-y: auto; }
   html, body { overflow: auto; }
   .zones { grid-template-columns: 1fr; }
-  .orb-stage { order: -1; height: calc(var(--u) * 26); }
+  .hud-stage { order: -1; height: calc(var(--u) * 26); }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; height: auto; }
   .chrome { grid-template-columns: 1fr; justify-items: start; }
   .chrome__mid, .chrome__meta { justify-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb__mist, .orb__core { animation: none !important; }
+  .hud__dot { animation: none !important; }
   .badge--stale { animation: none; }
   .top5__fill, .top5__avg { transition: none; }
 }

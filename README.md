@@ -7,6 +7,12 @@ three things at a glance, in giant type, on a dark HUD:
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person
 - **Eight cash/ops tiles** — Appointments Set, Cost per Appt, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected
 
+In the middle sits the Talon HUD: concentric instrument rings — graticules, arc
+brackets, radial bar readouts, a hex core and a radar sweep — in blues and
+greens, moving continuously at rates that drift, burst and reverse. Amber is
+reserved for alerts (stale feed, example mode, the AR-over-60 tile) so it always
+means "look here".
+
 **Values are written by Talon / humans into Google Sheets; this site only
 displays them.** It never computes a KPI from a source system, never caches
 numbers server-side, and never invents a value: a blank Sheet cell renders as
@@ -31,6 +37,7 @@ assets/js/sheet.js          CSV fetch + tab parsers -> normalized model
 assets/js/csv.js            RFC4180-ish CSV parser
 assets/js/format.js         number/date formatting (em dash rules live here)
 assets/js/render.js         model -> DOM
+assets/js/hud.js            centre HUD: ring layers + motion engine
 assets/js/gate.js           passphrase overlay
 netlify/functions/sheet.js  GET /api/sheet?tab=KPI -> text/csv (server-side, no CORS)
 netlify/functions/gate.js   GET/POST /api/gate -> passphrase check
@@ -201,23 +208,58 @@ Nothing in this repo calls ProLine or GHL, and the TV page cannot edit the Sheet
 
 ## 9. Tuning it (Jacob)
 
-Everything cosmetic is in `assets/css/talon.css`:
+### Type, palette, layout — `assets/css/talon.css`
 
 - **Type scale and spacing** hang off `--u` at the top of the file
   (`--u: min(1vw, 1.78vh)` — one unit ≈ 19px on a 1080p TV). Bump a number like
   `13` in `.rest__value` to resize the hero, `3.9` in `.tile__value` for tiles.
-- **Palette** — `--cyan`, `--amber`, `--bg`, `--ink*` tokens under `:root`.
-- **Orb intensity** — `.orb__mist--a/b/c` (blur, alpha, animation duration) and
-  `.orb__core`. Slow everything down by raising the `spin` durations; calm it
-  further by lowering the alphas. `.orb__ring` is a disabled hook if you want a
-  HUD ring back.
-- **Layout** — `.zones` column ratios, `.tiles` grid, `--gap`.
+- **Palette** — `--cyan`, `--amber`, `--bg`, `--ink*` tokens under `:root`, plus
+  `--hud-blue`, `--hud-blue-deep`, `--hud-green`, `--hud-green-deep` for the centre.
+- **Layout** — `.zones` column ratios, `.tiles` grid, `--gap`. Cluster size is
+  the `25` in `.hud`.
 - Metric labels, people and the refresh window live in `assets/js/config.js`.
+
+### The centre HUD — `assets/js/hud.js`
+
+Each ring is one masked div; the only animated property is `transform`, so the
+whole cluster stays on the compositor. Rotation runs through the Web Animations
+API rather than CSS keyframes, because changing a playback rate re-speeds a ring
+without making it jump.
+
+`RINGS` is the composition — one entry per ring, listed outside in:
+
+| Field | Meaning |
+|---|---|
+| `kind` | `ticks`, `bars`, `arcs` or `sweep` (picks the gradient style) |
+| `in` / `out` | annulus edges as a % of the cluster radius — the ring's thickness |
+| `period` / `duty` | tick pitch and tick width in degrees (`ticks`, `bars`) |
+| `from` | angular offset of the tick pattern, for interleaving bar layers |
+| `win` | `[fromDeg, spanDeg]` makes the ring a partial band instead of a full circle |
+| `arcs` | `[[fromDeg, spanDeg], …]` arc segments (`arcs`) |
+| `color` | use the `C.blue / blueDeep / green / greenDeep / ice(alpha)` helpers |
+| `spin` | seconds per rotation at rate 1 — bigger is slower |
+| `dir` | `1` clockwise, `-1` counter-clockwise |
+
+The bar readout is three layers (`barsA/B/C`) sharing one pitch, speed and
+angular window at different depths — that overlap is what produces uneven bar
+heights. `barsD` is the short counter-band opposite it.
+
+Motion:
+
+- `VARIANT_GAP` (ms) is how often a variant fires. Widen it for a calmer board.
+- Variants are plain functions in one array — `drift`, `burst`, `reverse`
+  (ramps through zero, so the ring stalls then unwinds), `barSync`, `scan`,
+  `blink`, `counterSwing`. Delete one to retire it or add your own; each just
+  ramps a layer with `layer.rampTo(rate, ms)` or blinks it with
+  `layer.flicker(n)`.
+- Rates ramp instead of snapping, so "slow then quick" is a ramp duration, not a
+  duration swap. Roughly: `0.15–0.7` = lazy drift, `1` = the ring's `spin` value,
+  `2.5–5.5` = burst.
+- The cluster pauses when the tab is hidden and resumes on return, and
+  `prefers-reduced-motion` gives one constant slow rotation with no variants.
 
 Check changes against `/?mode=example` (full) and `/?mode=empty` (empty states)
 before deploying, then `npm test && npm run check`.
-
----
 
 ## 10. Troubleshooting
 
