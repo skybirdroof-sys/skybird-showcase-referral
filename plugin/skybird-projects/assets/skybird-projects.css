@@ -1,0 +1,188 @@
+/**
+ * Skybird Projects — front-end styles.
+ *
+ * Mobile first throughout. A project page doubles as a sales tool a rep pulls
+ * up on a tablet at the kitchen table, not only an SEO asset
+ * (docs/06-trigger-design.md §4), so the small-screen layout is the base case
+ * and the desktop grid is the enhancement.
+ *
+ * Intentionally unopinionated about colour and type — the Hub Child theme owns
+ * those. This file handles layout and the few components the theme has no
+ * equivalent for.
+ */
+
+.skybird-project {
+	max-width: 56rem;
+	margin: 0 auto;
+	padding: 1.5rem 1rem 3rem;
+}
+
+.skybird-project__title {
+	margin: 0 0 0.25rem;
+	line-height: 1.2;
+}
+
+.skybird-project__area {
+	margin: 0 0 1.5rem;
+	opacity: 0.75;
+}
+
+.skybird-project__cover {
+	margin: 0 0 1.5rem;
+}
+
+.skybird-project__cover img,
+.skybird-project__grid img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 4px;
+}
+
+.skybird-project__body {
+	margin-bottom: 2rem;
+	line-height: 1.65;
+}
+
+/* Specs read as a two-column definition list on anything above a phone. */
+.skybird-project__spec-list {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.25rem 1rem;
+	margin: 0 0 2rem;
+}
+
+.skybird-project__spec-list dt {
+	font-weight: 600;
+}
+
+.skybird-project__spec-list dd {
+	margin: 0 0 0.75rem;
+}
+
+.skybird-project__grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+	margin: 0 0 2rem;
+	padding: 0;
+	list-style: none;
+}
+
+.skybird-project__footer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: center;
+	padding-top: 1.5rem;
+	border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.skybird-project__back,
+.skybird-project__share {
+	display: inline-block;
+	/* 44px minimum touch target — this gets used on a tablet in the field. */
+	min-height: 44px;
+	padding: 0.7rem 1.1rem;
+	border-radius: 4px;
+	text-decoration: none;
+	line-height: 1.5;
+}
+
+.skybird-project__back {
+	border: 1px solid currentColor;
+}
+
+.skybird-project__share {
+	background: #1877f2;
+	color: #fff;
+	border: 1px solid #1877f2;
+}
+
+.skybird-project__share:hover,
+.skybird-project__share:focus {
+	background: #145fc4;
+	color: #fff;
+}
+
+/* --- Map widget ------------------------------------------------------- */
+
+.skybird-map__list {
+	margin: 0 0 1rem;
+	padding: 0 0 0 1.1rem;
+}
+
+.skybird-map__item {
+	margin-bottom: 0.35rem;
+}
+
+.skybird-map__canvas {
+	width: 100%;
+	height: 22rem;
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.04);
+}
+
+/*
+ * Once the map is live the link list is redundant for sighted users, but it
+ * stays in the DOM: crawlers follow it, and it is the accessible equivalent of
+ * the pins. Clipped rather than display:none so screen readers keep it.
+ */
+.skybird-map--enhanced .skybird-map__list {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+.skybird-map__popup img {
+	display: block;
+	width: 100%;
+	max-width: 14rem;
+	height: auto;
+	margin-bottom: 0.5rem;
+	border-radius: 3px;
+}
+
+.skybird-map__notice {
+	padding: 0.75rem 1rem;
+	border-left: 4px solid #d63638;
+	background: rgba(214, 54, 56, 0.06);
+}
+
+@media (min-width: 40rem) {
+	.skybird-project {
+		padding: 2.5rem 1.5rem 4rem;
+	}
+
+	.skybird-project__spec-list {
+		grid-template-columns: max-content 1fr;
+	}
+
+	.skybird-project__spec-list dd {
+		margin-bottom: 0.25rem;
+	}
+
+	.skybird-project__grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 1rem;
+	}
+
+	.skybird-map__canvas {
+		height: 28rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skybird-project *,
+	.skybird-map * {
+		animation: none !important;
+		transition: none !important;
+	}
+}

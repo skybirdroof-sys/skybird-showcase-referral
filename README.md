@@ -24,6 +24,13 @@ Built in-house on Skybird-owned infrastructure. See
 | [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | Sent 2026-09-17 |
 | [`docs/09-euan-answers.md`](docs/09-euan-answers.md) | 4 | **Answered** — §2.2 closed bar the security plugin |
 
+## Code
+
+| Path | What |
+|---|---|
+| [`plugin/skybird-projects/`](plugin/skybird-projects/) | WordPress plugin — `project` CPT, service-area taxonomy, meta, page template, map shortcode. [Its README](plugin/skybird-projects/README.md) carries the REST contract for the n8n side |
+| [`tests/test-plugin.php`](tests/test-plugin.php) | 96 registration/validation assertions against stubbed WordPress. `php tests/test-plugin.php` |
+
 ## The trigger, in one line
 
 Photos tagged `Showcase` (+ one `Showcase Cover`) → project labeled
