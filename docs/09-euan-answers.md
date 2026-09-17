@@ -147,19 +147,33 @@ Euan's one constraint on creating `skybird-sync`: WordPress requires a unique em
 
 ## 5. Gate — what's needed before code
 
-**Decisions (Jacob's, both involve money):**
+**Decided 2026-09-17 (Jacob) — both money questions answered no:**
 
-1. **ACF Pro, $49/yr — recommend no.** Native meta for `gallery`, ACF free for the reviewer-edited fields (§3.1).
-2. **WP Staging Pro, $159/yr — recommend no.** Prove on a throwaway instance, then install on production and create drafts only (§3.2).
+| # | Decision |
+|---|---|
+| 1 | **No ACF Pro.** `gallery` is native post meta; ACF free covers the reviewer-edited fields (§3.1). $49 buys the UI later if reviewers turn out to want it, and the meta field stays either way — nothing gets rebuilt |
+| 2 | **No WP Staging Pro.** Prove the plugin and the n8n REST write on a throwaway WordPress instance we control, then install the proven plugin on production and create drafts only (§3.2) |
 
-**Actions:**
+Together these mean **Phase 4 needs nothing further from Pitch Peak to begin** — no purchase, no staging provisioning. The only remaining Pitch Peak dependency is the `skybird-sync` user, and that is needed to *test against production*, not to write or prove the plugin.
 
-3. **One-line follow-up to Euan** on the security plugin (§2). Optionally the `/shenzhou/` noindex check in the same message.
-4. **Ask Euan to create `skybird-sync`** as Editor with an Application Password, using `skybirdroof+wpsync@gmail.com` (§3.6).
+**Actions outstanding:**
 
-**Unchanged and still Jacob's:**
+3. **Follow-up to Euan** — the skipped security-plugin question (§2), the `skybird-sync` user with `skybirdroof+wpsync@gmail.com` (§3.6), and the `/shenzhou/` noindex check. One short message.
+4. Egress allowlist (`07-phase-4-preflight.md` §3) — still needs a new session.
+5. Create the `project.label_added` webhook and prove the four delivery steps (`07-phase-4-preflight.md` §2.3).
 
-5. Egress allowlist (`07-phase-4-preflight.md` §3) — still needs a new session.
-6. Create the `project.label_added` webhook and prove the four delivery steps (`07-phase-4-preflight.md` §2.3).
+**The plugin is now fully specified and unblocked.** Per the project's working rule it is not being written unasked — but nothing is waiting on a decision any more:
 
-Once 1–4 land, the plugin can be written: CPT `project` with `has_archive => false`, service-area taxonomy, native meta for `gallery` and the offset coordinates, ACF-free fields for the human-edited ones, a `template_include` single template, and a `[skybird_project_map]` shortcode.
+```
+skybird-projects/
+  CPT `project`        rest_base `projects`, /projects/{slug}/, has_archive => false  (§3.5)
+  Taxonomy             service_area, 8 terms, show_in_rest
+  Native meta          gallery (int[]), approx_lat, approx_lng,
+                       companycam_project_id, proline_project_id (unpopulated, §2.4.2 of 07)
+  ACF free fields      manufacturer, product_line, color, warranty,
+                       city, neighborhood, zip, completion_date   (reviewer-edited)
+  Template             single-project via template_include, not the Hub Child theme  (§3.4)
+  Shortcode            [skybird_project_map area="..."] for the WPBakery pages  (§3.4)
+```
+
+The security-plugin answer (§2) affects whether Application Passwords will *authenticate* against production. It does not affect the plugin's code, so it gates testing, not writing.
