@@ -32,6 +32,12 @@ export const CONFIG = {
   /* Top 5 row order. Anyone extra in the Sheet is appended after these. */
   top5Order: ['Margaret', 'Travis', 'John', 'Henry', 'Anas', 'Jacob'],
 
+  /* Daily Top Five scoring is count-based — five items, 20% each — so these are
+     the only values Today % can legitimately hold. Anything else (a cell
+     corrupted into a timestamp, a stray 45) is treated as missing and drawn as
+     an em dash. Set to [] to accept any 0-100 number. */
+  top5ValidToday: [0, 20, 40, 60, 80, 100],
+
   /* The eight cash/ops tiles. `metric` must match the Sheet's KPI!A values
      exactly. `unit` is the fallback when the Sheet's Unit cell is blank. */
   tiles: [

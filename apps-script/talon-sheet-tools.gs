@@ -1,5 +1,18 @@
 /**
- * Talon board — Google Sheet sync.
+ * Talon board — Google Sheet tools.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │ TALON IS THE WRITER OF RECORD for `Rest Index` and                       │
+ * │ `Daily Top-Five Progress`. Those tabs are produced by the ops bot from   │
+ * │ Morning Runway and the 4pm Slack scoring pass.                           │
+ * │                                                                          │
+ * │ So `ensureTabs()` is the useful part here: it creates missing tabs and    │
+ * │ headers so the board has something to read and Talon has a target to     │
+ * │ write into. The two sync functions are a FALLBACK ONLY — they stay       │
+ * │ inert unless you flip CONFIG.fallbackMode, because two writers on one    │
+ * │ tab overwrite each other. Do not install their triggers while Talon is   │
+ * │ writing.                                                                 │
+ * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Runs inside the Talon Board spreadsheet (Extensions -> Apps Script) and does
  * three jobs:
@@ -21,6 +34,10 @@
 /* ------------------------------------------------------------------ config */
 
 var CONFIG = {
+  // Leave false while Talon writes the Rest Index and Top Five tabs. Set true
+  // only if you need this script to produce them instead.
+  fallbackMode: false,
+
   // Morning Runway spreadsheet (the weekday stale clock lives here).
   runwayId: '1qpAJYkdxByPNPynUMcXJZQ5EWFF3UVxjnlgKDJkUdj0',
 
@@ -156,6 +173,7 @@ function addTodaysEntryRows() {
  * as its hero number.
  */
 function syncRestIndex() {
+  if (!requireFallback_('Rest Index')) return;
   var runway = openRunway_();
   var grid = runway.getDataRange().getValues();
   if (grid.length < 2) throw new Error('Morning Runway looks empty — check CONFIG.runwayTab.');
@@ -229,6 +247,7 @@ function syncRestIndex() {
  * weekdays that have a row for that person.
  */
 function syncTopFive() {
+  if (!requireFallback_('Daily Top-Five Progress')) return;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var entry = tab_(ss, CONFIG.tabs.entry);
   var grid = entry.getDataRange().getValues();
@@ -306,6 +325,7 @@ function scoreRow_(row) {
 
 /** Weekday rows in the morning, Rest Index at 7am, Top Five at 4pm ET. */
 function installTriggers() {
+  if (!requireFallback_('scheduled writes')) return;
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
 
   ScriptApp.newTrigger('addTodaysEntryRows').timeBased().atHour(6).everyDays(1).create();
@@ -316,6 +336,16 @@ function installTriggers() {
 }
 
 /* -------------------------------------------------------------- helpers */
+
+/** Refuses to write a tab Talon owns unless fallback mode is switched on. */
+function requireFallback_(what) {
+  if (CONFIG.fallbackMode) return true;
+  var message = 'Talon owns ' + what + '. Set CONFIG.fallbackMode = true only if '
+    + 'this script should write it instead.';
+  try { SpreadsheetApp.getActiveSpreadsheet().toast(message, 'Skipped', 8); } catch (e) {}
+  Logger.log(message);
+  return false;
+}
 
 function openRunway_() {
   var ss = SpreadsheetApp.openById(CONFIG.runwayId);

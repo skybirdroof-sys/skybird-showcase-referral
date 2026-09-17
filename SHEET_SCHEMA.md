@@ -130,6 +130,30 @@ Unknown keys are ignored, so the tab is safe to extend.
 
 ---
 
+## What happens when a tab is missing
+
+Each tab is fetched independently. A missing, renamed or empty tab blanks only
+its own zone — the board reports a data-source failure just when all three data
+tabs (`KPI`, `Daily Top-Five Progress`, `Rest Index`) fail. So the Top 5 strip
+lights up the moment it is wired, even before the `Rest Index` tab exists.
+
+`Today %` is validated against the locked count-based set
+**{0, 20, 40, 60, 80, 100}**. A value outside it — text, a stray `45`, a cell
+corrupted into a timestamp — is treated as missing and drawn as `—` rather than
+rendered as a score nobody earned. `~5-day avg` is a mean, so it takes any
+number 0–100.
+
+`Last updated` shows the newest stamp the board can parse across Meta
+`last_updated_et` and every tab's `Updated` / `Updated ET` column. ISO 8601 with
+an offset (`2026-09-17T16:00:00-04:00`) is parsed, ordered and reformatted in
+ET; a human stamp with no zone is shown exactly as written, because guessing its
+zone would invent precision. The amber **feed stale** badge means the fetch
+failed — not that the numbers are old, so Friday's scores sitting there all
+weekend is correct and shows no badge.
+
+The full board ↔ Talon contract, including sample JSON and the write-path
+recommendations, is in [`docs/TALON_CONTRACT.md`](docs/TALON_CONTRACT.md).
+
 ## Header matching
 
 Headers are compared after lowercasing and stripping everything that isn't a

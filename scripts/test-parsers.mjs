@@ -2,7 +2,8 @@
    Run: npm test */
 
 import assert from 'node:assert/strict';
-import { buildModelFromCsv, kpiFor } from '../assets/js/sheet.js';
+import { buildModelFromCsv, kpiFor, loadLive, NoSourceError } from '../assets/js/sheet.js';
+import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
 
@@ -151,6 +152,141 @@ test('an empty sheet yields a model of nulls, not zeros', () => {
   assert.equal(blank.rest.index, null);
   assert.equal(blank.top5.length, 0);
   assert.equal(kpiFor(blank, 'Cash Collected'), null);
+});
+
+/* --- Talon's live tab quirks -------------------------------------------- */
+
+test('Today % outside the count-based set is treated as missing', () => {
+  // A cell corrupted into a timestamp, and a value no count-based score produces.
+  const csv = [
+    'Person,Today %,~5-day avg,Updated ET',
+    'Margaret,9/17/2026 16:00:00,92%,Wed Sep 17 4:00 PM',
+    'Travis,20,56%,Wed Sep 17 4:00 PM',
+    'John,45,84%,Wed Sep 17 4:00 PM',
+    'Henry,100,88%,Wed Sep 17 4:00 PM',
+  ].join('\n');
+  const model = buildModelFromCsv({ top5: csv });
+  const by = (name) => model.top5.find((p) => p.person === name);
+  assert.equal(by('Margaret').today, null); // timestamp string
+  assert.equal(by('Margaret').week, 92);    // its average is still good
+  assert.equal(by('Travis').today, 20);
+  assert.equal(by('John').today, null);     // 45 is not a count-based score
+  assert.equal(by('Henry').today, 100);
+});
+
+test('out-of-range weekly average is dropped, not clamped', () => {
+  const csv = ['Person,Today %,~5-day avg', 'John,20,140'].join('\n');
+  assert.equal(buildModelFromCsv({ top5: csv }).top5[0].week, null);
+});
+
+test('Rest Index tab with a Key/Value summary block parses cleanly', () => {
+  // Talon's proposed layout: person rows, then a second block lower down.
+  const csv = [
+    'Person,Days at rest avg,Project count,Updated ET',
+    'Jacob,2.6,10,Wed Sep 17 7:10 AM',
+    'John,4.4,16,Wed Sep 17 7:10 AM',
+    'Henry,1.9,12,Wed Sep 17 7:10 AM',
+    'Anas,3.2,15,Wed Sep 17 7:10 AM',
+    ',,,',
+    'Key,Value,Updated ET,',
+    'Rest Index,3.0,,Wed Sep 17 7:10 AM',
+    'period_label,as-of Morning Runway rebuild,,Wed Sep 17 7:10 AM',
+  ].join('\n');
+  const model = buildModelFromCsv({ rest: csv });
+  assert.equal(model.rest.index, 3);
+  assert.equal(model.rest.computed, false);
+  assert.equal(model.rest.people.length, 4, 'the Key header and meta keys must not become people');
+  assert.deepEqual(model.rest.people.map((p) => p.person), ['Jacob', 'John', 'Henry', 'Anas']);
+  assert.equal(model.meta.periodLabel, 'as-of Morning Runway rebuild');
+});
+
+test('Meta tab wins over the Rest Index summary block', () => {
+  const rest = ['Person,Days at rest avg', 'period_label,from summary block'].join('\n');
+  const meta = ['Key,Value', 'period_label,from Meta tab'].join('\n');
+  assert.equal(buildModelFromCsv({ rest, meta }).meta.periodLabel, 'from Meta tab');
+});
+
+test('Last updated takes the newest parseable stamp across tabs', () => {
+  const kpi = [
+    'Metric,Value,Target,Unit,Source,Owner,Notes,Updated',
+    'Cash Collected,100,,USD,ProLine,,,2026-09-17T09:00:00-04:00',
+  ].join('\n');
+  const top5 = [
+    'Person,Today %,~5-day avg,Updated ET',
+    'John,20,40,2026-09-17T16:00:00-04:00',
+  ].join('\n');
+  const model = buildModelFromCsv({ kpi, top5 });
+  assert.equal(model.updated.date.toISOString(), new Date('2026-09-17T16:00:00-04:00').toISOString());
+});
+
+test('a human stamp with no zone is kept verbatim rather than guessed at', () => {
+  const meta = ['Key,Value', 'last_updated_et,Wed Sep 17 4:05 PM'].join('\n');
+  const model = buildModelFromCsv({ meta });
+  assert.equal(model.updated.date, null);
+  assert.equal(model.updated.raw, 'Wed Sep 17 4:05 PM');
+});
+
+/* --- one missing tab must not take the board down ---------------------- */
+
+const okCsv = {
+  KPI: ['Metric,Value,Target,Unit', 'Cash Collected,"$88,240",,USD'].join('\n'),
+  'Daily Top-Five Progress': ['Person,Today %,~5-day avg', 'Margaret,100,92', 'Travis,40,56'].join('\n'),
+};
+
+function stubFetch(handler) {
+  globalThis.fetch = async (url) => {
+    const tab = decodeURIComponent(new URL(url, 'http://board.test').searchParams.get('tab'));
+    return handler(tab);
+  };
+}
+
+await (async function missingRestTabStillRenders() {
+  // The live sheet today: KPI and Top Five exist, `Rest Index` does not.
+  stubFetch(async (tab) => (okCsv[tab]
+    ? { ok: true, status: 200, text: async () => okCsv[tab] }
+    : { ok: false, status: 502, text: async () => 'Google returned 400' }));
+
+  const model = await loadLive();
+  test('a missing Rest Index tab leaves the rest of the board live', () => {
+    assert.equal(model.top5.length, 2);
+    assert.equal(kpiFor(model, 'Cash Collected').number, 88240);
+    assert.equal(model.rest.index, null);
+    assert.equal(model.sources.top5, 'ok');
+    assert.equal(model.sources.rest, 'unavailable');
+    assert.equal(model.sourceErrors.length, 2); // Rest Index + Meta
+  });
+})();
+
+await (async function proxyStaysAliveAcrossRefreshes() {
+  // A tab-level 502 must not convince the client the Function is gone: the very
+  // next refresh has to keep reading the tabs that do work.
+  stubFetch(async (tab) => (okCsv[tab]
+    ? { ok: true, status: 200, text: async () => okCsv[tab] }
+    : { ok: false, status: 502, text: async () => 'Google returned 400' }));
+
+  await loadLive();
+  const second = await loadLive();
+  test('a missing tab does not disable the proxy for later refreshes', () => {
+    assert.equal(second.sources.kpi, 'ok');
+    assert.equal(second.sources.top5, 'ok');
+    assert.equal(second.sources.rest, 'unavailable');
+    assert.match(second.sourceErrors.join(' '), /Proxy error 502/);
+    assert.equal(second.top5.length, 2);
+  });
+})();
+
+await (async function everyTabDown() {
+  stubFetch(async () => ({ ok: false, status: 502, text: async () => 'boom' }));
+  let thrown = null;
+  try { await loadLive(); } catch (err) { thrown = err; }
+  test('losing every data tab is a real failure', () => {
+    assert.ok(thrown, 'loadLive should reject when no data tab can be read');
+    assert.match(thrown.message, /Rest Index|KPI|Daily Top-Five/);
+  });
+})();
+
+test('config keeps Talon\'s locked scoring set', () => {
+  assert.deepEqual(CONFIG.top5ValidToday, [0, 20, 40, 60, 80, 100]);
 });
 
 console.log(`\n${passed} passing`);

@@ -212,20 +212,21 @@ function renderTiles(model) {
 function renderChrome(model, state) {
   el.period().textContent = model.meta.periodLabel || '';
 
-  // Prefer the Sheet's own stamp (when Talon wrote the numbers); fall back to
-  // this client's fetch time so the TV always shows something truthful.
-  let stamp = '';
-  const sheetStamp = model.meta.lastUpdatedEt;
-  if (sheetStamp) {
-    const parsed = new Date(sheetStamp);
-    stamp = Number.isNaN(parsed.getTime()) ? sheetStamp : fmtEtStamp(parsed);
-  } else {
-    stamp = fmtEtStamp(model.fetchedAt);
-  }
+  // Newest timestamp the Sheet gave us (Meta, or any tab's Updated column),
+  // reformatted only when it carried a real offset; otherwise shown as written.
+  // Falls back to this client's fetch time so the TV is never blank.
+  const stamped = model.updated || { date: null, raw: '' };
+  const stamp = stamped.date
+    ? fmtEtStamp(stamped.date)
+    : (stamped.raw || fmtEtStamp(model.fetchedAt));
 
   const updated = el.updated();
   updated.textContent = stamp || EMPTY;
-  updated.title = `Board last fetched ${fmtEtStamp(state.lastFetchAt || model.fetchedAt)}`;
+
+  const notes = [`Board last fetched ${fmtEtStamp(state.lastFetchAt || model.fetchedAt)}`];
+  const missing = Object.keys(model.sources || {}).filter((k) => model.sources[k] !== 'ok');
+  if (missing.length) notes.push(`Tabs unavailable: ${missing.join(', ')}`);
+  updated.title = notes.join(' · ');
 
   el.badgeExample().hidden = !model.example;
 

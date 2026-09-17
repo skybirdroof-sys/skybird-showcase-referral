@@ -6,7 +6,9 @@
  *
  * Env:
  *   SHEET_ID        (required) Google Sheet id, Sheet shared "anyone with link can view"
- *   SHEET_TAB_KPI / SHEET_TAB_TOP5 / SHEET_TAB_REST / SHEET_TAB_META (optional)
+ *   SHEET_TAB_KPI / SHEET_TAB_TOP5 / SHEET_TAB_REST / SHEET_TAB_META (optional) tab names
+ *   SHEET_GID_KPI / SHEET_GID_TOP5 / SHEET_GID_REST / SHEET_GID_META (optional) tab gids,
+ *                   which survive a tab rename and win over the name when set
  *
  * GET /api/sheet?tab=KPI  ->  text/csv
  */
@@ -18,13 +20,14 @@ const DEFAULT_TABS = {
   META: 'Meta',
 };
 
-function allowedTabs() {
-  return [
-    process.env.SHEET_TAB_KPI || DEFAULT_TABS.KPI,
-    process.env.SHEET_TAB_TOP5 || DEFAULT_TABS.TOP5,
-    process.env.SHEET_TAB_REST || DEFAULT_TABS.REST,
-    process.env.SHEET_TAB_META || DEFAULT_TABS.META,
-  ];
+/* Each slot resolves to a tab name (SHEET_TAB_*) and, optionally, a stable gid
+ * (SHEET_GID_*). A gid survives someone renaming the tab, so it wins when set. */
+function slots() {
+  return Object.keys(DEFAULT_TABS).map((slot) => ({
+    slot,
+    name: process.env[`SHEET_TAB_${slot}`] || DEFAULT_TABS[slot],
+    gid: (process.env[`SHEET_GID_${slot}`] || '').trim(),
+  }));
 }
 
 const text = (statusCode, body, extraHeaders = {}) => ({
@@ -51,12 +54,15 @@ exports.handler = async (event) => {
   if (!tab) return text(400, 'Missing ?tab=');
 
   // Whitelist: this proxy only ever reads the four Talon tabs.
-  const tabs = allowedTabs();
-  const match = tabs.find((t) => t.toLowerCase() === tab.toLowerCase());
+  const match = slots().find((s) => s.name.toLowerCase() === tab.toLowerCase());
   if (!match) return text(403, `Tab "${tab}" is not exposed by this board.`);
 
+  const selector = match.gid
+    ? `gid=${encodeURIComponent(match.gid)}`
+    : `sheet=${encodeURIComponent(match.name)}`;
+
   const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}` +
-    `/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(match)}`;
+    `/gviz/tq?tqx=out:csv&${selector}`;
 
   try {
     const res = await fetch(url, {
@@ -65,14 +71,14 @@ exports.handler = async (event) => {
     });
 
     if (!res.ok) {
-      return text(502, `Google returned ${res.status} for tab "${match}".`);
+      return text(502, `Google returned ${res.status} for tab "${match.name}".`);
     }
 
     const body = await res.text();
 
     // Google answers with an HTML sign-in page when the Sheet isn't link-shared.
     if (body.trim().startsWith('<')) {
-      return text(502, `Tab "${match}" did not return CSV — check the Sheet is shared "anyone with the link can view".`);
+      return text(502, `Tab "${match.name}" did not return CSV — check the Sheet is shared "anyone with the link can view".`);
     }
 
     return {
