@@ -13,7 +13,7 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 |---|---|
 | CompanyCam side | ✅ Verified live. Tags, label, curated set, test project all real (`07` §1) |
 | WordPress plugin | ✅ Built, 108 assertions, **installs and activates on real WordPress** |
-| Plugin REST write | ⏳ **23/27 on first real run.** Two bugs found and fixed; needs a re-run |
+| Plugin REST write | ✅ **27/27 on the fourth run, 2026-09-17.** Three bugs found and fixed along the way |
 | n8n workflow | ✅ Built as importable JSON, 24 nodes. **Never imported or executed** |
 | `project.label_added` webhook | ❌ Not created. The delivery leg has never been proven |
 | End-to-end run | ❌ Not attempted |
@@ -34,7 +34,7 @@ The TasteWP sandbox from 9/17 has expired. That cost nothing — it was disposab
 3. **Optional:** install **Advanced Custom Fields** (free) from the plugin directory. Clears the admin notice and confirms the field group registers.
 4. **Tools → Skybird Self Test → Run the checks.** Copy the plain-text box.
 
-**Expected: 27 passed, 0 failed.** If the coordinates are still missing from the schema, the cause is something other than what was diagnosed on 9/17 and is worth stopping on.
+**Done 2026-09-17: 27 passed, 0 failed.** What remains unverified is *rendering* — see the plugin README's status table. Nothing has ever loaded a project page, placed the map shortcode, or run with ACF active.
 
 If the zips aren't to hand, rebuild them:
 

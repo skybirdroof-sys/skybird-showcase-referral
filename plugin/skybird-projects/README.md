@@ -12,9 +12,12 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 |---|---|
 | PHP syntax | ✅ `php -l` clean on all 8 files |
 | JS syntax | ✅ `node --check` clean |
-| Registration + validation | ✅ 108 assertions passing — `php tests/test-plugin.php` |
+| Registration + validation | ✅ 115 assertions passing — `php tests/test-plugin.php` |
 | Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
-| REST write verified on real WordPress | ⏳ **three runs, one field responsible for all of it** — see below |
+| **REST write verified on real WordPress** | ✅ **2026-09-17, 27/27** — draft created, every field round-tripped, every invalid value rejected |
+| Project page template rendered | ❌ never — no project page has been loaded |
+| Map shortcode rendered | ❌ never — never placed on a page |
+| ACF field group | ❌ never — ACF was inactive on every run |
 
 **First real install: 2026-09-17**, on a TasteWP sandbox. Activation succeeded with no fatal error, the `Projects` menu registered, all eight service areas seeded with the expected slugs, and the ACF-missing admin notice appeared and read correctly.
 
@@ -36,7 +39,12 @@ The suite now asserts that every meta type is a **single scalar** — the check 
 
 The suite now asserts every field's default matches its declared type, that the coordinates are strings, and that the full label set is present with no label containing "category".
 
-Still unverified: that the REST write survives a **re-run** with both fixes in, that Application Passwords authenticate over HTTP, and that rewrite rules flush cleanly. The first is what `plugin/skybird-selftest/` re-runs; the other two are properties of the host and can only be answered on the real site — which is Euan's outstanding security-plugin question.
+**Fourth run: 27 passed, 0 failed.** The endpoint, the registered meta, the sanitisers and the duplicate check all behave on real WordPress, on the same code path n8n hits over HTTP.
+
+Still unverified, and worth being precise rather than calling the plugin done:
+
+- **Nothing has been *rendered*.** The self-test exercises registration and REST. No project page has ever been loaded, so `templates/single-project.php` has never executed; the map shortcode has never been placed on a page; and ACF was inactive on every run, so the field group has never been built. A fatal in any of those would not have shown up in a single one of the 27 checks.
+- **Application Passwords over HTTP**, and whether a security plugin blocks REST. Properties of the host, not of this plugin — Euan's outstanding question, answerable only on the real site.
 
 ## Install
 
