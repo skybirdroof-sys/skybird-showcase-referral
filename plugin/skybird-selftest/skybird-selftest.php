@@ -225,7 +225,22 @@ function skybird_selftest_run() {
 		$created[] = $bb['id'];
 		$m         = isset( $bb['meta'] ) ? $bb['meta'] : array();
 
-		skybird_selftest_check( $r, 'Rejects 0,0 coordinates (offset never ran)', empty( $m['approx_lat'] ) && empty( $m['approx_lng'] ), 'lat "' . ( $m['approx_lat'] ?? '' ) . '" lng "' . ( $m['approx_lng'] ?? '' ) . '"' );
+		// The key must EXIST and be empty. Checking only emptiness gave a
+		// false pass on 2026-09-17: both coordinate fields had been dropped
+		// from the REST schema entirely, so they read as empty and this
+		// "passed" while actually being broken. An absent key is a failure,
+		// not a rejection.
+		$lat_present = array_key_exists( 'approx_lat', $m );
+		$lng_present = array_key_exists( 'approx_lng', $m );
+
+		skybird_selftest_check(
+			$r,
+			'Rejects 0,0 coordinates (offset never ran)',
+			$lat_present && $lng_present && '' === (string) $m['approx_lat'] && '' === (string) $m['approx_lng'],
+			( $lat_present && $lng_present )
+				? 'lat "' . $m['approx_lat'] . '" lng "' . $m['approx_lng'] . '"'
+				: 'coordinate fields are MISSING from the response, not rejected'
+		);
 		skybird_selftest_check( $r, 'Rejects an invalid referral code', empty( $m['ambassador_referral_code'] ), '"' . ( $m['ambassador_referral_code'] ?? '' ) . '"' );
 		skybird_selftest_check( $r, 'Rejects February 30th', empty( $m['completion_date'] ), '"' . ( $m['completion_date'] ?? '' ) . '"' );
 		skybird_selftest_check( $r, 'Rejects a 3-digit ZIP', empty( $m['zip'] ), '"' . ( $m['zip'] ?? '' ) . '"' );

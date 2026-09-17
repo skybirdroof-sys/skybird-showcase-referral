@@ -12,13 +12,21 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 |---|---|
 | PHP syntax | ✅ `php -l` clean on all 8 files |
 | JS syntax | ✅ `node --check` clean |
-| Registration + validation | ✅ 105 assertions passing — `php tests/test-plugin.php` |
+| Registration + validation | ✅ 108 assertions passing — `php tests/test-plugin.php` |
 | Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
 | **REST write verified end to end** | ⏳ in progress — `dist/verify.sh` |
 
 **First real install: 2026-09-17**, on a TasteWP sandbox. Activation succeeded with no fatal error, the `Projects` menu registered, all eight service areas seeded with the expected slugs, and the ACF-missing admin notice appeared and read correctly.
 
-That install immediately caught a defect the stub tests structurally cannot see: the taxonomy had only five of its labels defined, so WordPress fell back to default **category** wording and the term screen read *"Add Category"*, *"Parent Category"*, *"Search Categories"*. Fixed, and the suite now asserts a full label set plus that no label contains the word "category" — the assertion is a proxy, since a stub never renders admin copy.
+The real install found two bugs the stub harness structurally could not, and the second one matters:
+
+**Coordinates were never stored at all.** `approx_lat` and `approx_lng` were registered as `type => 'number'` with a `default` of `''`. WordPress validates a registered field's default against its own schema, so the mismatch dropped both fields from the REST schema entirely — they were silently absent rather than erroring. They are now `string`, which is also the right type on its own merits: a `number` single meta returns `0` when unset, and `0` is exactly the sentinel the sanitiser rejects, so absent and invalid would be indistinguishable. A numeric string makes `''` unambiguously "not set".
+
+Worse, the self-test *passed* its own 0,0-rejection check while this was broken, because an absent field reads as empty. That check now requires the key to be present **and** empty.
+
+**Taxonomy labels fell back to category wording**, twice. A first pass defined the fifteen obvious labels and the admin still read "Filter by category", "No categories", "Categories list" — WordPress fills any omission from the hierarchical (category) defaults, and those are the labels nobody thinks to set. The rule: define the whole set or accept category wording somewhere you are not looking.
+
+The suite now asserts every field's default matches its declared type, that the coordinates are strings, and that the full label set is present with no label containing "category".
 
 Still unverified by the harness, which asserts what the plugin *asks for* rather than what WordPress does with it: that the REST write works, that Application Passwords authenticate, and that rewrite rules flush cleanly. `dist/verify.sh` covers those against a live site.
 

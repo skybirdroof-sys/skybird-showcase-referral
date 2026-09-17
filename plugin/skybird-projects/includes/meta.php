@@ -55,15 +55,17 @@ function skybird_projects_meta_fields() {
 			'sanitize'    => 'sanitize_text_field',
 			'description' => 'ProLine job ID. Nothing populates this today — no CompanyCam/ProLine link exists for new jobs (docs/07-phase-4-preflight.md §2.4.2). The field is the slot a future bridge fills.',
 		),
+		// Stored as strings, not numbers, and that is deliberate — see the
+		// note under skybird_projects_sanitize_lat().
 		'approx_lat'                => array(
-			'type'        => 'number',
+			'type'        => 'string',
 			'sanitize'    => 'skybird_projects_sanitize_lat',
-			'description' => 'Offset latitude for the map pin. Never the true location.',
+			'description' => 'Offset latitude for the map pin, as a numeric string. Empty means not set. Never the true location.',
 		),
 		'approx_lng'                => array(
-			'type'        => 'number',
+			'type'        => 'string',
 			'sanitize'    => 'skybird_projects_sanitize_lng',
-			'description' => 'Offset longitude for the map pin. Never the true location.',
+			'description' => 'Offset longitude for the map pin, as a numeric string. Empty means not set. Never the true location.',
 		),
 		'gallery'                   => array(
 			'type'        => 'array',
@@ -189,8 +191,22 @@ function skybird_projects_meta_auth( $allowed, $meta_key, $object_id ) {
  * signature of an offset step that silently didn't run, and 0,0 is in the Gulf
  * of Guinea — far more obvious in code than on a map the reviewer may not open.
  *
+ * WHY THIS RETURNS A STRING, and why the field is registered as `string`
+ * rather than `number` — found on a real install, 2026-09-17:
+ *
+ * A meta field registered as `type => 'number'` with `single => true` has no
+ * way to represent "not set". WordPress returns 0 for a missing numeric meta,
+ * and 0 is precisely the sentinel this function exists to reject — so absent
+ * and invalid would be indistinguishable in the REST response. Worse, a
+ * `default` of '' against a numeric schema is itself invalid, which is why
+ * both coordinate fields were silently dropped from the REST schema
+ * altogether and never stored at all.
+ *
+ * A numeric string sidesteps both: '' is unambiguously "not set", and every
+ * consumer already casts (see includes/map-shortcode.php).
+ *
  * @param mixed $value Incoming value.
- * @return string|float Empty string to store nothing, or the float.
+ * @return string Empty string for "not set", or the coordinate as a string.
  */
 function skybird_projects_sanitize_lat( $value ) {
 	if ( '' === $value || null === $value ) {
@@ -203,14 +219,14 @@ function skybird_projects_sanitize_lat( $value ) {
 		return '';
 	}
 
-	return $lat;
+	return (string) $lat;
 }
 
 /**
  * Longitude, same reasoning as latitude.
  *
  * @param mixed $value Incoming value.
- * @return string|float
+ * @return string
  */
 function skybird_projects_sanitize_lng( $value ) {
 	if ( '' === $value || null === $value ) {
@@ -223,7 +239,7 @@ function skybird_projects_sanitize_lng( $value ) {
 		return '';
 	}
 
-	return $lng;
+	return (string) $lng;
 }
 
 /**

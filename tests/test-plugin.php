@@ -104,10 +104,18 @@ if ( $tax ) {
 // "Parent Category". Found on a real install 2026-09-17, invisible to a stub
 // that never renders admin copy — so assert the labels exist instead.
 if ( $tax ) {
+	// Includes the labels nobody thinks to set -- no_terms, filter_by_item,
+	// items_list, items_list_navigation, archives, template_name. Those are
+	// exactly the ones that were still reading "category" after a first,
+	// partial fix, because WordPress fills any omission from the hierarchical
+	// (i.e. category) defaults.
 	$required_labels = array(
 		'name', 'singular_name', 'menu_name', 'all_items', 'edit_item',
 		'add_new_item', 'new_item_name', 'parent_item', 'parent_item_colon',
 		'search_items', 'not_found', 'update_item', 'view_item',
+		'no_terms', 'filter_by_item', 'items_list', 'items_list_navigation',
+		'archives', 'template_name', 'item_link', 'item_link_description',
+		'back_to_items', 'most_used',
 	);
 
 	$missing = array();
@@ -204,6 +212,36 @@ foreach ( $stub['post_meta'] as $key => $args ) {
 }
 it( 'every meta field is single and exposed in REST', $all_rest );
 
+// The assertion that was missing when approx_lat/approx_lng were registered as
+// `number` with a `default` of ''. WordPress validates a registered meta
+// field's default against its own schema; a mismatch drops the field from the
+// REST schema entirely and it is never stored. Nothing here caught that,
+// because the stub records args without validating them. Found on a real
+// install 2026-09-17.
+$type_mismatches = array();
+foreach ( $stub['post_meta'] as $key => $args ) {
+	$type    = $args['type'];
+	$default = $args['default'];
+
+	$matches = ( 'array' === $type && is_array( $default ) )
+		|| ( 'string' === $type && is_string( $default ) )
+		|| ( 'number' === $type && ( is_int( $default ) || is_float( $default ) ) )
+		|| ( 'boolean' === $type && is_bool( $default ) )
+		|| ( 'integer' === $type && is_int( $default ) );
+
+	if ( ! $matches ) {
+		$type_mismatches[] = sprintf( '%s (type %s, default %s)', $key, $type, gettype( $default ) );
+	}
+}
+it( "every meta field's default matches its declared type", empty( $type_mismatches ), implode( '; ', $type_mismatches ) );
+
+// Coordinates specifically must NOT be numeric. A number-typed single meta
+// returns 0 when unset, and 0 is the sentinel the sanitiser rejects, so absent
+// and invalid would be indistinguishable. See skybird_projects_sanitize_lat().
+foreach ( array( 'approx_lat', 'approx_lng' ) as $coord ) {
+	eq( "$coord is a string, so '' can mean not-set", 'string', $stub['post_meta'][ $coord ]['type'] );
+}
+
 // --- Sanitisers: coordinates ----------------------------------------------
 
 // Rejecting 0 implements the review-gate check in docs/06-trigger-design.md §3
@@ -212,12 +250,12 @@ eq( 'lat 0 is rejected (offset never generated)', '', skybird_projects_sanitize_
 eq( 'lat "0" is rejected', '', skybird_projects_sanitize_lat( '0' ) );
 eq( 'lat empty stays empty', '', skybird_projects_sanitize_lat( '' ) );
 eq( 'lat out of range is rejected', '', skybird_projects_sanitize_lat( 91 ) );
-eq( 'valid lat is kept', 36.07117, skybird_projects_sanitize_lat( 36.07117 ) );
-eq( 'valid negative lat is kept', -33.5, skybird_projects_sanitize_lat( '-33.5' ) );
+eq( 'valid lat is kept', '36.07117', skybird_projects_sanitize_lat( 36.07117 ) );
+eq( 'valid negative lat is kept', '-33.5', skybird_projects_sanitize_lat( '-33.5' ) );
 
 eq( 'lng 0 is rejected', '', skybird_projects_sanitize_lng( 0 ) );
 eq( 'lng out of range is rejected', '', skybird_projects_sanitize_lng( -181 ) );
-eq( 'valid lng is kept', -78.5583, skybird_projects_sanitize_lng( -78.5583 ) );
+eq( 'valid lng is kept', '-78.5583', skybird_projects_sanitize_lng( -78.5583 ) );
 
 // --- Sanitisers: gallery ---------------------------------------------------
 

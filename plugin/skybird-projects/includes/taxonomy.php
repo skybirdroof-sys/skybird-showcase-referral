@@ -69,28 +69,47 @@ function skybird_projects_register_taxonomy() {
 		SKYBIRD_PROJECTS_TAXONOMY,
 		array( SKYBIRD_PROJECTS_POST_TYPE ),
 		array(
-			// The full label set, not a partial one. A hierarchical taxonomy
-			// with labels left out falls back to the default *category*
-			// wording, so the term screen reads "Add Category" / "Parent
-			// Category" / "Search Categories" for something that is not a
-			// category. Confirmed on a real install 2026-09-17 — the stubbed
-			// tests can't see admin copy, so this is asserted below instead.
+			// EVERY label, not just the obvious ones.
+			//
+			// WordPress fills any label you omit from a per-type default set,
+			// and for a hierarchical taxonomy those defaults are the
+			// *category* ones. A first pass here defined the fifteen obvious
+			// labels and the admin still read "Filter by category", "No
+			// categories", "Categories list" — because those are the labels
+			// nobody thinks to set. Found on a real install 2026-09-17, twice:
+			// once in a screenshot, then again by the self-test after a
+			// partial fix.
+			//
+			// The rule: with a custom taxonomy, define the whole set or accept
+			// category wording somewhere you are not looking.
 			'labels'             => array(
-				'name'              => _x( 'Service Areas', 'taxonomy general name', 'skybird-projects' ),
-				'singular_name'     => _x( 'Service Area', 'taxonomy singular name', 'skybird-projects' ),
-				'menu_name'         => __( 'Service Areas', 'skybird-projects' ),
-				'all_items'         => __( 'All Service Areas', 'skybird-projects' ),
-				'edit_item'         => __( 'Edit Service Area', 'skybird-projects' ),
-				'view_item'         => __( 'View Service Area', 'skybird-projects' ),
-				'update_item'       => __( 'Update Service Area', 'skybird-projects' ),
-				'add_new_item'      => __( 'Add New Service Area', 'skybird-projects' ),
-				'new_item_name'     => __( 'New Service Area Name', 'skybird-projects' ),
-				'parent_item'       => __( 'Parent Service Area', 'skybird-projects' ),
-				'parent_item_colon' => __( 'Parent Service Area:', 'skybird-projects' ),
-				'search_items'      => __( 'Search Service Areas', 'skybird-projects' ),
-				'not_found'         => __( 'No service areas found.', 'skybird-projects' ),
-				'back_to_items'     => __( '&larr; Go to Service Areas', 'skybird-projects' ),
-				'name_field_description' => __( 'The service area name, as it appears on the project page and its back-link.', 'skybird-projects' ),
+				'name'                       => _x( 'Service Areas', 'taxonomy general name', 'skybird-projects' ),
+				'singular_name'              => _x( 'Service Area', 'taxonomy singular name', 'skybird-projects' ),
+				'menu_name'                  => __( 'Service Areas', 'skybird-projects' ),
+				'all_items'                  => __( 'All Service Areas', 'skybird-projects' ),
+				'edit_item'                  => __( 'Edit Service Area', 'skybird-projects' ),
+				'view_item'                  => __( 'View Service Area', 'skybird-projects' ),
+				'update_item'                => __( 'Update Service Area', 'skybird-projects' ),
+				'add_new_item'               => __( 'Add New Service Area', 'skybird-projects' ),
+				'new_item_name'              => __( 'New Service Area Name', 'skybird-projects' ),
+				'parent_item'                => __( 'Parent Service Area', 'skybird-projects' ),
+				'parent_item_colon'          => __( 'Parent Service Area:', 'skybird-projects' ),
+				'search_items'               => __( 'Search Service Areas', 'skybird-projects' ),
+				'not_found'                  => __( 'No service areas found.', 'skybird-projects' ),
+				'no_terms'                   => __( 'No service areas', 'skybird-projects' ),
+				'filter_by_item'             => __( 'Filter by service area', 'skybird-projects' ),
+				'items_list_navigation'      => __( 'Service areas list navigation', 'skybird-projects' ),
+				'items_list'                 => __( 'Service areas list', 'skybird-projects' ),
+				'most_used'                  => __( 'Most Used', 'skybird-projects' ),
+				'back_to_items'              => __( '&larr; Go to Service Areas', 'skybird-projects' ),
+				'archives'                   => __( 'All Service Areas', 'skybird-projects' ),
+				'template_name'              => __( 'Service Area Archives', 'skybird-projects' ),
+				'item_link'                  => _x( 'Service Area Link', 'navigation link block title', 'skybird-projects' ),
+				'item_link_description'      => _x( 'A link to a service area.', 'navigation link block description', 'skybird-projects' ),
+				'name_field_description'     => __( 'The service area name, as it appears on the project page and its back-link.', 'skybird-projects' ),
+				'slug_field_description'     => __( 'The URL-friendly version of the name. Must match the area page slug, without the -nc suffix.', 'skybird-projects' ),
+				'parent_field_description'   => __( 'Service areas are flat in practice — leave this as None.', 'skybird-projects' ),
+				'desc_field_description'     => __( 'Not shown anywhere on the site. Optional.', 'skybird-projects' ),
 			),
 			'public'             => false,
 			'publicly_queryable' => false,
