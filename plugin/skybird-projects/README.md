@@ -14,7 +14,7 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 | JS syntax | ✅ `node --check` clean |
 | Registration + validation | ✅ 108 assertions passing — `php tests/test-plugin.php` |
 | Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
-| **REST write verified end to end** | ⏳ in progress — `dist/verify.sh` |
+| REST write verified on real WordPress | ⏳ **first run: 23/27**, two bugs found and fixed — awaiting a re-run |
 
 **First real install: 2026-09-17**, on a TasteWP sandbox. Activation succeeded with no fatal error, the `Projects` menu registered, all eight service areas seeded with the expected slugs, and the ACF-missing admin notice appeared and read correctly.
 
@@ -28,7 +28,7 @@ Worse, the self-test *passed* its own 0,0-rejection check while this was broken,
 
 The suite now asserts every field's default matches its declared type, that the coordinates are strings, and that the full label set is present with no label containing "category".
 
-Still unverified by the harness, which asserts what the plugin *asks for* rather than what WordPress does with it: that the REST write works, that Application Passwords authenticate, and that rewrite rules flush cleanly. `dist/verify.sh` covers those against a live site.
+Still unverified: that the REST write survives a **re-run** with both fixes in, that Application Passwords authenticate over HTTP, and that rewrite rules flush cleanly. The first is what `plugin/skybird-selftest/` re-runs; the other two are properties of the host and can only be answered on the real site — which is Euan's outstanding security-plugin question.
 
 ## Install
 

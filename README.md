@@ -24,6 +24,7 @@ Built in-house on Skybird-owned infrastructure. See
 | [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | Sent 2026-09-17 |
 | [`docs/09-euan-answers.md`](docs/09-euan-answers.md) | 4 | **Answered** — §2.2 closed bar the security plugin |
 | [`docs/10-n8n-workflow.md`](docs/10-n8n-workflow.md) | 4 | The workflow's reasoning, node by node |
+| [`docs/11-resume-here.md`](docs/11-resume-here.md) | 4 | **Start here** — current state and the exact next action |
 
 ## Code
 
