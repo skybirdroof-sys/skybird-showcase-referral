@@ -55,17 +55,20 @@ function skybird_projects_meta_fields() {
 			'sanitize'    => 'sanitize_text_field',
 			'description' => 'ProLine job ID. Nothing populates this today — no CompanyCam/ProLine link exists for new jobs (docs/07-phase-4-preflight.md §2.4.2). The field is the slot a future bridge fills.',
 		),
-		// Stored as strings, not numbers, and that is deliberate — see the
-		// note under skybird_projects_sanitize_lat().
+		// Stored as strings, but the REST schema accepts a number too. Both
+		// halves of that are deliberate — see the note under
+		// skybird_projects_sanitize_lat().
 		'approx_lat'                => array(
 			'type'        => 'string',
+			'rest_schema' => array( 'type' => array( 'string', 'number' ) ),
 			'sanitize'    => 'skybird_projects_sanitize_lat',
-			'description' => 'Offset latitude for the map pin, as a numeric string. Empty means not set. Never the true location.',
+			'description' => 'Offset latitude for the map pin, stored as a numeric string. Accepts a number or a string. Empty means not set. Never the true location.',
 		),
 		'approx_lng'                => array(
 			'type'        => 'string',
+			'rest_schema' => array( 'type' => array( 'string', 'number' ) ),
 			'sanitize'    => 'skybird_projects_sanitize_lng',
-			'description' => 'Offset longitude for the map pin, as a numeric string. Empty means not set. Never the true location.',
+			'description' => 'Offset longitude for the map pin, stored as a numeric string. Accepts a number or a string. Empty means not set. Never the true location.',
 		),
 		'gallery'                   => array(
 			'type'        => 'array',
@@ -148,6 +151,13 @@ function skybird_projects_register_meta() {
 					'items' => array( 'type' => $field['items'] ),
 				),
 			);
+		} elseif ( isset( $field['rest_schema'] ) ) {
+			// An explicit REST schema, where what we accept on input is wider
+			// than what we store. REST validates the incoming value against
+			// this schema BEFORE sanitize_callback runs, so a field that only
+			// declares 'string' rejects a JSON number outright and the
+			// sanitiser never gets a chance to cast it.
+			$show_in_rest = array( 'schema' => $field['rest_schema'] );
 		}
 
 		register_post_meta(
@@ -205,7 +215,15 @@ function skybird_projects_meta_auth( $allowed, $meta_key, $object_id ) {
  * A numeric string sidesteps both: '' is unambiguously "not set", and every
  * consumer already casts (see includes/map-shortcode.php).
  *
- * @param mixed $value Incoming value.
+ * AND the REST schema accepts a number as well as a string — found on the
+ * second real run, 2026-09-17. REST validates the incoming value against the
+ * schema BEFORE this callback runs, so declaring only 'string' rejected a
+ * JSON number outright with `rest_invalid_type` and this function never saw
+ * it. A coordinate is naturally a number at the point it is calculated;
+ * forcing every caller to stringify it first is a footgun that would have
+ * bitten n8n in exactly the same way. So: accept either, normalise here.
+ *
+ * @param mixed $value Incoming value — number or numeric string.
  * @return string Empty string for "not set", or the coordinate as a string.
  */
 function skybird_projects_sanitize_lat( $value ) {

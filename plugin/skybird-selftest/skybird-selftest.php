@@ -161,8 +161,15 @@ function skybird_selftest_run() {
 		'title'  => 'Self test — will be deleted',
 		'meta'   => array(
 			'companycam_project_id' => '110848078',
+
+			// Deliberately mixed shapes in one request: a JSON number and a
+			// JSON string. REST validates against the schema before the
+			// sanitiser runs, so a string-only schema rejects the number
+			// outright -- which is exactly what happened on the second real
+			// run. n8n's offset code produces numbers, so both must work.
 			'approx_lat'            => 36.074512,
-			'approx_lng'            => -78.561238,
+			'approx_lng'            => '-78.561238',
+
 			'city'                  => 'Youngsville',
 			'zip'                   => '27596',
 			'completion_date'       => '2026-09-10',
@@ -182,8 +189,17 @@ function skybird_selftest_run() {
 		skybird_selftest_check( $r, 'Creating a draft over REST', true, 'post id ' . $body['id'] );
 		skybird_selftest_check( $r, 'Saved as a draft, not published', 'draft' === $body['status'], $body['status'] );
 		skybird_selftest_check( $r, 'CompanyCam project ID stored', '110848078' === (string) ( $m['companycam_project_id'] ?? '' ), (string) ( $m['companycam_project_id'] ?? '(empty)' ) );
-		skybird_selftest_check( $r, 'Map pin latitude stored', abs( (float) ( $m['approx_lat'] ?? 0 ) - 36.074512 ) < 0.0001, (string) ( $m['approx_lat'] ?? '(empty)' ) );
-		skybird_selftest_check( $r, 'Map pin longitude stored', abs( (float) ( $m['approx_lng'] ?? 0 ) + 78.561238 ) < 0.0001, (string) ( $m['approx_lng'] ?? '(empty)' ) );
+		skybird_selftest_check( $r, 'Map pin latitude stored (sent as a number)', abs( (float) ( $m['approx_lat'] ?? 0 ) - 36.074512 ) < 0.0001, (string) ( $m['approx_lat'] ?? '(empty)' ) );
+		skybird_selftest_check( $r, 'Map pin longitude stored (sent as a string)', abs( (float) ( $m['approx_lng'] ?? 0 ) + 78.561238 ) < 0.0001, (string) ( $m['approx_lng'] ?? '(empty)' ) );
+
+		// Both must land as strings, whichever shape arrived, so '' can mean
+		// "not set" without colliding with a real 0.
+		skybird_selftest_check(
+			$r,
+			'Both coordinates normalised to strings',
+			is_string( $m['approx_lat'] ?? null ) && is_string( $m['approx_lng'] ?? null ),
+			'lat ' . gettype( $m['approx_lat'] ?? null ) . ', lng ' . gettype( $m['approx_lng'] ?? null )
+		);
 		skybird_selftest_check( $r, 'City stored', 'Youngsville' === ( $m['city'] ?? '' ), (string) ( $m['city'] ?? '(empty)' ) );
 		skybird_selftest_check( $r, 'Completion date stored', '2026-09-10' === ( $m['completion_date'] ?? '' ), (string) ( $m['completion_date'] ?? '(empty)' ) );
 
@@ -207,7 +223,7 @@ function skybird_selftest_run() {
 		'title'  => 'Self test (bad input) — will be deleted',
 		'meta'   => array(
 			'approx_lat'               => 0,
-			'approx_lng'               => 0,
+			'approx_lng'               => '0',
 			'ambassador_referral_code' => 'BADGUY',
 			'completion_date'          => '2026-02-30',
 			'zip'                      => '123',

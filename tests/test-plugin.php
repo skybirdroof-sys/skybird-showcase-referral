@@ -239,8 +239,32 @@ it( "every meta field's default matches its declared type", empty( $type_mismatc
 // returns 0 when unset, and 0 is the sentinel the sanitiser rejects, so absent
 // and invalid would be indistinguishable. See skybird_projects_sanitize_lat().
 foreach ( array( 'approx_lat', 'approx_lng' ) as $coord ) {
-	eq( "$coord is a string, so '' can mean not-set", 'string', $stub['post_meta'][ $coord ]['type'] );
+	eq( "$coord is stored as a string, so '' can mean not-set", 'string', $stub['post_meta'][ $coord ]['type'] );
+
+	// ...but the REST schema must accept a NUMBER too. REST validates the
+	// incoming value against the schema before sanitize_callback runs, so a
+	// string-only schema rejects a JSON number with rest_invalid_type and the
+	// sanitiser never gets to cast it. A coordinate is naturally a number
+	// where it is calculated. Found on the second real run, 2026-09-17.
+	$schema = isset( $stub['post_meta'][ $coord ]['show_in_rest']['schema'] )
+		? $stub['post_meta'][ $coord ]['show_in_rest']['schema']
+		: null;
+
+	it(
+		"$coord REST schema accepts a number as well as a string",
+		is_array( $schema )
+			&& is_array( $schema['type'] )
+			&& in_array( 'number', $schema['type'], true )
+			&& in_array( 'string', $schema['type'], true ),
+		is_array( $schema ) ? wp_json_encode( $schema ) : 'no explicit schema'
+	);
 }
+
+// The sanitiser must normalise both input shapes to the same stored string.
+eq( 'a numeric lat normalises to a string', '36.074512', skybird_projects_sanitize_lat( 36.074512 ) );
+eq( 'a string lat normalises to a string', '36.074512', skybird_projects_sanitize_lat( '36.074512' ) );
+eq( 'a numeric lng normalises to a string', '-78.561238', skybird_projects_sanitize_lng( -78.561238 ) );
+eq( 'a string lng normalises to a string', '-78.561238', skybird_projects_sanitize_lng( '-78.561238' ) );
 
 // --- Sanitisers: coordinates ----------------------------------------------
 
