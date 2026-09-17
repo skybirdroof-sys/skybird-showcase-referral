@@ -21,7 +21,8 @@ Built in-house on Skybird-owned infrastructure. See
 | [`docs/handoff-buy-vs-build.md`](docs/handoff-buy-vs-build.md) | — | Context carried into the vendor evaluation |
 | [`docs/handoff-buy-vs-build-decision.md`](docs/handoff-buy-vs-build-decision.md) | — | **Decision: build in-house.** Closed |
 | [`docs/07-phase-4-preflight.md`](docs/07-phase-4-preflight.md) | 4 | **At a gate** — open items in §7 |
-| [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | **Sent 2026-09-17** — awaiting Euan |
+| [`docs/08-euan-questions.md`](docs/08-euan-questions.md) | 4 | Sent 2026-09-17 |
+| [`docs/09-euan-answers.md`](docs/09-euan-answers.md) | 4 | **Answered** — §2.2 closed bar the security plugin |
 
 ## The trigger, in one line
 
