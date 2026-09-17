@@ -1,0 +1,4 @@
+{
+  "//": "The repo root is an ESM package (type: module) so the static board and the node scripts share one module system. Netlify Functions here are classic CommonJS handlers, so this file pins CommonJS for this folder only.",
+  "type": "commonjs"
+}

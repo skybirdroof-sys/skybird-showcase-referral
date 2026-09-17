@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-mode="live">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Talon · Skybird Roofing</title>
+  <meta name="description" content="Talon board — internal ops display for Skybird Roofing." />
+  <link rel="icon" href="/assets/favicon.svg" />
+  <link rel="stylesheet" href="/assets/css/talon.css" />
+</head>
+<body>
+  <!-- Passphrase gate. Hidden unless the /api/gate function reports a password is required. -->
+  <div id="gate" class="gate" hidden>
+    <form class="gate__form" id="gate-form" autocomplete="off">
+      <div class="gate__mark">TALON</div>
+      <label class="gate__label" for="gate-input">Passphrase</label>
+      <input class="gate__input" id="gate-input" type="password" inputmode="text"
+             autocomplete="current-password" spellcheck="false" />
+      <button class="gate__btn" type="submit">Unlock board</button>
+      <p class="gate__msg" id="gate-msg" role="status"></p>
+    </form>
+  </div>
+
+  <main id="board" class="board" hidden>
+    <div class="backdrop" aria-hidden="true">
+      <div class="backdrop__grid"></div>
+      <div class="backdrop__vignette"></div>
+    </div>
+
+    <header class="chrome">
+      <div class="chrome__brand">
+        <span class="chrome__wordmark">TALON</span>
+        <span class="chrome__company">Skybird Roofing</span>
+      </div>
+      <div class="chrome__mid">
+        <span class="chrome__period" id="period-label"></span>
+      </div>
+      <div class="chrome__meta">
+        <span class="badge badge--example" id="badge-example" hidden>example data</span>
+        <span class="badge badge--stale" id="badge-stale" hidden>feed stale</span>
+        <span class="chrome__updated">Last updated · <span id="last-updated">—</span></span>
+      </div>
+    </header>
+
+    <section class="zones">
+      <!-- Zone A: Rest Index hero -->
+      <section class="panel panel--rest" aria-labelledby="rest-title">
+        <h2 class="panel__title" id="rest-title">Rest Index</h2>
+        <p class="rest__value" id="rest-value">—</p>
+        <p class="rest__sub">avg days at rest · OS + Jacob</p>
+        <p class="rest__hint">lower is better</p>
+        <ul class="rest__chips" id="rest-chips"></ul>
+      </section>
+
+      <!-- Center focal: Talon mist orb -->
+      <div class="orb-stage" aria-hidden="true">
+        <div class="orb">
+          <span class="orb__mist orb__mist--a"></span>
+          <span class="orb__mist orb__mist--b"></span>
+          <span class="orb__mist orb__mist--c"></span>
+          <span class="orb__core"></span>
+          <span class="orb__ring"></span>
+        </div>
+        <div class="orb__label">
+          <span class="orb__word">TALON</span>
+          <span class="orb__sub">Skybird Roofing</span>
+        </div>
+      </div>
+
+      <!-- Zone B: Top 5 daily + weekly average -->
+      <section class="panel panel--top5" aria-labelledby="top5-title">
+        <div class="panel__head">
+          <h2 class="panel__title" id="top5-title">Top 5 Daily</h2>
+          <div class="legend">
+            <span class="legend__item legend__item--today">today</span>
+            <span class="legend__item legend__item--avg">~5-day avg</span>
+          </div>
+        </div>
+        <ul class="top5" id="top5-rows"></ul>
+      </section>
+    </section>
+
+    <!-- Zone C: eight cash/ops tiles -->
+    <section class="tiles" id="tiles" aria-label="Cash and ops metrics"></section>
+  </main>
+
+  <noscript>
+    <p style="color:#e6f6ff;background:#05070a;font:600 20px system-ui;padding:32px">
+      Talon needs JavaScript enabled to render the board.
+    </p>
+  </noscript>
+
+  <script type="module" src="/assets/js/main.js"></script>
+</body>
+</html>

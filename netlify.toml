@@ -1,0 +1,49 @@
+# Talon — Skybird Roofing office TV board
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[dev]
+  framework = "#static"
+
+# Secret URL path for the office TV bookmark: /t/<random>
+# Any /t/* path serves the board. Pick one random path, bookmark it, and keep it off
+# public pages. See README (Access control).
+[[redirects]]
+  from = "/t/*"
+  to = "/index.html"
+  status = 200
+
+# The publish dir is the repo root, so keep source folders from being served.
+[[redirects]]
+  from = "/netlify/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/scripts/*"
+  to = "/"
+  status = 301
+
+# Friendly API paths -> functions
+[[redirects]]
+  from = "/api/sheet"
+  to = "/.netlify/functions/sheet"
+  status = 200
+
+[[redirects]]
+  from = "/api/gate"
+  to = "/.netlify/functions/gate"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    # The board is a wall display; never let a proxy cache a stale board shell.
+    Cache-Control = "no-cache"

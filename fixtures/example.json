@@ -1,0 +1,35 @@
+{
+  "_README": "EXAMPLE ONLY — not live Skybird numbers. Layout/typography test data. Load with ?mode=example; the board shows an 'example data' badge whenever a fixture is used.",
+  "meta": {
+    "periodLabel": "EXAMPLE DATA · Week of Sep 7–13",
+    "lastUpdatedEt": "2026-09-17T16:05:00-04:00",
+    "refreshSeconds": "180"
+  },
+  "kpi": [
+    { "metric": "Appointments Set",     "value": "41",     "target": "50",   "unit": "count", "source": "GHL" },
+    { "metric": "Cost per Appt",        "value": "$212",   "target": "$180", "unit": "USD",   "source": "GHL" },
+    { "metric": "Contracts Signed $$",  "value": "$186,400", "target": "",   "unit": "USD",   "source": "ProLine" },
+    { "metric": "Close Rates",          "value": "38.5%",  "target": "45%",  "unit": "pct",   "source": "ProLine" },
+    { "metric": "Jobs Completed",       "value": "12",     "target": "",     "unit": "count", "source": "ProLine" },
+    { "metric": "Sent CoC cash sitting","value": "$74,800","target": "",     "unit": "USD",   "source": "ProLine" },
+    { "metric": "Total AR Over 60 Days","value": "$28,150","target": "$0",   "unit": "USD",   "source": "ProLine" },
+    { "metric": "Cash Collected",       "value": "$142,900","target": "",    "unit": "USD",   "source": "ProLine" }
+  ],
+  "top5": [
+    { "person": "Margaret", "today": "80%",  "week": "76%" },
+    { "person": "Travis",   "today": "60%",  "week": "68%" },
+    { "person": "John",     "today": "100%", "week": "88%" },
+    { "person": "Henry",    "today": "40%",  "week": "52%" },
+    { "person": "Anas",     "today": "80%",  "week": "84%" },
+    { "person": "Jacob",    "today": "60%",  "week": "72%" }
+  ],
+  "rest": {
+    "index": "2.4",
+    "people": [
+      { "person": "Jacob", "days": "1.8", "projects": "9" },
+      { "person": "John",  "days": "3.1", "projects": "14" },
+      { "person": "Henry", "days": "2.2", "projects": "11" },
+      { "person": "Anas",  "days": "2.5", "projects": "13" }
+    ]
+  }
+}
