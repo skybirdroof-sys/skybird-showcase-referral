@@ -28,6 +28,34 @@ is the acceptance test for the first: after any change you make, she can sit
 down the next morning, read the sheet, and work — without a legend, a migration,
 or a question to anyone.
 
+### It is a live meeting artifact, not just a data file
+
+Every morning Margaret runs her morning meetings from this sheet, and uses it to
+know what to raise with each outside salesman. That changes what "don't break
+it" means in three specific ways:
+
+- **Ready before the meeting, frozen during it.** The rebuild must be finished
+  and stable before she starts, and **write nothing while the meeting is
+  running.** A sheet that shifts under her while she is presenting costs her her
+  place in front of people. Get the meeting's start and end time and treat it as
+  a no-write window, not a preference.
+- **Row order is her script.** She reads down each owner's section and talks to
+  that salesman from it. Re-sorting is not cosmetic — it rewrites her talking
+  points between sentences, and it breaks "the third one down" as a thing she
+  can rely on. Ordering must be **stable run to run** unless she asks otherwise.
+- **If the rebuild fails, she needs to know before she presents, not after.**
+  A silent abort means she walks into the meeting reading yesterday's clocks as
+  though they were today's. The alert has to reach her ahead of the meeting and
+  say plainly: not refreshed, numbers are from <when>.
+
+Ship protected-core changes **after** a meeting, or on a day she agrees to —
+never overnight before one. Nobody should discover a new layout with an audience
+waiting.
+
+One thing worth *asking* her (not assuming): a "changed since yesterday" marker
+at the right edge might make the meeting easier rather than harder. If you're
+going to add anything for her benefit, ask about that one first.
+
 ### Separate the two surfaces first
 
 Most of the tension disappears if her sheet doesn't have to serve two readers.
@@ -134,8 +162,9 @@ never confused.
   `clear()`, sort, dedupe or row deletion.
 - **Preserve everything non-value**: formatting, notes, comments, formulas,
   colors, merges, filters, frozen panes.
-- **Respect a write window.** A rebuild landing mid-edit can clobber what she is
-  typing. Confirm the hours she works and keep writes outside them.
+- **Respect the write window.** A rebuild landing mid-edit can clobber what she
+  is typing, and one landing mid-meeting moves the page she is presenting from.
+  Finish before the meeting; write nothing during it.
 - **Alert her, not just Jacob.** If a run aborts or skips, her sheet is stale by
   8:35 and she is the one who needs to know.
 
@@ -145,7 +174,7 @@ file. Everything else on this list is a display nicety by comparison.
 
 **Accept when:** a dry run shows the snapshot created, the structure check
 passing, and a deliberately altered structure causing a clean abort with an
-alert and zero writes.
+alert and zero writes — with that alert reaching Margaret before her meeting.
 
 ### 2. Blank `Today %` at the ~7:30 AM send
 
@@ -259,8 +288,8 @@ it, name the staleness threshold you want and the board will surface it.
 1. **Exactly which ranges of Morning Runway do you write today**, and what does
    the rebuild do if the structure doesn't match what you expect?
 2. Is there already a pre-rebuild backup? If so, where and how many days?
-3. What hours does Margaret work in that sheet, and does the 8:30 rebuild
-   overlap them?
+3. **What time do the morning meetings start and end?** Does the 8:30 rebuild
+   finish before that, and can you hard-stop writes for the duration?
 3b. Which structural changes do you actually need? List them with what each one
    buys, so Margaret can say yes to the worthwhile ones instead of all or
    nothing.
