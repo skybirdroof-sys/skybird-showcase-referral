@@ -14,7 +14,7 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 | JS syntax | ✅ `node --check` clean |
 | Registration + validation | ✅ 108 assertions passing — `php tests/test-plugin.php` |
 | Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
-| REST write verified on real WordPress | ⏳ **three bugs found across two runs**, all fixed — awaiting a third run |
+| REST write verified on real WordPress | ⏳ **three runs, one field responsible for all of it** — see below |
 
 **First real install: 2026-09-17**, on a TasteWP sandbox. Activation succeeded with no fatal error, the `Projects` menu registered, all eight service areas seeded with the expected slugs, and the ACF-missing admin notice appeared and read correctly.
 
@@ -24,7 +24,13 @@ The real install found two bugs the stub harness structurally could not, and the
 
 Worse, the self-test *passed* its own 0,0-rejection check while this was broken, because an absent field reads as empty. That check now requires the key to be present **and** empty.
 
-**The coordinate REST schema rejected numbers.** The fix above created a new failure on the next run: `rest_invalid_type: meta.approx_lat is not of type string`. REST validates an incoming value against the field's schema **before** `sanitize_callback` runs, so a `string`-only schema rejects a JSON number outright and the sanitiser never gets to cast it. A coordinate is naturally a number where it is calculated — n8n's offset code produces one — so forcing every caller to stringify first is a footgun. The schema now accepts `["string", "number"]` and the sanitiser normalises either to a stored string. The self-test sends latitude as a number and longitude as a string **in the same request** so both paths are exercised.
+**Then the `string` type rejected numbers.** Run two: `rest_invalid_type: meta.approx_lat is not of type string`. REST validates an incoming value against the field's schema **before** `sanitize_callback` runs, so a `string`-only field rejects a JSON number outright and the sanitiser never gets to cast it.
+
+**Then a union type dropped the field again.** Run three, attempting `["string", "number"]` to accept either: the coordinates vanished from the schema a second time, with the identical symptom to run one and a completely different cause. **WordPress meta REST does not support union types.** `WP_REST_Meta_Fields::get_registered_fields()` resolves the type and then does `in_array( $type, array( 'string', 'boolean', 'integer', 'number', 'array', 'object' ), true )` — an array never matches, so the field is skipped silently.
+
+**Settled: `number`, default `0`, where `0` means "no usable pin".** A single scalar type with a matching default is the plainest registration possible, and it is also the natural type — a coordinate is a number where n8n calculates it, so nothing has to stringify. The cost is that "absent" and "invalid" both read as `0`, and that distinction turned out not to matter: no consumer behaves differently between them, both mean "don't render a pin", and `0,0` is in the Gulf of Guinea so it cannot collide with a real project.
+
+The suite now asserts that every meta type is a **single scalar** — the check that would have caught run three.
 
 **Taxonomy labels fell back to category wording**, twice. A first pass defined the fifteen obvious labels and the admin still read "Filter by category", "No categories", "Categories list" — WordPress fills any omission from the hierarchical (category) defaults, and those are the labels nobody thinks to set. The rule: define the whole set or accept category wording somewhere you are not looking.
 
@@ -96,7 +102,7 @@ Notes that will save a debugging session:
 - **`gallery` excludes the cover.** The cover goes in `featured_media`. The `Showcase Cover` photo is also tagged `Showcase`, so filter it out or it appears twice (`docs/07-phase-4-preflight.md` §1.3).
 - **Fields the plugin silently drops** rather than storing wrong: a lat or lng of `0`, a referral code that isn't 6 valid characters, a malformed date, a non-five-digit ZIP, a negative attachment ID. If a value vanishes, it failed validation — check the value, not the plugin.
 - **Product fields are left empty** by the automation for now and filled by the reviewer, because there is no CompanyCam→ProLine bridge (`docs/07-phase-4-preflight.md` §2.4.2).
-- **Coordinates accept a number or a numeric string.** They are stored as strings so `''` can mean "not set" without colliding with a real `0`, but the REST schema is `["string", "number"]` so n8n can send either. See `includes/meta.php`.
+- **Coordinates are plain numbers, and `0` means "not set".** Send them as JSON numbers, which is what the offset code produces. A `0` for either is rejected and stored as `0`. See the note in `includes/meta.php` for why this took three attempts.
 
 ### Idempotency lookup
 

@@ -55,20 +55,19 @@ function skybird_projects_meta_fields() {
 			'sanitize'    => 'sanitize_text_field',
 			'description' => 'ProLine job ID. Nothing populates this today — no CompanyCam/ProLine link exists for new jobs (docs/07-phase-4-preflight.md §2.4.2). The field is the slot a future bridge fills.',
 		),
-		// Stored as strings, but the REST schema accepts a number too. Both
-		// halves of that are deliberate — see the note under
-		// skybird_projects_sanitize_lat().
+		// Plain numbers, with 0 meaning "no usable pin". See the note under
+		// skybird_projects_sanitize_lat() for why this took three attempts.
 		'approx_lat'                => array(
-			'type'        => 'string',
-			'rest_schema' => array( 'type' => array( 'string', 'number' ) ),
+			'type'        => 'number',
+			'default'     => 0,
 			'sanitize'    => 'skybird_projects_sanitize_lat',
-			'description' => 'Offset latitude for the map pin, stored as a numeric string. Accepts a number or a string. Empty means not set. Never the true location.',
+			'description' => 'Offset latitude for the map pin. 0 means not set. Never the true location.',
 		),
 		'approx_lng'                => array(
-			'type'        => 'string',
-			'rest_schema' => array( 'type' => array( 'string', 'number' ) ),
+			'type'        => 'number',
+			'default'     => 0,
 			'sanitize'    => 'skybird_projects_sanitize_lng',
-			'description' => 'Offset longitude for the map pin, stored as a numeric string. Accepts a number or a string. Empty means not set. Never the true location.',
+			'description' => 'Offset longitude for the map pin. 0 means not set. Never the true location.',
 		),
 		'gallery'                   => array(
 			'type'        => 'array',
@@ -151,13 +150,6 @@ function skybird_projects_register_meta() {
 					'items' => array( 'type' => $field['items'] ),
 				),
 			);
-		} elseif ( isset( $field['rest_schema'] ) ) {
-			// An explicit REST schema, where what we accept on input is wider
-			// than what we store. REST validates the incoming value against
-			// this schema BEFORE sanitize_callback runs, so a field that only
-			// declares 'string' rejects a JSON number outright and the
-			// sanitiser never gets a chance to cast it.
-			$show_in_rest = array( 'schema' => $field['rest_schema'] );
 		}
 
 		register_post_meta(
@@ -166,7 +158,9 @@ function skybird_projects_register_meta() {
 			array(
 				'type'              => $field['type'],
 				'single'            => true,
-				'default'           => 'array' === $field['type'] ? array() : '',
+				'default'           => array_key_exists( 'default', $field )
+					? $field['default']
+					: ( 'array' === $field['type'] ? array() : '' ),
 				'show_in_rest'      => $show_in_rest,
 				'sanitize_callback' => $field['sanitize'],
 				'description'       => isset( $field['description'] ) ? $field['description'] : '',
@@ -193,71 +187,66 @@ function skybird_projects_meta_auth( $allowed, $meta_key, $object_id ) {
 }
 
 /**
- * Latitude: must be a real offset, not blank and not 0.
+ * Latitude: must be a real offset. 0 means "no usable pin".
  *
  * Rejecting exactly 0 implements a check the review gate already asks a human
  * to make by eye (docs/06-trigger-design.md §3: "Confirm the approximate map
  * coordinates were generated, not left blank or defaulted"). A 0,0 pin is the
- * signature of an offset step that silently didn't run, and 0,0 is in the Gulf
- * of Guinea — far more obvious in code than on a map the reviewer may not open.
+ * signature of an offset step that silently didn't run.
  *
- * WHY THIS RETURNS A STRING, and why the field is registered as `string`
- * rather than `number` — found on a real install, 2026-09-17:
+ * THIS FIELD TOOK THREE ATTEMPTS. Recording all of it, because the constraint
+ * is not obvious and the failure mode is silent both times it bit:
  *
- * A meta field registered as `type => 'number'` with `single => true` has no
- * way to represent "not set". WordPress returns 0 for a missing numeric meta,
- * and 0 is precisely the sentinel this function exists to reject — so absent
- * and invalid would be indistinguishable in the REST response. Worse, a
- * `default` of '' against a numeric schema is itself invalid, which is why
- * both coordinate fields were silently dropped from the REST schema
- * altogether and never stored at all.
+ * 1. `type => 'number'` with `default => ''`. WordPress validates a
+ *    registered field's default against its own schema; the mismatch dropped
+ *    both coordinates from the REST schema entirely. Silently — no error.
+ * 2. `type => 'string'`, so '' could mean "not set". REST then rejected the
+ *    JSON *number* n8n sends, because it validates the incoming value against
+ *    the schema BEFORE sanitize_callback runs: `rest_invalid_type`.
+ * 3. `type => ['string','number']` to accept either. This also drops the
+ *    field silently, and is the real lesson: **WordPress meta REST does not
+ *    support union types.** WP_REST_Meta_Fields::get_registered_fields()
+ *    resolves the type and then does an `in_array( $type, [...], true )`
+ *    against the six scalar type names. An array never matches, so the field
+ *    is skipped — identical symptom to attempt 1, different cause.
  *
- * A numeric string sidesteps both: '' is unambiguously "not set", and every
- * consumer already casts (see includes/map-shortcode.php).
+ * So: a single scalar type, and a default that matches it. `number` with a
+ * default of `0` is the plainest registration possible, and it is also the
+ * natural type — a coordinate is a number where n8n calculates it.
  *
- * AND the REST schema accepts a number as well as a string — found on the
- * second real run, 2026-09-17. REST validates the incoming value against the
- * schema BEFORE this callback runs, so declaring only 'string' rejected a
- * JSON number outright with `rest_invalid_type` and this function never saw
- * it. A coordinate is naturally a number at the point it is calculated;
- * forcing every caller to stringify it first is a footgun that would have
- * bitten n8n in exactly the same way. So: accept either, normalise here.
+ * The cost is that "absent" and "invalid" both read as 0. That distinction
+ * turned out not to matter: no consumer behaves differently between them.
+ * Both mean "do not render a pin", which is exactly what the map shortcode
+ * does with a falsy value. And 0,0 is in the Gulf of Guinea, so it cannot
+ * collide with a real Skybird project.
  *
- * @param mixed $value Incoming value — number or numeric string.
- * @return string Empty string for "not set", or the coordinate as a string.
+ * @param mixed $value Incoming value.
+ * @return float 0 for "not set", or the coordinate.
  */
 function skybird_projects_sanitize_lat( $value ) {
-	if ( '' === $value || null === $value ) {
-		return '';
-	}
-
 	$lat = (float) $value;
 
 	if ( 0.0 === $lat || $lat < -90.0 || $lat > 90.0 ) {
-		return '';
+		return 0;
 	}
 
-	return (string) $lat;
+	return $lat;
 }
 
 /**
  * Longitude, same reasoning as latitude.
  *
  * @param mixed $value Incoming value.
- * @return string
+ * @return float
  */
 function skybird_projects_sanitize_lng( $value ) {
-	if ( '' === $value || null === $value ) {
-		return '';
-	}
-
 	$lng = (float) $value;
 
 	if ( 0.0 === $lng || $lng < -180.0 || $lng > 180.0 ) {
-		return '';
+		return 0;
 	}
 
-	return (string) $lng;
+	return $lng;
 }
 
 /**

@@ -106,7 +106,10 @@ function skybird_projects_map_shortcode( $atts ) {
 		// A project with no offset coordinates still appears in the list — it
 		// just gets no pin. Better a linked project with no pin than a pin at
 		// 0,0 or a project missing from the page entirely.
-		if ( '' === $lat || '' === $lng ) {
+		//
+		// 0 is the "not set" value for these fields (see includes/meta.php),
+		// and empty() catches 0, 0.0, '' and null alike.
+		if ( empty( $lat ) || empty( $lng ) ) {
 			continue;
 		}
 

@@ -32,7 +32,7 @@ Built in-house on Skybird-owned infrastructure. See
 |---|---|
 | [`plugin/skybird-selftest/`](plugin/skybird-selftest/) | Sandbox-only plugin: adds Tools → Skybird Self Test, which exercises the real REST controller in-process and prints PASS/FAIL. Replaces an earlier shell script that assumed a terminal |
 | [`plugin/skybird-projects/`](plugin/skybird-projects/) | WordPress plugin — `project` CPT, service-area taxonomy, meta, page template, map shortcode. [Its README](plugin/skybird-projects/README.md) carries the REST contract for the n8n side |
-| [`tests/test-plugin.php`](tests/test-plugin.php) | 114 registration/validation assertions against stubbed WordPress. `php tests/test-plugin.php` |
+| [`tests/test-plugin.php`](tests/test-plugin.php) | 115 registration/validation assertions against stubbed WordPress. `php tests/test-plugin.php` |
 | [`n8n/`](n8n/) | Importable workflow JSON — 24 nodes, `project.label_added` → WordPress draft. Never imported or executed; [its README](n8n/README.md) has the steps and the caveats |
 
 ## The trigger, in one line

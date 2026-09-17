@@ -239,47 +239,48 @@ it( "every meta field's default matches its declared type", empty( $type_mismatc
 // returns 0 when unset, and 0 is the sentinel the sanitiser rejects, so absent
 // and invalid would be indistinguishable. See skybird_projects_sanitize_lat().
 foreach ( array( 'approx_lat', 'approx_lng' ) as $coord ) {
-	eq( "$coord is stored as a string, so '' can mean not-set", 'string', $stub['post_meta'][ $coord ]['type'] );
-
-	// ...but the REST schema must accept a NUMBER too. REST validates the
-	// incoming value against the schema before sanitize_callback runs, so a
-	// string-only schema rejects a JSON number with rest_invalid_type and the
-	// sanitiser never gets to cast it. A coordinate is naturally a number
-	// where it is calculated. Found on the second real run, 2026-09-17.
-	$schema = isset( $stub['post_meta'][ $coord ]['show_in_rest']['schema'] )
-		? $stub['post_meta'][ $coord ]['show_in_rest']['schema']
-		: null;
-
-	it(
-		"$coord REST schema accepts a number as well as a string",
-		is_array( $schema )
-			&& is_array( $schema['type'] )
-			&& in_array( 'number', $schema['type'], true )
-			&& in_array( 'string', $schema['type'], true ),
-		is_array( $schema ) ? wp_json_encode( $schema ) : 'no explicit schema'
-	);
+	eq( "$coord is a plain number", 'number', $stub['post_meta'][ $coord ]['type'] );
+	eq( "$coord defaults to 0, matching its type", 0, $stub['post_meta'][ $coord ]['default'] );
 }
 
-// The sanitiser must normalise both input shapes to the same stored string.
-eq( 'a numeric lat normalises to a string', '36.074512', skybird_projects_sanitize_lat( 36.074512 ) );
-eq( 'a string lat normalises to a string', '36.074512', skybird_projects_sanitize_lat( '36.074512' ) );
-eq( 'a numeric lng normalises to a string', '-78.561238', skybird_projects_sanitize_lng( -78.561238 ) );
-eq( 'a string lng normalises to a string', '-78.561238', skybird_projects_sanitize_lng( '-78.561238' ) );
+// Both input shapes must land on the same value. n8n sends a number; a human
+// or a different caller might send a numeric string.
+eq( 'a numeric lat is kept', 36.074512, skybird_projects_sanitize_lat( 36.074512 ) );
+eq( 'a string lat is coerced', 36.074512, skybird_projects_sanitize_lat( '36.074512' ) );
+eq( 'a numeric lng is kept', -78.561238, skybird_projects_sanitize_lng( -78.561238 ) );
+eq( 'a string lng is coerced', -78.561238, skybird_projects_sanitize_lng( '-78.561238' ) );
+
+// WordPress meta REST does not support union types: WP_REST_Meta_Fields
+// resolves the type and does in_array( $type, [six scalar names], true ), so
+// an array never matches and the field is skipped from REST entirely --
+// silently, and with the same symptom as a default/type mismatch. Assert every
+// field declares exactly one scalar type. Found the hard way, 2026-09-17.
+$non_scalar = array();
+foreach ( $stub['post_meta'] as $key => $args ) {
+	if ( ! is_string( $args['type'] ) || ! in_array( $args['type'], array( 'string', 'boolean', 'integer', 'number', 'array', 'object' ), true ) ) {
+		$non_scalar[] = $key . ' (' . wp_json_encode( $args['type'] ) . ')';
+	}
+
+	if ( isset( $args['show_in_rest']['schema']['type'] ) && ! is_string( $args['show_in_rest']['schema']['type'] ) ) {
+		$non_scalar[] = $key . ' REST schema (' . wp_json_encode( $args['show_in_rest']['schema']['type'] ) . ')';
+	}
+}
+it( 'every meta type is a single scalar (no union types)', empty( $non_scalar ), implode( '; ', $non_scalar ) );
 
 // --- Sanitisers: coordinates ----------------------------------------------
 
 // Rejecting 0 implements the review-gate check in docs/06-trigger-design.md §3
 // — a 0,0 pin is the signature of an offset step that didn't run.
-eq( 'lat 0 is rejected (offset never generated)', '', skybird_projects_sanitize_lat( 0 ) );
-eq( 'lat "0" is rejected', '', skybird_projects_sanitize_lat( '0' ) );
-eq( 'lat empty stays empty', '', skybird_projects_sanitize_lat( '' ) );
-eq( 'lat out of range is rejected', '', skybird_projects_sanitize_lat( 91 ) );
-eq( 'valid lat is kept', '36.07117', skybird_projects_sanitize_lat( 36.07117 ) );
-eq( 'valid negative lat is kept', '-33.5', skybird_projects_sanitize_lat( '-33.5' ) );
+eq( 'lat 0 is rejected (offset never generated)', 0, skybird_projects_sanitize_lat( 0 ) );
+eq( 'lat "0" is rejected', 0, skybird_projects_sanitize_lat( '0' ) );
+eq( 'lat empty becomes 0 (not set)', 0, skybird_projects_sanitize_lat( '' ) );
+eq( 'lat out of range is rejected', 0, skybird_projects_sanitize_lat( 91 ) );
+eq( 'valid lat is kept', 36.07117, skybird_projects_sanitize_lat( 36.07117 ) );
+eq( 'valid negative lat is kept', -33.5, skybird_projects_sanitize_lat( '-33.5' ) );
 
-eq( 'lng 0 is rejected', '', skybird_projects_sanitize_lng( 0 ) );
-eq( 'lng out of range is rejected', '', skybird_projects_sanitize_lng( -181 ) );
-eq( 'valid lng is kept', '-78.5583', skybird_projects_sanitize_lng( -78.5583 ) );
+eq( 'lng 0 is rejected', 0, skybird_projects_sanitize_lng( 0 ) );
+eq( 'lng out of range is rejected', 0, skybird_projects_sanitize_lng( -181 ) );
+eq( 'valid lng is kept', -78.5583, skybird_projects_sanitize_lng( -78.5583 ) );
 
 // --- Sanitisers: gallery ---------------------------------------------------
 

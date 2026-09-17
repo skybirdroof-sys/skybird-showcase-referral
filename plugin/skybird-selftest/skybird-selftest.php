@@ -135,12 +135,37 @@ function skybird_selftest_run() {
 	sort( $schema );
 
 	$missing = array_diff( $expected_meta, $schema );
-	skybird_selftest_check(
-		$r,
-		'All 14 meta fields in the REST schema',
-		empty( $missing ),
-		empty( $missing ) ? count( $schema ) . ' fields present' : 'missing: ' . implode( ', ', $missing )
-	);
+
+	// If a field is missing, say WHY rather than just that it is gone. A meta
+	// field vanishes from the REST schema for more than one reason -- a default
+	// that does not match its type, or a type WP_REST_Meta_Fields does not
+	// recognise (it rejects anything that is not one of six scalar names,
+	// including an array of types). Both look identical from outside, which
+	// cost two rounds of guessing. Dump the registration so the next failure
+	// is diagnosable on sight.
+	$detail = empty( $missing ) ? count( $schema ) . ' fields present' : 'missing: ' . implode( ', ', $missing );
+
+	if ( ! empty( $missing ) ) {
+		$registered = get_registered_meta_keys( 'post', 'project' );
+		$dumps      = array();
+
+		foreach ( $missing as $key ) {
+			if ( ! isset( $registered[ $key ] ) ) {
+				$dumps[] = $key . ' = NOT REGISTERED AT ALL';
+				continue;
+			}
+
+			$reg      = $registered[ $key ];
+			$type     = isset( $reg['type'] ) ? wp_json_encode( $reg['type'] ) : 'none';
+			$default  = array_key_exists( 'default', $reg ) ? wp_json_encode( $reg['default'] ) : 'none';
+			$in_rest  = isset( $reg['show_in_rest'] ) ? wp_json_encode( $reg['show_in_rest'] ) : 'none';
+			$dumps[]  = sprintf( '%s: type=%s default=%s show_in_rest=%s', $key, $type, $default, $in_rest );
+		}
+
+		$detail .= ' || ' . implode( ' || ', $dumps );
+	}
+
+	skybird_selftest_check( $r, 'All 14 meta fields in the REST schema', empty( $missing ), $detail );
 
 	// --- Idempotency lookup -------------------------------------------------
 	$params = isset( $data['endpoints'][0]['args'] ) ? array_keys( $data['endpoints'][0]['args'] ) : array();
@@ -162,13 +187,10 @@ function skybird_selftest_run() {
 		'meta'   => array(
 			'companycam_project_id' => '110848078',
 
-			// Deliberately mixed shapes in one request: a JSON number and a
-			// JSON string. REST validates against the schema before the
-			// sanitiser runs, so a string-only schema rejects the number
-			// outright -- which is exactly what happened on the second real
-			// run. n8n's offset code produces numbers, so both must work.
+			// Both sent as JSON numbers, which is what n8n's offset code
+			// produces and what the field is now typed as.
 			'approx_lat'            => 36.074512,
-			'approx_lng'            => '-78.561238',
+			'approx_lng'            => -78.561238,
 
 			'city'                  => 'Youngsville',
 			'zip'                   => '27596',
@@ -189,17 +211,8 @@ function skybird_selftest_run() {
 		skybird_selftest_check( $r, 'Creating a draft over REST', true, 'post id ' . $body['id'] );
 		skybird_selftest_check( $r, 'Saved as a draft, not published', 'draft' === $body['status'], $body['status'] );
 		skybird_selftest_check( $r, 'CompanyCam project ID stored', '110848078' === (string) ( $m['companycam_project_id'] ?? '' ), (string) ( $m['companycam_project_id'] ?? '(empty)' ) );
-		skybird_selftest_check( $r, 'Map pin latitude stored (sent as a number)', abs( (float) ( $m['approx_lat'] ?? 0 ) - 36.074512 ) < 0.0001, (string) ( $m['approx_lat'] ?? '(empty)' ) );
-		skybird_selftest_check( $r, 'Map pin longitude stored (sent as a string)', abs( (float) ( $m['approx_lng'] ?? 0 ) + 78.561238 ) < 0.0001, (string) ( $m['approx_lng'] ?? '(empty)' ) );
-
-		// Both must land as strings, whichever shape arrived, so '' can mean
-		// "not set" without colliding with a real 0.
-		skybird_selftest_check(
-			$r,
-			'Both coordinates normalised to strings',
-			is_string( $m['approx_lat'] ?? null ) && is_string( $m['approx_lng'] ?? null ),
-			'lat ' . gettype( $m['approx_lat'] ?? null ) . ', lng ' . gettype( $m['approx_lng'] ?? null )
-		);
+		skybird_selftest_check( $r, 'Map pin latitude stored', abs( (float) ( $m['approx_lat'] ?? 0 ) - 36.074512 ) < 0.0001, var_export( $m['approx_lat'] ?? null, true ) );
+		skybird_selftest_check( $r, 'Map pin longitude stored', abs( (float) ( $m['approx_lng'] ?? 0 ) + 78.561238 ) < 0.0001, var_export( $m['approx_lng'] ?? null, true ) );
 		skybird_selftest_check( $r, 'City stored', 'Youngsville' === ( $m['city'] ?? '' ), (string) ( $m['city'] ?? '(empty)' ) );
 		skybird_selftest_check( $r, 'Completion date stored', '2026-09-10' === ( $m['completion_date'] ?? '' ), (string) ( $m['completion_date'] ?? '(empty)' ) );
 
@@ -223,7 +236,7 @@ function skybird_selftest_run() {
 		'title'  => 'Self test (bad input) — will be deleted',
 		'meta'   => array(
 			'approx_lat'               => 0,
-			'approx_lng'               => '0',
+			'approx_lng'               => 0,
 			'ambassador_referral_code' => 'BADGUY',
 			'completion_date'          => '2026-02-30',
 			'zip'                      => '123',
@@ -252,9 +265,9 @@ function skybird_selftest_run() {
 		skybird_selftest_check(
 			$r,
 			'Rejects 0,0 coordinates (offset never ran)',
-			$lat_present && $lng_present && '' === (string) $m['approx_lat'] && '' === (string) $m['approx_lng'],
+			$lat_present && $lng_present && 0.0 === (float) $m['approx_lat'] && 0.0 === (float) $m['approx_lng'],
 			( $lat_present && $lng_present )
-				? 'lat "' . $m['approx_lat'] . '" lng "' . $m['approx_lng'] . '"'
+				? 'lat ' . var_export( $m['approx_lat'], true ) . ' lng ' . var_export( $m['approx_lng'], true ) . ' (0 = not set)'
 				: 'coordinate fields are MISSING from the response, not rejected'
 		);
 		skybird_selftest_check( $r, 'Rejects an invalid referral code', empty( $m['ambassador_referral_code'] ), '"' . ( $m['ambassador_referral_code'] ?? '' ) . '"' );
