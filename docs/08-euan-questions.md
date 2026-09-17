@@ -5,9 +5,9 @@ Skybird Project Showcase + Referral System · Phase 4
 
 This file mirrors the message verbatim so the repo and what actually went out do not diverge.
 
-> **Send defect, 2026-09-17 — a corrected resend is drafted and awaiting Jacob.**
+> **Send defect, 2026-09-17 — corrected resend sent 13:23 UTC, verified clean.**
 > The message was sent with an HTML body that had been HTML-escaped before submission, so the markup was delivered as literal visible text (`<div style="...">`, `<p>Hi Euan,</p>`) rather than rendered formatting, and the plain-text alternative was dropped rather than used as the fallback. The reference-site link was also rewritten into unusable nested-markdown form.
-> Content and recipient were correct; only the rendering was broken. A plain-text-only resend is drafted in the same thread with a one-line apology at the top.
+> Content and recipient were correct; only the rendering was broken. A plain-text-only resend went out in the same thread at 13:23 UTC with a one-line apology at the top, and was verified clean before being reported as fixed. The thread now holds four messages: Jacob's original, Euan's Option B reply, the malformed send, and the readable correction.
 > **Lesson for any future send from this project: pass `body` only, plain text.** The HTML path added no value here — the message is a list of questions — and introduced the one failure mode that reached an external partner.
 
 ---
