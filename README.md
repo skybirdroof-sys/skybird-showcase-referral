@@ -191,6 +191,18 @@ Talon already owns the inputs; this board only reads what Talon writes:
 
 Nothing in this repo calls ProLine or GHL, and the TV page cannot edit the Sheet.
 
+### The sync script
+
+`apps-script/talon-sync.gs` is the piece that fills two of those tabs without
+anyone typing: pasted into the Talon Board spreadsheet (Extensions → Apps
+Script) it builds every tab to spec, reads Morning Runway to produce the
+`Rest Index` tab, scores a `Top-Five Entry` check-off tab into
+`Daily Top-Five Progress`, and installs weekday triggers (6am rows, 7am Rest
+Index, 4pm Top Five). It runs as whoever installs it, so it needs no keys and no
+extra sharing. Install steps and the Morning Runway column mapping are in
+[`apps-script/README.md`](apps-script/README.md). The eight KPI values stay
+hand/Talon-written.
+
 ---
 
 ## 8. Number formatting rules
