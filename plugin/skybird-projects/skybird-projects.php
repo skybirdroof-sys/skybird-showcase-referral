@@ -35,6 +35,7 @@ define( 'SKYBIRD_PROJECTS_TAXONOMY', 'service_area' );
 require_once SKYBIRD_PROJECTS_DIR . 'includes/post-type.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/taxonomy.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/meta.php';
+require_once SKYBIRD_PROJECTS_DIR . 'includes/rest.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/acf-fields.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/template.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/map-shortcode.php';

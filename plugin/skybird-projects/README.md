@@ -12,7 +12,7 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 |---|---|
 | PHP syntax | ✅ `php -l` clean on all 8 files |
 | JS syntax | ✅ `node --check` clean |
-| Registration + validation | ✅ 96 assertions passing — `php tests/test-plugin.php` |
+| Registration + validation | ✅ 103 assertions passing — `php tests/test-plugin.php` |
 | **Run on a real WordPress install** | ❌ **Not done.** See below |
 
 **The plugin has never been loaded by WordPress.** The build environment has PHP 8.4 but no MySQL, no WP-CLI and no WordPress, and outbound network access is blocked (`docs/07-phase-4-preflight.md` §3) so it can't be fetched. The test harness stubs WordPress and asserts what the plugin *asks for*; it cannot tell you that the REST write works, that Application Passwords authenticate, or that rewrite rules flush cleanly.
@@ -83,6 +83,10 @@ Notes that will save a debugging session:
 - **`gallery` excludes the cover.** The cover goes in `featured_media`. The `Showcase Cover` photo is also tagged `Showcase`, so filter it out or it appears twice (`docs/07-phase-4-preflight.md` §1.3).
 - **Fields the plugin silently drops** rather than storing wrong: a lat or lng of `0`, a referral code that isn't 6 valid characters, a malformed date, a non-five-digit ZIP, a negative attachment ID. If a value vanishes, it failed validation — check the value, not the plugin.
 - **Product fields are left empty** by the automation for now and filled by the reviewer, because there is no CompanyCam→ProLine bridge (`docs/07-phase-4-preflight.md` §2.4.2).
+
+### Idempotency lookup
+
+`GET /wp-json/wp/v2/projects?companycam_project_id=110848078&status=any` — added because `project.label_added` fires for **any** of the account's eight project labels, so the workflow gets woken by an unrelated label on an already-showcased project and needs to know a draft exists. `status=any` matters: the existing record is usually a draft.
 
 ### The offset is n8n's job, not the plugin's
 

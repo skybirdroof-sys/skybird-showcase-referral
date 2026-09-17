@@ -261,3 +261,18 @@ function get_footer() {}
 function get_the_ID() {
 	return 1;
 }
+
+/**
+ * Stand-in for WP_REST_Request, for the collection-filter tests.
+ */
+class Stub_Request {
+	private $params;
+
+	public function __construct( $params = array() ) {
+		$this->params = $params;
+	}
+
+	public function get_param( $key ) {
+		return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
+	}
+}

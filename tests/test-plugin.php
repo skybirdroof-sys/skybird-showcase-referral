@@ -307,6 +307,25 @@ it(
 	false !== strpos( skybird_projects_map_shortcode( array( 'area' => '' ) ), 'No service area set' )
 );
 
+// --- REST lookup (idempotency) --------------------------------------------
+
+// project.label_added fires for ANY of the account's eight project labels, so
+// the workflow must be able to ask whether a draft already exists before
+// creating a second one.
+it( 'projects collection accepts companycam_project_id', isset( $GLOBALS['wp_stub']['filters']['rest_project_collection_params'] ) );
+it( 'projects query applies the lookup', isset( $GLOBALS['wp_stub']['filters']['rest_project_query'] ) );
+
+$params = skybird_projects_rest_collection_params( array() );
+it( 'lookup param is in the endpoint schema', isset( $params['companycam_project_id'] ) );
+
+$args = skybird_projects_rest_query( array(), new Stub_Request( array( 'companycam_project_id' => '110848078' ) ) );
+eq( 'lookup builds a meta_query', 1, count( $args['meta_query'] ) );
+eq( 'lookup keys on companycam_project_id', 'companycam_project_id', $args['meta_query'][0]['key'] );
+eq( 'lookup matches the requested ID', '110848078', $args['meta_query'][0]['value'] );
+
+$untouched = skybird_projects_rest_query( array( 'foo' => 'bar' ), new Stub_Request( array() ) );
+eq( 'no lookup param leaves the query alone', array( 'foo' => 'bar' ), $untouched );
+
 // --- Template --------------------------------------------------------------
 
 it( 'template_include filter is attached', isset( $GLOBALS['wp_stub']['filters']['template_include'] ) );
