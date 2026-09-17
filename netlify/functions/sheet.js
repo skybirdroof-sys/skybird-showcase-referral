@@ -25,7 +25,7 @@ const DEFAULT_TABS = {
 function slots() {
   return Object.keys(DEFAULT_TABS).map((slot) => ({
     slot,
-    name: process.env[`SHEET_TAB_${slot}`] || DEFAULT_TABS[slot],
+    name: (process.env[`SHEET_TAB_${slot}`] || DEFAULT_TABS[slot]).trim(),
     gid: (process.env[`SHEET_GID_${slot}`] || '').trim(),
   }));
 }
@@ -43,7 +43,9 @@ const text = (statusCode, body, extraHeaders = {}) => ({
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return text(405, 'Method not allowed');
 
-  const sheetId = process.env.SHEET_ID;
+  // Trimmed: a value pasted into the Netlify UI can carry a trailing space or
+  // newline, which would otherwise be encoded into the URL and 502 every tab.
+  const sheetId = (process.env.SHEET_ID || '').trim();
   if (!sheetId) {
     // 501 tells the client "proxy exists but is unconfigured", so it can fall
     // back to a direct CSV read if CONFIG.sheetId was set.
