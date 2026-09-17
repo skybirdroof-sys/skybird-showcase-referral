@@ -22,9 +22,10 @@
 	line-height: 1.2;
 }
 
-.skybird-project__area {
+.skybird-project__meta {
 	margin: 0 0 1.5rem;
 	opacity: 0.75;
+	font-size: 0.95em;
 }
 
 .skybird-project__cover {

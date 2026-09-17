@@ -449,6 +449,26 @@ foreach ( token_get_all( $template_src ) as $token ) {
 it( 'template does not call get_header() directly', false === strpos( $code_only, 'get_header()' ), 'a bare get_header() renders outside the site chrome on a block theme' );
 it( 'template does not call get_footer() directly', false === strpos( $code_only, 'get_footer()' ), 'a bare get_footer() renders outside the site chrome on a block theme' );
 
+// The locked SEO title format (docs/06-trigger-design.md §3) is one job, one
+// town, roof replacement -- so the H1 always carries both the service and the
+// town. A subtitle that also says "Roof replacement in {Area}, NC" just
+// restates it. Seen on a real render 2026-09-17; the eyebrow now carries
+// where and when instead.
+it(
+	'no subtitle restating the title',
+	false === stripos( $code_only, 'Roof replacement in %s' ),
+	'the H1 already says the service and the town'
+);
+
+// Each fact once: the completion date belongs to the eyebrow, not also the
+// spec list.
+$specs_block = substr( $code_only, strpos( $code_only, 'skybird-specs-heading' ) );
+it(
+	'completion date is not duplicated into the spec list',
+	false === strpos( $specs_block, "'Completed'" ),
+	'completion date appears in the eyebrow already'
+);
+
 // --- Report ----------------------------------------------------------------
 
 /**

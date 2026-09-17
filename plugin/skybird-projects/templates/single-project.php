@@ -43,16 +43,33 @@ $completed    = get_post_meta( $project_id, 'completion_date', true );
 		<header class="skybird-project__header">
 			<h1 class="skybird-project__title"><?php the_title(); ?></h1>
 
-			<?php if ( $area_name ) : ?>
-				<p class="skybird-project__area">
-					<?php
-					printf(
-						/* translators: %s: service area name. */
-						esc_html__( 'Roof replacement in %s, NC', 'skybird-projects' ),
-						esc_html( $area_name )
-					);
-					?>
-				</p>
+			<?php
+			// An eyebrow carrying WHERE and WHEN. Deliberately not "Roof
+			// replacement in {Area}, NC" -- the locked SEO title format
+			// (docs/06-trigger-design.md §3) is one job, one town, roof
+			// replacement, so the H1 already says both and a subtitle
+			// repeating it is noise. Seen on a real render, 2026-09-17.
+			//
+			// The completion date lives here rather than in the spec list
+			// below, so each fact appears exactly once: this line is where
+			// and when, the specs are what was installed.
+			$meta_bits = array();
+
+			if ( $area_name ) {
+				$meta_bits[] = $area_name . ', NC';
+			}
+
+			if ( $completed ) {
+				$meta_bits[] = sprintf(
+					/* translators: %s: month and year, e.g. September 2026. */
+					__( 'Completed %s', 'skybird-projects' ),
+					date_i18n( 'F Y', strtotime( $completed ) )
+				);
+			}
+
+			if ( $meta_bits ) :
+				?>
+				<p class="skybird-project__meta"><?php echo esc_html( implode( ' · ', $meta_bits ) ); ?></p>
 			<?php endif; ?>
 		</header>
 
@@ -77,7 +94,7 @@ $completed    = get_post_meta( $project_id, 'completion_date', true );
 			<?php the_content(); ?>
 		</div>
 
-		<?php if ( $manufacturer || $product_line || $color || $warranty || $completed ) : ?>
+		<?php if ( $manufacturer || $product_line || $color || $warranty ) : ?>
 			<section class="skybird-project__specs" aria-labelledby="skybird-specs-heading">
 				<h2 id="skybird-specs-heading"><?php esc_html_e( 'What we installed', 'skybird-projects' ); ?></h2>
 				<dl class="skybird-project__spec-list">
@@ -88,13 +105,6 @@ $completed    = get_post_meta( $project_id, 'completion_date', true );
 						__( 'Color', 'skybird-projects' )        => $color,
 						__( 'Warranty', 'skybird-projects' )     => $warranty,
 					);
-
-					if ( $completed ) {
-						$specs[ __( 'Completed', 'skybird-projects' ) ] = date_i18n(
-							(string) get_option( 'date_format' ),
-							strtotime( $completed )
-						);
-					}
 
 					foreach ( $specs as $label => $value ) {
 						if ( ! $value ) {

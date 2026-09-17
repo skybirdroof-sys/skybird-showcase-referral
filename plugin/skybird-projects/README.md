@@ -12,10 +12,10 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 |---|---|
 | PHP syntax | ✅ `php -l` clean on all 8 files |
 | JS syntax | ✅ `node --check` clean |
-| Registration + validation | ✅ 119 assertions passing — `php tests/test-plugin.php` |
+| Registration + validation | ✅ 121 assertions passing — `php tests/test-plugin.php` |
 | Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
 | **REST write verified on real WordPress** | ✅ **2026-09-17, 27/27** — draft created, every field round-tripped, every invalid value rejected |
-| Project page template rendered | ⚠️ **loads without error**, but only ever with an empty project and on a block theme (see below) |
+| **Project page template rendered** | ✅ **2026-09-17** — title, eyebrow, body, cover and back-link all render inside the real theme chrome |
 | Map shortcode rendered | ❌ never — never placed on a page |
 | ACF field group | ❌ never — ACF was inactive on every run |
 
@@ -45,7 +45,9 @@ Still unverified, and worth being precise rather than calling the plugin done:
 
 - **The layout has never actually been seen.** A preview on 2026-09-17 confirmed the template loads, `template_include` picks it, and an empty project degrades correctly — no cover, no specs, no gallery, no footer links. But the project had no content, so the layout that matters has never rendered. The map shortcode has never been placed on a page, and ACF was inactive on every run so the field group has never been built.
 
-  That preview also caught a real defect: **`get_header()` / `get_footer()` only work on a classic theme.** A block theme has no `header.php`, so WordPress falls through to the deprecated `wp-includes/theme-compat/` stubs and the page renders inside a bare site title and tagline with none of the real chrome. It fails quietly, so it reads as a styling problem rather than a template one. Skybird's own site is Hub Child + WPBakery — classic — so production was never at risk, but any sandbox used to check this page is likely to be a block theme, which would have made the layout impossible to judge. `skybird_projects_header()` / `skybird_projects_footer()` now handle both, and the suite asserts the template never calls the core functions directly.
+  A filled-in render on the same day caught a second, subtler one: **the subtitle restated the H1.** It read *"Roof replacement in Youngsville, NC"* directly under a title saying *"Roof Replacement in Youngsville, NC"*. Not a fluke — the locked SEO title format (`docs/06-trigger-design.md` §3) is *one job, one town, roof replacement*, so the H1 **always** carries both, and the subtitle was written assuming it might not. The eyebrow now carries **where and when** (`Youngsville, NC · Completed September 2026`) and the spec list carries **what was installed**, so each fact appears exactly once. Asserted both ways.
+
+  The first preview caught a defect too: **`get_header()` / `get_footer()` only work on a classic theme.** A block theme has no `header.php`, so WordPress falls through to the deprecated `wp-includes/theme-compat/` stubs and the page renders inside a bare site title and tagline with none of the real chrome. It fails quietly, so it reads as a styling problem rather than a template one. Skybird's own site is Hub Child + WPBakery — classic — so production was never at risk, but any sandbox used to check this page is likely to be a block theme, which would have made the layout impossible to judge. `skybird_projects_header()` / `skybird_projects_footer()` now handle both, and the suite asserts the template never calls the core functions directly.
 - **Application Passwords over HTTP**, and whether a security plugin blocks REST. Properties of the host, not of this plugin — Euan's outstanding question, answerable only on the real site.
 
 ## Install
