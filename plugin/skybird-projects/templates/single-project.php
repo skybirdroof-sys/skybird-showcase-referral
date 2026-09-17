@@ -18,7 +18,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-get_header();
+// Not get_header() -- that only works on a classic theme. See
+// includes/template.php for why.
+skybird_projects_header();
 
 $project_id = get_the_ID();
 $area_page  = skybird_projects_get_area_page( $project_id );
@@ -161,4 +163,4 @@ $completed    = get_post_meta( $project_id, 'completion_date', true );
 </main>
 
 <?php
-get_footer();
+skybird_projects_footer();

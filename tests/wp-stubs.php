@@ -276,3 +276,22 @@ class Stub_Request {
 		return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
 	}
 }
+
+// Block-theme detection and the block header/footer parts. The wrappers in
+// includes/template.php branch on these.
+function wp_is_block_theme() {
+	return false;
+}
+function block_template_part( $part ) {}
+function get_language_attributes() {
+	return 'lang="en-US"';
+}
+function get_bloginfo( $show = '' ) {
+	return 'UTF-8';
+}
+function get_body_class( $class = '' ) {
+	return array( 'single', 'single-project' );
+}
+function wp_body_open() {}
+function wp_head() {}
+function wp_footer() {}

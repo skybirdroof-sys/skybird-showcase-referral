@@ -38,6 +38,67 @@ function skybird_projects_template_include( $template ) {
 add_filter( 'template_include', 'skybird_projects_template_include' );
 
 /**
+ * Open the page, whichever kind of theme is active.
+ *
+ * `get_header()` only works on a *classic* theme. A block theme has no
+ * header.php, so WordPress falls through to the deprecated
+ * wp-includes/theme-compat/header.php — which renders a bare site title and
+ * tagline instead of the real site chrome. The page still loads, so this
+ * fails quietly and looks like a styling problem rather than a template one.
+ *
+ * Found on a real preview, 2026-09-17: a TasteWP sandbox runs a block theme,
+ * and the project page rendered inside "Just another WordPress site by
+ * TasteWP.com" with none of the theme around it.
+ *
+ * Skybird's own site is Hub Child + WPBakery, which is classic, so production
+ * was never at risk. Two reasons to handle it anyway: any sandbox used to
+ * check this page is likely to be a block theme, so without this we cannot
+ * see the real layout while verifying (docs/06-trigger-design.md §4 needs the
+ * page eyeballed on a tablet); and if Pitch Peak ever re-themes, every project
+ * page would silently lose its header and footer.
+ */
+function skybird_projects_header() {
+	if ( ! function_exists( 'wp_is_block_theme' ) || ! wp_is_block_theme() ) {
+		get_header();
+		return;
+	}
+
+	printf(
+		'<!DOCTYPE html><html %s><head><meta charset="%s">',
+		get_language_attributes(), // phpcs:ignore WordPress.Security.EscapeOutput
+		esc_attr( get_bloginfo( 'charset' ) )
+	);
+
+	wp_head();
+
+	printf( '</head><body class="%s">', esc_attr( implode( ' ', get_body_class() ) ) );
+
+	wp_body_open();
+
+	if ( function_exists( 'block_template_part' ) ) {
+		block_template_part( 'header' );
+	}
+}
+
+/**
+ * Close the page. Mirror of skybird_projects_header().
+ */
+function skybird_projects_footer() {
+	if ( ! function_exists( 'wp_is_block_theme' ) || ! wp_is_block_theme() ) {
+		get_footer();
+		return;
+	}
+
+	if ( function_exists( 'block_template_part' ) ) {
+		block_template_part( 'footer' );
+	}
+
+	wp_footer();
+
+	echo '</body></html>';
+}
+
+/**
  * Front-end styles.
  *
  * Loaded on single projects and on any page running the map shortcode. Kept as

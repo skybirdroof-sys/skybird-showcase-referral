@@ -420,7 +420,34 @@ eq( 'no lookup param leaves the query alone', array( 'foo' => 'bar' ), $untouche
 // --- Template --------------------------------------------------------------
 
 it( 'template_include filter is attached', isset( $GLOBALS['wp_stub']['filters']['template_include'] ) );
-it( 'single template file exists', file_exists( dirname( __DIR__ ) . '/plugin/skybird-projects/templates/single-project.php' ) );
+
+$template_path = dirname( __DIR__ ) . '/plugin/skybird-projects/templates/single-project.php';
+it( 'single template file exists', file_exists( $template_path ) );
+
+// get_header()/get_footer() only work on a CLASSIC theme. On a block theme
+// WordPress falls through to the deprecated theme-compat stubs and the page
+// renders outside the real site chrome -- quietly, so it reads as a styling
+// problem rather than a template one. Found on a real preview 2026-09-17.
+// The wrappers in includes/template.php handle both; assert the template uses
+// them rather than calling core directly.
+$template_src = file_get_contents( $template_path );
+
+it( 'template opens via the theme-aware wrapper', false !== strpos( $template_src, 'skybird_projects_header()' ) );
+it( 'template closes via the theme-aware wrapper', false !== strpos( $template_src, 'skybird_projects_footer()' ) );
+
+// Strip comments before looking for a bare call. The first version of this
+// assertion matched the word get_header() inside the comment explaining why
+// the template does NOT call it -- a test failing on its own documentation.
+$code_only = '';
+foreach ( token_get_all( $template_src ) as $token ) {
+	if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+		continue;
+	}
+	$code_only .= is_array( $token ) ? $token[1] : $token;
+}
+
+it( 'template does not call get_header() directly', false === strpos( $code_only, 'get_header()' ), 'a bare get_header() renders outside the site chrome on a block theme' );
+it( 'template does not call get_footer() directly', false === strpos( $code_only, 'get_footer()' ), 'a bare get_footer() renders outside the site chrome on a block theme' );
 
 // --- Report ----------------------------------------------------------------
 
