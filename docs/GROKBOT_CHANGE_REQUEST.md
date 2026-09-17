@@ -16,41 +16,83 @@ remain the writer of record for `Rest Index` and `Daily Top-Five Progress`.
 
 ---
 
-## HARD CONSTRAINT — Morning Runway belongs to Margaret
+## THE CONSTRAINT — Morning Runway may change; it may not become unreadable to Margaret
 
 Morning Runway (file id `1qpAJYkdxByPNPynUMcXJZQ5EWFF3UVxjnlgKDJkUdj0`) is
-Margaret's working sheet. She built it, she works in it every morning, and her
-job depends on it being exactly where she left it. **This constraint overrides
-everything else in this document, including any suggestion below.** If any
-requested change here would require altering Morning Runway's structure, do not
-do it — come back and say so instead.
+Margaret's working sheet. She built it and she runs her morning out of it.
 
-**Do not, under any circumstances:**
+You **have permission to change it** where a change is genuinely needed. What
+you do not have is permission to cost her the ability to interpret it and keep
+her jobs and projects organised. Both things are required, and the second one
+is the acceptance test for the first: after any change you make, she can sit
+down the next morning, read the sheet, and work — without a legend, a migration,
+or a question to anyone.
 
-- Restructure, "clean up", re-sort, re-group or reformat it.
-- Move, rename, delete or re-create the file, or any tab in it.
-- Change column positions or insert/remove columns. Column A is the clock and
-  stays column A.
-- Remove or rewrite her section headers (`JACOB` / `JOHN` / `ANAS` / `HENRY`),
-  notes, comments, formulas, conditional formatting, colors, frozen panes,
-  filters or named ranges. The colors are decoration to the TV board; they are
-  not decoration to Margaret.
-- Delete blank rows or blank clocks. A blank clock is meaningful data, not a gap
-  to tidy.
-- Overwrite any cell a human edited by hand.
-- Change its sharing or permissions. She must never lose access or edit rights.
-- Add tabs to it for the TV board's benefit. Derived data goes in the KPI Board
-  file (see item 6).
+### Separate the two surfaces first
 
-**Must remain true after every run:** Margaret opens Morning Runway the next
-morning and it looks and behaves exactly as it did before — same layout, same
-sections, same formatting, same workflow, nothing new for her to learn or
-undo. Her morning does not change because of this work.
+Most of the tension disappears if her sheet doesn't have to serve two readers.
+Before restructuring anything she looks at, prefer:
 
-**For computing Rest Index, treat Morning Runway as read-only input.** Read it,
-aggregate it, write the result into the KPI Board file.
+1. A **machine-readable tab** for your own consumption — flat, one row per
+   project, no sections, no merged cells, no colors (see item 6). Put it in the
+   KPI Board file, or as a clearly named extra tab here if adjacency genuinely
+   matters. She never has to open it.
+2. **Additive changes at the edges** of her working area — new columns to the
+   *right* of what she uses, never inserted into the middle, so nothing she
+   reaches for moves.
 
----
+Reshaping her grid to suit a parser is the last resort, not the first move.
+
+### Protected core — changing any of this needs Margaret's yes first
+
+These are the things she reads the sheet *by*. They are not yours to change
+unilaterally, however sensible the change:
+
+- **Column A is the clock.** Its position and its meaning (weekday days since
+  last touch; **blank = no clock yet**, not zero).
+- Her **owner sections** (`JACOB` / `JOHN` / `ANAS` / `HENRY`) — their existence,
+  names, order and grouping.
+- The **project identity column** and the row order within a section.
+- What her **colors and conditional formatting mean.** They are decoration to
+  the TV board; they are how she triages her morning.
+- Anything she authored: **notes, comments, formulas, filters, frozen panes.**
+- Her **access**: she stays an editor, always.
+
+### Free to change, with a snapshot and a log entry
+
+- Filling values into the ranges you already own.
+- Adding a column at the far right, plainly labelled in the same language she
+  uses — and outside her frozen/filtered view so her screen looks the same when
+  she opens it.
+- Adding a new tab (yours, not hers).
+- Anything invisible to her working view.
+
+### How to ship a change to the protected core
+
+Never live-first:
+
+1. **Propose** it in plain language: what changes, where, why, what she'd have
+   to do differently (ideally nothing).
+2. **Show it on a copy** — duplicate the file, apply the change there, let her
+   look at the real thing rather than a description.
+3. **Get her yes.**
+4. **Snapshot**, apply, and **log** it (item 7) with a dated plain-language note
+   and how to undo it.
+5. Keep the pre-change copy for **30 days**.
+
+### Her edits win
+
+If a human has edited a cell you were going to write, do not silently overwrite
+it. Write your value to the log as a conflict and leave hers in place, or ask.
+An unattended process should never be the reason someone's work disappears.
+
+### Structure drift vs. deliberate change
+
+Keep a `structure_version` marker and the expected shape on file. On every run,
+compare. **Unexpected** mismatch → stop, write nothing, alert (item 1).
+**Approved** change → you bump the version deliberately as part of shipping it.
+That way intended changes proceed and accidents still halt, and the two are
+never confused.
 
 ## Already handled on the board side — please don't work around these
 
@@ -80,17 +122,22 @@ aggregate it, write the result into the KPI Board file.
 
 - **Snapshot first.** Save a timestamped copy to a backup folder and keep at
   least 30 days, so any bad run is one click to recover.
-- **Verify structure, then abort on drift.** Confirm the expected tab, the owner
-  sections and the column-A clock are where they belong. If anything is
-  unexpected — a section renamed, a column inserted, a tab added — **stop, write
-  nothing, and alert.** Never "repair" the sheet to match your expectations;
-  Margaret may have changed it deliberately.
+- **Verify structure against `structure_version`, then abort on unexpected
+  drift.** Confirm the expected tab, the owner sections and the column-A clock
+  are where the recorded shape says they are. If anything differs and it wasn't
+  an approved change — a section renamed, a column inserted, a tab added —
+  **stop, write nothing, and alert.** Never "repair" the sheet to match your
+  expectations; Margaret may have changed it deliberately, and she is allowed
+  to. Approved changes bump the version as part of shipping, so they don't
+  trip this.
 - **Write values into designated ranges only**, never whole-sheet clears,
   `clear()`, sort, dedupe or row deletion.
 - **Preserve everything non-value**: formatting, notes, comments, formulas,
   colors, merges, filters, frozen panes.
 - **Respect a write window.** A rebuild landing mid-edit can clobber what she is
   typing. Confirm the hours she works and keep writes outside them.
+- **Alert her, not just Jacob.** If a run aborts or skips, her sheet is stale by
+  8:35 and she is the one who needs to know.
 
 **Why:** this is the routine with the most destructive potential in the whole
 system, and it runs unattended every weekday against someone's live working
@@ -167,7 +214,9 @@ human can see which projects moved it; and it means nothing downstream ever
 needs to read Margaret's sheet again.
 
 **Accept when:** `Rest Index` can be recomputed from `runway_flat` alone, and
-Morning Runway is untouched by this item.
+Margaret's own tab is unchanged by this item. If you think the mirror has to
+live inside Morning Runway to stay in sync, say so and make the case — a new
+tab of yours there is a conversation, not a refusal.
 
 ### 7. Add a `run_log` tab (KPI Board file)
 
@@ -192,8 +241,9 @@ it, name the staleness threshold you want and the board will surface it.
 
 ## Please keep these invariants
 
-- **Morning Runway keeps its fundamentals and structure. Read it, don't rewrite
-  it.** (See the hard constraint above.)
+- **Margaret can still read Morning Runway and run her morning from it.**
+  Change what you need to; the protected core needs her yes first, and nothing
+  ships that leaves her sheet harder to interpret than it is today.
 - You are the only writer of `Rest Index` and `Daily Top-Five Progress`.
 - Blank means unknown; never write 0 to stand in for missing data.
 - `KPI` metric strings must stay exactly: Appointments Set, Cost per Appt,
@@ -211,6 +261,9 @@ it, name the staleness threshold you want and the board will surface it.
 2. Is there already a pre-rebuild backup? If so, where and how many days?
 3. What hours does Margaret work in that sheet, and does the 8:30 rebuild
    overlap them?
+3b. Which structural changes do you actually need? List them with what each one
+   buys, so Margaret can say yes to the worthwhile ones instead of all or
+   nothing.
 4. Does the 4 PM pass read Slack replies and score autonomously, or does someone
    confirm before you write? Where does that gate live?
 5. ETA on creating and first-filling the `Rest Index` tab.
@@ -224,9 +277,9 @@ Challenge anything that you see here. Do not run right away unless you have any
 issues with anything that Claude Code has suggested. Make your suggestions or
 problematic items known before running anything.
 
-(One exception to that invitation: the Morning Runway constraint is not up for
-negotiation. Challenge the engineering freely — if you think a safeguard is
-unnecessary or a better approach exists, say so — but the requirement that
-Margaret's sheet keeps its structure and her morning workflow is unchanged is
-fixed. If you believe a change cannot be made without touching it, the answer is
-that the change doesn't happen.)
+(One thing is not up for negotiation, and it is an outcome rather than a
+method: Margaret keeps being able to read Morning Runway and organise her daily
+jobs and projects in it. How you get there is open — argue for a different
+structure, a mirror tab, a better parse, whatever you think is right. If a
+change would make that sheet harder for her to work, it needs her yes before it
+ships, and "the parser would prefer it" is not a reason she has to accept.)
