@@ -280,6 +280,14 @@ Both available paths (direct request through the agent proxy, and the sanctioned
 
 **Decided 2026-09-16 (Jacob): allow the domains in the environment's network policy.**
 
+> **Correction, 2026-09-17 — "allow the domains" is not a thing this environment can do, and my earlier framing was wrong.**
+>
+> Jacob allowed the domains and they are still denied. Checking why: the account has exactly one environment, `env_01V7bhQTYY1xs9kY9SrNbK8Q`, named **"Default - trusted network access"**. That is a *preset*, and its permitted set is a fixed curated list of development hosts — the proxy reports it as `api.anthropic.com`, `registry.npmjs.org`, `jsr.io`, `pypi.org`, `files.pythonhosted.org`, `index.crates.io`, `proxy.golang.org` and loopback/cluster addresses. Nothing else.
+>
+> So there is no per-domain allowlist to add `skybirdroofing.net` to. Reaching arbitrary hosts requires **changing the environment's network setting itself** (to an unrestricted option) or creating a second environment with one, and then starting a session under it. I described this as "allow the domains … see the docs," which implied a per-domain list that does not exist on this preset. The distinction matters because the first is a checkbox and the second is a policy decision about what this environment may reach.
+>
+> **This does not block Phase 4.** Everything verified so far came through MCP connectors, which are unaffected. What it blocks is *me* running the live-site checks and driving a sandbox directly — see §4.1, which is why those items went to Euan instead.
+
 The allowlist Phase 4 needs:
 
 | Host | Needed for |
