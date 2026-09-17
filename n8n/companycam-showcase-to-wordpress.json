@@ -1,0 +1,776 @@
+{
+  "name": "CompanyCam Showcase -> WordPress draft",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "companycam-showcase",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "0585bc93-89bd-44e5-b1e7-c4adb9c7f5dd",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        300
+      ],
+      "webhookId": "093326e2-4f5f-427e-ba41-56bfe0695975"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst item = $input.first();\n\n// Raw Body is on, so the body arrives as a string. Hash the bytes exactly as\n// received - do NOT JSON.parse and re-stringify, because key order and\n// whitespace will differ from what CompanyCam signed and the digest will\n// never match.\nlet raw = item.json.body;\nif (typeof raw !== 'string') {\n  raw = Buffer.from(item.binary?.data?.data ?? '', 'base64').toString('utf8');\n}\n\nconst headers = item.json.headers || {};\nconst received =\n  headers['x-companycam-signature'] || headers['X-CompanyCam-Signature'] || '';\n\n// Set COMPANYCAM_WEBHOOK_TOKEN in n8n. It is shown once, at webhook-create\n// time, and never again.\nconst token = $env.COMPANYCAM_WEBHOOK_TOKEN;\n\nconst expected = crypto\n  .createHmac('sha1', token)\n  .update(raw, 'utf8')\n  .digest('base64');\n\n// Timing-safe. A plain === leaks how much of the digest matched, which is the\n// whole reason this header exists.\nlet valid = false;\ntry {\n  const a = Buffer.from(received);\n  const b = Buffer.from(expected);\n  valid = a.length === b.length && crypto.timingSafeEqual(a, b);\n} catch (e) {\n  valid = false;\n}\n\nlet payload = null;\nif (valid) {\n  try { payload = JSON.parse(raw); } catch (e) { valid = false; }\n}\n\nreturn [{ json: { valid, payload } }];"
+      },
+      "id": "bbac3465-5f2a-4edc-a52b-8bb620c410c3",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c6d57333-f1ee-4fe9-a38d-af4944196f0f",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "ca815ff1-ef11-46c6-b69b-6447f9b41504",
+      "name": "Signature Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -680,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "30b36e64-0b38-440f-8271-eb349ea59efd",
+      "name": "Drop: Bad Signature",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// project.label_added fires for ANY label on ANY project. This account has\n// eight project labels (Website Showcase, Gutter Cleaning, JobNimbus Job,\n// Pipedrive Deal, and four \"... Lead\" labels). Without this filter, someone\n// tagging a project \"Pipedrive Deal\" starts building a WordPress draft.\nconst payload = $input.first().json.payload || {};\nconst project = payload.payload || {};\nconst eventType = payload.event_type || '';\n\n// Whether the webhook payload includes the project's labels is NOT verified -\n// the audit says the payload \"matches the object\", and the object carries\n// labels when requested with include=labels, but the webhook's exact shape\n// has not been seen. Use them if present; otherwise fetch them.\nconst labels = Array.isArray(project.labels) ? project.labels : null;\n\nconst hasLabel =\n  labels === null\n    ? null\n    : labels.some((l) => String(l.value || '').toLowerCase() === 'website showcase');\n\nreturn [{\n  json: {\n    eventType,\n    projectId: String(project.id || ''),\n    needsLabelFetch: hasLabel === null,\n    isOurs: eventType === 'project.label_added' && hasLabel === true,\n  },\n}];"
+      },
+      "id": "5a7a4a0a-090f-4730-8324-6e24dbd3710f",
+      "name": "Check Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b84dcd80-02e3-46b9-a091-c1641b7b730d",
+              "leftValue": "={{ $json.needsLabelFetch }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "85266338-cc71-42dc-8198-ad091fb304c0",
+      "name": "Need Label Fetch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.companycam.com/v2/projects/{{ $json.projectId }}/labels",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "067a49cc-eff1-456f-952d-73139eff314e",
+      "name": "Fetch Project Labels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -20,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Reached only when the payload did not carry labels. Re-evaluate against the\n// authoritative list from GET /projects/{id}/labels.\nconst ctx = $('Check Label').first().json;\nconst labels = $input.first().json;\nconst list = Array.isArray(labels) ? labels : (labels.data || []);\n\nconst isOurs = list.some(\n  (l) => String(l.value || '').toLowerCase() === 'website showcase'\n);\n\nreturn [{ json: { ...ctx, isOurs } }];"
+      },
+      "id": "1aaa78e2-de37-4679-975b-85c61a78d063",
+      "name": "Re-check Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "74d95259-8cdf-4402-8817-1a40f595454f",
+              "leftValue": "={{ $json.isOurs }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "71bb14e2-3f1b-425d-a856-365247ebda82",
+      "name": "Is Website Showcase?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c900be3d-c208-4d63-a816-d67f41fea94b",
+      "name": "Drop: Other Label",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        640,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/projects?companycam_project_id={{ $json.projectId }}&status=any&per_page=1",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth"
+      },
+      "id": "c56cade1-c305-4164-9e93-09631d06dff2",
+      "name": "Already Drafted?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        140
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress skybird-sync"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "86d785a5-13fe-4958-a42a-d5036f66e45b",
+              "leftValue": "={{ $json.length === 0 || ($json.data && $json.data.length === 0) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "f3462203-1400-4f96-99af-d09bc9b13d6a",
+      "name": "Is New?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "dc830eb4-32d3-478f-8243-08dc113b24ec",
+      "name": "Drop: Already Drafted",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "8c51016c-a9f9-4e13-962a-03a05fd1d126",
+      "name": "Get Project",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}/photos?tag_ids=27372163&per_page=100",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "86d0561f-529d-468c-b44a-56928702d157",
+      "name": "Get Showcase Photos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}/photos?tag_ids=27372182&per_page=10",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "d12ea31c-21a6-48ad-a7d5-67dfef6a2287",
+      "name": "Get Cover Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const project = $('Get Project').first().json.data || $('Get Project').first().json;\nconst showcaseRes = $('Get Showcase Photos').first().json;\nconst coverRes = $('Get Cover Photo').first().json;\n\nconst showcase = showcaseRes.data || showcaseRes || [];\nconst covers = coverRes.data || coverRes || [];\n\n// Hard filters: docs/01-api-audit.md sections 1.5 and 6.\nconst usable = showcase.filter(\n  (p) => p.internal !== true && p.processing_status === 'processed'\n);\n\n// Oldest first: before -> during -> after, the order the page reads in.\nusable.sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at));\nconst capped = usable.slice(0, 20);\n\nconst cover = covers[0] || null;\n\n// Fail loudly rather than guess. docs/06-trigger-design.md section 3 requires\n// a human to confirm the cover is a genuine hero shot - they cannot confirm a\n// cover the automation picked at random. The fix for all three of these is in\n// CompanyCam (pull the label, fix the curation), not in a draft that papers\n// over it.\nif (!cover) {\n  throw new Error(`Project ${project.id}: no photo tagged \"Showcase Cover\".`);\n}\nif (covers.length > 1) {\n  throw new Error(\n    `Project ${project.id}: ${covers.length} photos tagged \"Showcase Cover\" - expected exactly 1.`\n  );\n}\n\n// The cover is also tagged Showcase, so it is in both lists. Decided\n// 2026-09-17: cover becomes featured_media, gallery is the set MINUS the\n// cover, so no photo appears twice on the page.\nconst gallery = capped.filter((p) => p.id !== cover.id);\n\nif (gallery.length === 0) {\n  throw new Error(`Project ${project.id}: no gallery photos left after filtering.`);\n}\n\n// --- Pin offset ---------------------------------------------------------\n// Generated HERE, once, and only the offset travels onward. The true\n// coordinates are never written to WordPress at all - docs/05-data-model.md\n// section 1. The plugin has no field for them and its tests assert none is\n// ever added.\nconst lat = project.coordinates && project.coordinates.lat;\nconst lon = project.coordinates && project.coordinates.lon;\n\nif (typeof lat !== 'number' || typeof lon !== 'number') {\n  throw new Error(`Project ${project.id}: no coordinates to offset.`);\n}\n\nconst R = 3958.8; // Earth radius, miles\nconst bearing = Math.random() * 2 * Math.PI;\n\n// An annulus, not a disc: at least 0.2 mi, at most 0.3 mi\n// (docs/04-pin-precision-research.md section 4). A uniform draw over a disc\n// would sometimes land the pin almost on the house, defeating the offset.\nconst miles = 0.2 + Math.random() * 0.1;\n\nconst d = miles / R;\nconst la = (lat * Math.PI) / 180;\nconst lo = (lon * Math.PI) / 180;\n\nconst la2 = Math.asin(\n  Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(bearing)\n);\nconst lo2 =\n  lo +\n  Math.atan2(\n    Math.sin(bearing) * Math.sin(d) * Math.cos(la),\n    Math.cos(d) - Math.sin(la) * Math.sin(la2)\n  );\n\nconst city = (project.address && project.address.city) || '';\nconst areaSlug = city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');\n\nconst pick = (p) => {\n  const uris = p.uris || [];\n  const original = uris.find((u) => u.type === 'original');\n  const web = uris.find((u) => u.type === 'web');\n  return (original || web || {}).uri;\n};\n\nreturn [{\n  json: {\n    companycamProjectId: String(project.id),\n    city,\n    areaSlug,\n    zip: (project.address && project.address.postal_code) || '',\n    approxLat: Number(((la2 * 180) / Math.PI).toFixed(6)),\n    approxLng: Number(((lo2 * 180) / Math.PI).toFixed(6)),\n    completionDate: String(cover.captured_at || '').slice(0, 10),\n    coverUrl: pick(cover),\n    galleryUrls: gallery.map(pick),\n  },\n}];"
+      },
+      "id": "ca6fa3d6-ca65-4c34-ba9b-d4f53cf65ced",
+      "name": "Curate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One item per photo, cover first, so the HTTP nodes run once each and n8n\n// preserves the order.\nconst c = $input.first().json;\nconst items = [];\n\n// Filenames are built from the area slug and project ID - NEVER from the\n// CompanyCam project name, which is usually the customer's name\n// (docs/06-trigger-design.md section 3 forbids PII in image filenames).\nitems.push({\n  json: {\n    url: c.coverUrl,\n    isCover: true,\n    filename: `skybird-roof-${c.areaSlug}-${c.companycamProjectId}-cover.jpeg`,\n  },\n});\n\nc.galleryUrls.forEach((url, i) => {\n  items.push({\n    json: {\n      url,\n      isCover: false,\n      filename: `skybird-roof-${c.areaSlug}-${c.companycamProjectId}-${i + 1}.jpeg`,\n    },\n  });\n});\n\nreturn items;"
+      },
+      "id": "7304b21c-baba-4994-95bf-6747df881fd6",
+      "name": "Prepare Photo Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "b610553e-e09f-49be-a4b3-fd6d9d7c6e6c",
+      "name": "Download Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/media",
+        "options": {},
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Disposition",
+              "value": "=attachment; filename=\"{{ $('Prepare Photo Items').item.json.filename }}\""
+            }
+          ]
+        }
+      },
+      "id": "1e78587a-bdc0-4c67-b47a-18afa7a73c85",
+      "name": "Upload Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2180,
+        40
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress skybird-sync"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Gather the uploaded attachment IDs, keeping order, and split the cover back\n// out from the gallery.\nconst uploads = $input.all();\n\nlet coverId = null;\nconst galleryIds = [];\n\nuploads.forEach((item, i) => {\n  const media = item.json || {};\n  const id = Number(media.id);\n  const source = $('Prepare Photo Items').all()[i];\n  const isCover = source && source.json.isCover;\n\n  if (!id) {\n    throw new Error(`Media upload ${i} returned no id: ${JSON.stringify(media).slice(0, 200)}`);\n  }\n\n  if (isCover) {\n    coverId = id;\n  } else {\n    galleryIds.push(id);\n  }\n});\n\nif (!coverId) {\n  throw new Error('Cover photo did not upload.');\n}\n\nreturn [{ json: { coverId, galleryIds } }];"
+      },
+      "id": "12574840-26a9-4d97-b09a-a50a7546a948",
+      "name": "Collect Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/service-areas?slug={{ $('Curate').first().json.areaSlug }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth"
+      },
+      "id": "218c7d88-bddb-49ee-b79d-58f1019d8ebc",
+      "name": "Get Area Term",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2620,
+        40
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress skybird-sync"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const c = $('Curate').first().json;\nconst media = $('Collect Media').first().json;\nconst areaRes = $('Get Area Term').first().json;\nconst terms = Array.isArray(areaRes) ? areaRes : (areaRes.data || []);\n\n// A project whose city is not one of the eight service areas would otherwise\n// be filed nowhere and drop out of every map widget. Throw instead.\nif (!terms.length) {\n  throw new Error(\n    `No service_area term for slug \"${c.areaSlug}\" (city \"${c.city}\"). Expected one of the eight seeded areas.`\n  );\n}\n\nconst areaName = terms[0].name;\n\n// Title and copy are deliberately minimal.\n//\n// docs/06-trigger-design.md section 3 locks the SEO title as one job, one\n// town, roof replacement - e.g. \"GAF Timberline HDZ Roof Replacement in Wake\n// Forest, NC\". That needs manufacturer and product line, and NOTHING\n// populates those: there is no CompanyCam->ProLine bridge\n// (docs/07-phase-4-preflight.md section 2.4.2). So write the town-only form\n// and let the reviewer upgrade it after filling the product fields.\n//\n// The body is one factual sentence for the same reason. The locked copy rules\n// forbid invented prices, \"free roof\", city-stuffing and storm claims, and an\n// automation with no product data and no job notes has nothing true to say\n// beyond the town and the service. Writing the 2-4 sentence description is the\n// reviewer's job at the gate. A thin draft a human finishes beats a fluent one\n// that invents specifics.\nconst title = `Roof Replacement in ${areaName}, NC`;\nconst content = `<p>Skybird Roofing completed a full roof replacement in ${areaName}, North Carolina.</p>`;\n\nreturn [{\n  json: {\n    status: 'draft',\n    title,\n    content,\n    excerpt: `Roof replacement in ${areaName}, NC.`,\n    featured_media: media.coverId,\n    'service-areas': [terms[0].id],\n    meta: {\n      companycam_project_id: c.companycamProjectId,\n      approx_lat: c.approxLat,\n      approx_lng: c.approxLng,\n      gallery: media.galleryIds,\n      city: c.city,\n      zip: c.zip,\n      completion_date: c.completionDate,\n    },\n  },\n}];"
+      },
+      "id": "3a3bdfd0-3029-49f2-945d-5886c7564e96",
+      "name": "Build Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2840,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/projects",
+        "options": {},
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "748a26bb-071a-4ff1-972e-e15c8dc8b151",
+      "name": "Create Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3060,
+        40
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "REPLACE_ME",
+          "name": "WordPress skybird-sync"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Signature Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature Valid?": {
+      "main": [
+        [
+          {
+            "node": "Check Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drop: Bad Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Label": {
+      "main": [
+        [
+          {
+            "node": "Need Label Fetch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Label Fetch?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Project Labels",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Website Showcase?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Project Labels": {
+      "main": [
+        [
+          {
+            "node": "Re-check Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-check Label": {
+      "main": [
+        [
+          {
+            "node": "Is Website Showcase?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Website Showcase?": {
+      "main": [
+        [
+          {
+            "node": "Already Drafted?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drop: Other Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Drafted?": {
+      "main": [
+        [
+          {
+            "node": "Is New?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New?": {
+      "main": [
+        [
+          {
+            "node": "Get Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drop: Already Drafted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Project": {
+      "main": [
+        [
+          {
+            "node": "Get Showcase Photos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Cover Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Showcase Photos": {
+      "main": [
+        [
+          {
+            "node": "Curate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cover Photo": {
+      "main": [
+        [
+          {
+            "node": "Curate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Curate": {
+      "main": [
+        [
+          {
+            "node": "Prepare Photo Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Photo Items": {
+      "main": [
+        [
+          {
+            "node": "Download Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Photo": {
+      "main": [
+        [
+          {
+            "node": "Upload Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Media": {
+      "main": [
+        [
+          {
+            "node": "Collect Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Media": {
+      "main": [
+        [
+          {
+            "node": "Get Area Term",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Area Term": {
+      "main": [
+        [
+          {
+            "node": "Build Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Payload": {
+      "main": [
+        [
+          {
+            "node": "Create Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "skybird-showcase-referral"
+  }
+}

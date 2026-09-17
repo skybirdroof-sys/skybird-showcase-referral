@@ -3,7 +3,11 @@
 Skybird Project Showcase + Referral System · Phase 4
 Written 2026-09-17. The automation half of Phase 4: `project.label_added` → WordPress draft.
 
-**Status: spec, not built.** Jacob builds and activates this in his own n8n account (`docs/09-euan-answers.md` §5). This document is the node-by-node build, with the exact Code node bodies — those are the part worth getting from a spec rather than improvising.
+**Status: built as an importable workflow — [`n8n/companycam-showcase-to-wordpress.json`](../n8n/companycam-showcase-to-wordpress.json) (24 nodes). This document is the reasoning behind it; [`n8n/README.md`](../n8n/README.md) has the import steps.**
+
+> **Correction, 2026-09-17.** An earlier version of this document said "Jacob builds and activates this in his own n8n account," and shipped only a spec on that basis. That misread him. Asked whether the workflow could be built in his own account or needed Pitch Peak, he answered *"I can build the workflow myself — I've built plenty in n8n before. That resolves whether this gets built independently"* — an answer about **permission and capability**, not a request to hand-build the nodes.
+>
+> The workflow is now generated as importable JSON. What genuinely remains his: importing it, attaching the credentials, creating the CompanyCam subscription, and activating. Creating it in the account directly isn't possible from here — no n8n connector, and `app.n8n.cloud` is egress-blocked. With that host allowed and an n8n API key, n8n's public API accepts a workflow POST and it could be created there instead.
 
 **I have not tested any of this.** `app.n8n.cloud` is blocked from the build environment and there is no n8n connector in this session. Every HTTP call below is written from `docs/01-api-audit.md` and from what was verified live through the CompanyCam MCP connector; none of it has round-tripped through n8n.
 
@@ -114,8 +118,9 @@ An invalid signature means someone is posting to the URL who shouldn't be. Stop;
 `project.label_added` fires for **any** label added to **any** project. The account has eight project labels (verified 2026-09-16, `docs/07-phase-4-preflight.md` §2.3): `Website Showcase`, `Gutter Cleaning`, `JobNimbus Job`, `Pipedrive Deal`, and four `… Lead` labels. Without this filter, someone tagging a project `Pipedrive Deal` starts building a WordPress draft.
 
 ```js
-// Code node.
-const payload = $json.payload;
+// Code node, Run Once for All Items. Note $input.first().json, NOT $json —
+// $json is not available in this mode and would throw at runtime.
+const payload = $input.first().json.payload || {};
 
 // `project.*` events carry the Project object (docs/01-api-audit.md §1.3).
 const project = payload.payload || {};
