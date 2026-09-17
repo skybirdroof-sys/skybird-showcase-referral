@@ -99,6 +99,34 @@ if ( $tax ) {
 	eq( 'taxonomy shows in the admin UI', true, $tax['show_ui'] );
 }
 
+// A hierarchical taxonomy with a partial label set silently falls back to the
+// default *category* wording, so the term screen reads "Add Category" /
+// "Parent Category". Found on a real install 2026-09-17, invisible to a stub
+// that never renders admin copy — so assert the labels exist instead.
+if ( $tax ) {
+	$required_labels = array(
+		'name', 'singular_name', 'menu_name', 'all_items', 'edit_item',
+		'add_new_item', 'new_item_name', 'parent_item', 'parent_item_colon',
+		'search_items', 'not_found', 'update_item', 'view_item',
+	);
+
+	$missing = array();
+	foreach ( $required_labels as $label ) {
+		if ( empty( $tax['labels'][ $label ] ) ) {
+			$missing[] = $label;
+		}
+	}
+	it( 'taxonomy defines a full label set (no "Add Category" fallback)', empty( $missing ), 'missing: ' . implode( ', ', $missing ) );
+
+	$says_category = false;
+	foreach ( $tax['labels'] as $value ) {
+		if ( false !== stripos( (string) $value, 'categor' ) ) {
+			$says_category = true;
+		}
+	}
+	it( 'no taxonomy label says "category"', ! $says_category );
+}
+
 // --- Service areas ---------------------------------------------------------
 
 $areas = skybird_projects_service_areas();

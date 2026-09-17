@@ -69,12 +69,28 @@ function skybird_projects_register_taxonomy() {
 		SKYBIRD_PROJECTS_TAXONOMY,
 		array( SKYBIRD_PROJECTS_POST_TYPE ),
 		array(
+			// The full label set, not a partial one. A hierarchical taxonomy
+			// with labels left out falls back to the default *category*
+			// wording, so the term screen reads "Add Category" / "Parent
+			// Category" / "Search Categories" for something that is not a
+			// category. Confirmed on a real install 2026-09-17 — the stubbed
+			// tests can't see admin copy, so this is asserted below instead.
 			'labels'             => array(
-				'name'          => _x( 'Service Areas', 'taxonomy general name', 'skybird-projects' ),
-				'singular_name' => _x( 'Service Area', 'taxonomy singular name', 'skybird-projects' ),
-				'menu_name'     => __( 'Service Areas', 'skybird-projects' ),
-				'all_items'     => __( 'All Service Areas', 'skybird-projects' ),
-				'edit_item'     => __( 'Edit Service Area', 'skybird-projects' ),
+				'name'              => _x( 'Service Areas', 'taxonomy general name', 'skybird-projects' ),
+				'singular_name'     => _x( 'Service Area', 'taxonomy singular name', 'skybird-projects' ),
+				'menu_name'         => __( 'Service Areas', 'skybird-projects' ),
+				'all_items'         => __( 'All Service Areas', 'skybird-projects' ),
+				'edit_item'         => __( 'Edit Service Area', 'skybird-projects' ),
+				'view_item'         => __( 'View Service Area', 'skybird-projects' ),
+				'update_item'       => __( 'Update Service Area', 'skybird-projects' ),
+				'add_new_item'      => __( 'Add New Service Area', 'skybird-projects' ),
+				'new_item_name'     => __( 'New Service Area Name', 'skybird-projects' ),
+				'parent_item'       => __( 'Parent Service Area', 'skybird-projects' ),
+				'parent_item_colon' => __( 'Parent Service Area:', 'skybird-projects' ),
+				'search_items'      => __( 'Search Service Areas', 'skybird-projects' ),
+				'not_found'         => __( 'No service areas found.', 'skybird-projects' ),
+				'back_to_items'     => __( '&larr; Go to Service Areas', 'skybird-projects' ),
+				'name_field_description' => __( 'The service area name, as it appears on the project page and its back-link.', 'skybird-projects' ),
 			),
 			'public'             => false,
 			'publicly_queryable' => false,

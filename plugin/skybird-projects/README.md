@@ -12,12 +12,15 @@ WordPress plugin. Registers the `project` post type, the `service_area` taxonomy
 |---|---|
 | PHP syntax | ✅ `php -l` clean on all 8 files |
 | JS syntax | ✅ `node --check` clean |
-| Registration + validation | ✅ 103 assertions passing — `php tests/test-plugin.php` |
-| **Run on a real WordPress install** | ❌ **Not done.** See below |
+| Registration + validation | ✅ 105 assertions passing — `php tests/test-plugin.php` |
+| Loads and activates on real WordPress | ✅ 2026-09-17, TasteWP sandbox — no fatal, `Projects` menu registered, 8 service areas seeded with correct slugs, ACF-missing notice behaves as designed |
+| **REST write verified end to end** | ⏳ in progress — `dist/verify.sh` |
 
-**The plugin has never been loaded by WordPress.** The build environment has PHP 8.4 but no MySQL, no WP-CLI and no WordPress, and outbound network access is blocked (`docs/07-phase-4-preflight.md` §3) so it can't be fetched. The test harness stubs WordPress and asserts what the plugin *asks for*; it cannot tell you that the REST write works, that Application Passwords authenticate, or that rewrite rules flush cleanly.
+**First real install: 2026-09-17**, on a TasteWP sandbox. Activation succeeded with no fatal error, the `Projects` menu registered, all eight service areas seeded with the expected slugs, and the ACF-missing admin notice appeared and read correctly.
 
-That verification is the next step, and it's what the throwaway-instance decision in `docs/09-euan-answers.md` §3.2 is for.
+That install immediately caught a defect the stub tests structurally cannot see: the taxonomy had only five of its labels defined, so WordPress fell back to default **category** wording and the term screen read *"Add Category"*, *"Parent Category"*, *"Search Categories"*. Fixed, and the suite now asserts a full label set plus that no label contains the word "category" — the assertion is a proxy, since a stub never renders admin copy.
+
+Still unverified by the harness, which asserts what the plugin *asks for* rather than what WordPress does with it: that the REST write works, that Application Passwords authenticate, and that rewrite rules flush cleanly. `dist/verify.sh` covers those against a live site.
 
 ## Install
 
