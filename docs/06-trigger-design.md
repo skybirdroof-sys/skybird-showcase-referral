@@ -35,6 +35,28 @@ This is Option A from the original brief, confirmed against the live CompanyCam 
 > What this changes: the three steps from `project.label_added` through signature validation to the n8n entry point are **unproven and are Phase 4's first deliverable**, not a re-wiring of something known good. In particular Phase 4 must prove, on a real delivery:
 > - the subscription fires on a label add (and, importantly, does *not* fire for the other labels already in the account — the payload carries the project, so n8n has to filter on the label itself);
 > - `X-CompanyCam-Signature` validates as base64 HMAC-SHA1 of the raw body (raw, not re-serialized JSON);
+
+> **Correction, 2026-09-18 — the HMAC check is not what shipped.** Jacob's n8n
+> is **Cloud, Community (free)**. Verifying the signature requires reading the
+> signing token inside a Code node, and Code nodes cannot read credentials.
+> `$env` is blocked on n8n Cloud outright and `$vars` is gated to Pro, so the
+> only remaining home for that token is plaintext inside the workflow JSON —
+> which would put a live secret into this repo and into every export.
+>
+> Replaced with a shared bearer in the `Authorization` header: CompanyCam sends
+> it on every delivery (`authorization_header` at subscription-create time) and
+> n8n's Webhook node authenticates it natively, rejecting unauthenticated
+> requests **before the workflow runs**. The secret lives in n8n's encrypted
+> credential store.
+>
+> What this costs: the HMAC additionally proves the body was not altered in
+> flight, where a bearer only proves the caller knows the secret. Over TLS to an
+> authenticated caller that gap is small, and it is not worth a committed
+> plaintext secret. **The bullet above is therefore withdrawn as a Phase 4
+> acceptance criterion** and replaced by: *an unauthenticated POST to the
+> production webhook URL is rejected by n8n.* Reinstate the original if the
+> account ever moves to Pro — `n8n/README.md` says how, and git history has the
+> three removed nodes.
 > - n8n returns HTTP 200 fast and does the work afterward, per the 25-error disable rule in `01-api-audit.md` §1.3.
 >
 > The signing token is shown **only once, at webhook-create time**. Whoever creates the subscription must capture it into the n8n credential store in the same sitting.

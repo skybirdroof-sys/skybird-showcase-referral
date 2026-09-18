@@ -8,7 +8,8 @@
         "responseMode": "onReceived",
         "options": {
           "rawBody": true
-        }
+        },
+        "authentication": "headerAuth"
       },
       "id": "0585bc93-89bd-44e5-b1e7-c4adb9c7f5dd",
       "name": "Webhook",
@@ -18,66 +19,50 @@
         -1120,
         300
       ],
-      "webhookId": "093326e2-4f5f-427e-ba41-56bfe0695975"
+      "webhookId": "093326e2-4f5f-427e-ba41-56bfe0695975",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_WEBHOOK",
+          "name": "CompanyCam Webhook Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-wpbase",
+              "name": "wpBase",
+              "value": "https://REPLACE-ME.example.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cfg-node-0001",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -920,
+        300
+      ],
+      "notes": "The one place the WordPress base URL is set. Sandbox while proving, production after. Not a secret - secrets are credentials."
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const crypto = require('crypto');\nconst item = $input.first();\n\n// Raw Body is on, so the body arrives as a string. Hash the bytes exactly as\n// received - do NOT JSON.parse and re-stringify, because key order and\n// whitespace will differ from what CompanyCam signed and the digest will\n// never match.\nlet raw = item.json.body;\nif (typeof raw !== 'string') {\n  raw = Buffer.from(item.binary?.data?.data ?? '', 'base64').toString('utf8');\n}\n\nconst headers = item.json.headers || {};\nconst received =\n  headers['x-companycam-signature'] || headers['X-CompanyCam-Signature'] || '';\n\n// Set COMPANYCAM_WEBHOOK_TOKEN in n8n. It is shown once, at webhook-create\n// time, and never again.\nconst token = $env.COMPANYCAM_WEBHOOK_TOKEN;\n\nconst expected = crypto\n  .createHmac('sha1', token)\n  .update(raw, 'utf8')\n  .digest('base64');\n\n// Timing-safe. A plain === leaks how much of the digest matched, which is the\n// whole reason this header exists.\nlet valid = false;\ntry {\n  const a = Buffer.from(received);\n  const b = Buffer.from(expected);\n  valid = a.length === b.length && crypto.timingSafeEqual(a, b);\n} catch (e) {\n  valid = false;\n}\n\nlet payload = null;\nif (valid) {\n  try { payload = JSON.parse(raw); } catch (e) { valid = false; }\n}\n\nreturn [{ json: { valid, payload } }];"
+        "jsCode": "const item = $input.first();\n\n// The Webhook node runs with Raw Body on, so the body arrives as a string\n// (or as base64 binary when n8n decides it is not text). n8n has already\n// rejected anything without the right Authorization header before this runs,\n// so this node only has to parse - it is not a trust boundary.\nlet raw = $('Webhook').first().json.body;\nif (typeof raw !== 'string') {\n  raw = Buffer.from($('Webhook').first().binary?.data?.data ?? '', 'base64').toString('utf8');\n}\n\nlet payload = null;\ntry {\n  payload = JSON.parse(raw);\n} catch (e) {\n  throw new Error('Webhook body was not valid JSON: ' + String(raw).slice(0, 200));\n}\n\nreturn [{ json: { payload } }];\n"
       },
-      "id": "bbac3465-5f2a-4edc-a52b-8bb620c410c3",
-      "name": "Verify Signature",
+      "id": "parse-node-0001",
+      "name": "Parse Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -900,
+        -720,
         300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "c6d57333-f1ee-4fe9-a38d-af4944196f0f",
-              "leftValue": "={{ $json.valid }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "id": "ca815ff1-ef11-46c6-b69b-6447f9b41504",
-      "name": "Signature Valid?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -680,
-        300
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "30b36e64-0b38-440f-8271-eb349ea59efd",
-      "name": "Drop: Bad Signature",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -460,
-        460
       ]
     },
     {
@@ -133,15 +118,8 @@
       "parameters": {
         "url": "=https://api.companycam.com/v2/projects/{{ $json.projectId }}/labels",
         "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "067a49cc-eff1-456f-952d-73139eff314e",
       "name": "Fetch Project Labels",
@@ -150,7 +128,13 @@
       "position": [
         -20,
         100
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_CCAM",
+          "name": "CompanyCam API"
+        }
+      }
     },
     {
       "parameters": {
@@ -214,7 +198,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/projects?companycam_project_id={{ $json.projectId }}&status=any&per_page=1",
+        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/projects?companycam_project_id={{ $json.projectId }}&status=any&per_page=1",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth"
@@ -284,15 +268,8 @@
       "parameters": {
         "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}",
         "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "8c51016c-a9f9-4e13-962a-03a05fd1d126",
       "name": "Get Project",
@@ -301,21 +278,20 @@
       "position": [
         1080,
         40
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_CCAM",
+          "name": "CompanyCam API"
+        }
+      }
     },
     {
       "parameters": {
         "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}/photos?tag_ids=27372163&per_page=100",
         "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "86d0561f-529d-468c-b44a-56928702d157",
       "name": "Get Showcase Photos",
@@ -324,21 +300,20 @@
       "position": [
         1300,
         -60
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_CCAM",
+          "name": "CompanyCam API"
+        }
+      }
     },
     {
       "parameters": {
         "url": "=https://api.companycam.com/v2/projects/{{ $('Is Website Showcase?').first().json.projectId }}/photos?tag_ids=27372182&per_page=10",
         "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.COMPANYCAM_API_KEY }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "d12ea31c-21a6-48ad-a7d5-67dfef6a2287",
       "name": "Get Cover Photo",
@@ -347,7 +322,13 @@
       "position": [
         1300,
         140
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME_CCAM",
+          "name": "CompanyCam API"
+        }
+      }
     },
     {
       "parameters": {
@@ -400,7 +381,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/media",
+        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/media",
         "options": {},
         "method": "POST",
         "authentication": "genericCredentialType",
@@ -449,7 +430,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/service-areas?slug={{ $('Curate').first().json.areaSlug }}",
+        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/service-areas?slug={{ $('Curate').first().json.areaSlug }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth"
@@ -485,7 +466,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.WP_BASE }}/wp-json/wp/v2/projects",
+        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/projects",
         "options": {},
         "method": "POST",
         "authentication": "genericCredentialType",
@@ -515,36 +496,7 @@
       "main": [
         [
           {
-            "node": "Verify Signature",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verify Signature": {
-      "main": [
-        [
-          {
-            "node": "Signature Valid?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Signature Valid?": {
-      "main": [
-        [
-          {
-            "node": "Check Label",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Drop: Bad Signature",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -758,6 +710,28 @@
         [
           {
             "node": "Create Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Parse Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Body": {
+      "main": [
+        [
+          {
+            "node": "Check Label",
             "type": "main",
             "index": 0
           }

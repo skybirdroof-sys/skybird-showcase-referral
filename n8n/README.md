@@ -1,13 +1,13 @@
 # n8n — CompanyCam Showcase → WordPress draft
 
-`companycam-showcase-to-wordpress.json` — importable n8n workflow, 24 nodes.
+`companycam-showcase-to-wordpress.json` — importable n8n workflow, 23 nodes.
 
 ## Status
 
 | | |
 |---|---|
 | Valid JSON | ✅ |
-| Structure | ✅ 24 nodes, all reachable from the Webhook, every IF wired on both branches, every `$('Node')` reference resolves |
+| Structure | ✅ 23 nodes, all reachable from the Webhook, every IF wired on both branches, every `$('Node')` reference resolves |
 | Embedded JS syntax | ✅ `node --check` clean on all 7 Code nodes |
 | Variable scope | ✅ no `$json` in a Run-Once-for-All-Items node |
 | **Imported into n8n** | ❌ never |
@@ -17,23 +17,71 @@
 
 ## Import
 
+Built for **n8n Cloud, Community (free)**, which is the constraining case:
+`$env` is blocked on Cloud entirely, and `$vars` (Variables) is gated to Pro
+and above. Neither is used. Every secret is an n8n **credential**; the one
+non-secret value is a **Config** node.
+
 1. n8n → **Workflows** → **Import from File**.
-2. Set three environment values (Settings → Variables, or your instance's env):
-   - `COMPANYCAM_API_KEY` — the Read-only Application Key
-   - `COMPANYCAM_WEBHOOK_TOKEN` — the webhook signing token, **shown once at create time**
-   - `WP_BASE` — e.g. `https://skybirdroofing.net` (no trailing slash)
-3. Create one credential: **HTTP Basic Auth** named `WordPress skybird-sync` — username `skybird-sync`, password the Application Password. Attach it to the four WordPress HTTP nodes (`Already Drafted?`, `Upload Media`, `Get Area Term`, `Create Draft`); the JSON carries a placeholder credential ID that won't resolve.
-4. **Activate the workflow**, then copy the **Production** webhook URL from the Webhook node.
-5. Create the CompanyCam subscription against that URL, scope `project.label_added`, and capture the token it returns into `COMPANYCAM_WEBHOOK_TOKEN`.
-6. Set an **Error Workflow** (workflow Settings). Several nodes throw deliberately — without one, those throws are silent.
+2. Create three credentials (Credentials → Add):
+
+   | Credential | Type | Settings |
+   |---|---|---|
+   | `CompanyCam Webhook Auth` | Header Auth | Name `Authorization`, Value `Bearer <shared secret you generate>` |
+   | `CompanyCam API` | Header Auth | Name `Authorization`, Value `Bearer <Read-only Application Key>` |
+   | `WordPress skybird-sync` | Basic Auth | Username and Application Password for the target site |
+
+   The JSON carries placeholder credential IDs (`REPLACE_ME_*`) that will not
+   resolve — open each flagged node and pick the credential from the list.
+
+   - `CompanyCam Webhook Auth` → the **Webhook** node
+   - `CompanyCam API` → `Fetch Project Labels`, `Get Project`,
+     `Get Showcase Photos`, `Get Cover Photo`
+   - `WordPress skybird-sync` → `Already Drafted?`, `Upload Media`,
+     `Get Area Term`, `Create Draft`
+
+3. Open the **Config** node and set `wpBase` to the target site, no trailing
+   slash. The sandbox while proving this out; production afterwards. It is the
+   only place that URL appears.
+4. **Activate the workflow**, then copy the **Production** webhook URL from the
+   Webhook node.
+5. Create the CompanyCam subscription against that URL, scope
+   `project.label_added`, with `authorization_header` set to the *same*
+   `Bearer <shared secret>` value as the `CompanyCam Webhook Auth` credential.
+6. Set an **Error Workflow** (workflow Settings). Several nodes throw
+   deliberately — without one, those throws are silent.
+
+### Why Header Auth rather than the HMAC signature
+
+`docs/06-trigger-design.md` specified verifying `X-CompanyCam-Signature` — a
+base64 HMAC-SHA1 of the raw body. That is still the stronger scheme on paper,
+and it is what the first build did, in three nodes.
+
+It cannot be done safely on this plan. The signing token has to be readable
+from inside a Code node, and Code nodes cannot read credentials. With `$env`
+blocked and `$vars` unavailable, the only remaining place to put it is
+**plaintext inside the workflow JSON** — where it would travel into this repo,
+into every export, and into every screenshot of the node.
+
+CompanyCam can instead send a static `Authorization` header on every delivery
+(`authorization_header` at create time), and n8n's Webhook node authenticates
+that natively, rejecting anything without it **before the workflow runs**. The
+secret stays in n8n's encrypted credential store.
+
+The trade: a shared bearer proves the caller knows the secret; the HMAC also
+proves the body was not altered in flight. Over TLS, to an authenticated
+caller, that difference is small — and it is bought at the cost of a secret
+committed in plaintext, which is not a trade worth making. **If the account
+moves to Pro**, `$vars.COMPANYCAM_WEBHOOK_TOKEN` becomes available and the
+HMAC trio can be restored; git history has the three nodes.
 
 **The mistake that costs an afternoon:** n8n gives a workflow a Test URL and a Production URL. The Test URL only listens while the editor is open. A subscription pointed at it appears to work once during a manual execution, then silently accrues delivery failures toward CompanyCam's **25-error disable**.
 
 ## What it does
 
 ```
-Webhook (200 immediately, raw body)
-  → Verify Signature (HMAC-SHA1, timing-safe)      → drop if invalid
+Webhook (200 immediately, raw body, Header Auth)
+  → Config (wpBase) → Parse Body
   → Check Label  [+ Fetch Project Labels fallback]  → drop if not Website Showcase
   → Already Drafted?                                → drop if a draft exists
   → Get Project · Get Showcase Photos · Get Cover Photo
@@ -42,12 +90,12 @@ Webhook (200 immediately, raw body)
   → Get Area Term → Build Payload → Create Draft (status: draft)
 ```
 
-Three of those are "drop quietly" — the normal outcome for most deliveries, not errors.
+Two of those are "drop quietly" — the normal outcome for most deliveries, not errors. A request that fails Header Auth never reaches the workflow at all.
 
 ## Things in here that are decisions, not defaults
 
 - **Respond immediately.** CompanyCam disables a webhook after 25 total errors (`docs/01-api-audit.md` §1.3), so nothing downstream may run before the 200.
-- **Raw body, hashed as received.** `JSON.parse` then re-stringify changes key order and whitespace, so the digest never matches. The compare is `timingSafeEqual` — a plain `===` leaks how much of the digest matched, which is the reason the header exists.
+- **Authentication happens in n8n, not in a node.** The Webhook node's Header Auth credential rejects an unsigned request before any node runs, so `Parse Body` is not a trust boundary and does not pretend to be one. See *Why Header Auth rather than the HMAC signature* above.
 - **The label filter is load-bearing.** `project.label_added` fires for *any* label, and this account has eight (`Website Showcase`, `Gutter Cleaning`, `JobNimbus Job`, `Pipedrive Deal`, four `… Lead`). Without the filter, tagging a project `Pipedrive Deal` builds a WordPress draft. There is a fallback branch that fetches `/projects/{id}/labels`, because whether the webhook payload includes labels is **not verified**.
 - **Idempotency check.** Because the trigger fires on every label change, a project showcased last month generates another delivery next time anyone touches any label. `Already Drafted?` uses the lookup the plugin adds. It stops rather than updating: a reviewer may have already edited the copy, and silently overwriting their work is worse than doing nothing.
 - **Two filtered photo calls**, not one call plus client-side tag filtering. The photo objects from that endpoint did **not** include a `tags` array in the responses inspected on 2026-09-16, so filtering on inline tags would silently return nothing.
