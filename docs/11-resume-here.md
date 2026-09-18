@@ -53,7 +53,7 @@ for name in ('skybird-projects','skybird-selftest'):
 PY
 ```
 
-Then `php tests/test-plugin.php` should print **108 passed, 0 failed**.
+Then `php tests/test-plugin.php` should print **127 passed, 0 failed**.
 
 ---
 

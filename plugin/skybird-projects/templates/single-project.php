@@ -29,12 +29,10 @@ $area_name  = ( ! empty( $area_terms ) && ! is_wp_error( $area_terms ) ) ? reset
 $gallery    = get_post_meta( $project_id, 'gallery', true );
 $share_url  = skybird_projects_share_url( $project_id );
 
-$city         = get_post_meta( $project_id, 'city', true );
 $manufacturer = get_post_meta( $project_id, 'manufacturer', true );
 $product_line = get_post_meta( $project_id, 'product_line', true );
 $color        = get_post_meta( $project_id, 'color', true );
 $warranty     = get_post_meta( $project_id, 'warranty', true );
-$completed    = get_post_meta( $project_id, 'completion_date', true );
 ?>
 
 <main class="skybird-project" id="content">
@@ -44,32 +42,13 @@ $completed    = get_post_meta( $project_id, 'completion_date', true );
 			<h1 class="skybird-project__title"><?php the_title(); ?></h1>
 
 			<?php
-			// An eyebrow carrying WHERE and WHEN. Deliberately not "Roof
-			// replacement in {Area}, NC" -- the locked SEO title format
-			// (docs/06-trigger-design.md §3) is one job, one town, roof
-			// replacement, so the H1 already says both and a subtitle
-			// repeating it is noise. Seen on a real render, 2026-09-17.
-			//
-			// The completion date lives here rather than in the spec list
-			// below, so each fact appears exactly once: this line is where
-			// and when, the specs are what was installed.
-			$meta_bits = array();
+			// The eyebrow rule lives in includes/template.php so the suite can
+			// exercise it -- it has shipped broken twice from being inline here.
+			$meta_line = skybird_projects_meta_line( $project_id );
 
-			if ( $area_name ) {
-				$meta_bits[] = $area_name . ', NC';
-			}
-
-			if ( $completed ) {
-				$meta_bits[] = sprintf(
-					/* translators: %s: month and year, e.g. September 2026. */
-					__( 'Completed %s', 'skybird-projects' ),
-					date_i18n( 'F Y', strtotime( $completed ) )
-				);
-			}
-
-			if ( $meta_bits ) :
+			if ( $meta_line ) :
 				?>
-				<p class="skybird-project__meta"><?php echo esc_html( implode( ' · ', $meta_bits ) ); ?></p>
+				<p class="skybird-project__meta"><?php echo esc_html( $meta_line ); ?></p>
 			<?php endif; ?>
 		</header>
 

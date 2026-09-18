@@ -119,6 +119,61 @@ function skybird_projects_enqueue_styles() {
 add_action( 'wp_enqueue_scripts', 'skybird_projects_enqueue_styles' );
 
 /**
+ * The eyebrow line under the H1: where and when.
+ *
+ * Lives here rather than inline in the template so the suite can exercise it.
+ * It has now shipped broken twice off the same assumption — that the H1 and
+ * this line carry different facts — and both times a rendered page was the
+ * only thing that caught it:
+ *
+ * - 2026-09-17: the line read "Roof replacement in {Area}, NC" under an H1
+ *   already reading exactly that.
+ * - 2026-09-18: shortened to area + completion date, it collapsed to
+ *   "Youngsville, NC" under "Roof Replacement in Youngsville, NC" on a
+ *   project with no completion_date. The first fix only hid the duplication
+ *   on projects that happened to have a date set.
+ *
+ * So the area is printed only when the title does not already contain it.
+ * Under the locked SEO title format (docs/06-trigger-design.md §3 — one job,
+ * one town, roof replacement) the title always does, and this returns the
+ * date alone. An editor who rewrites a title and drops the town gets the
+ * area back automatically. Checked against the rendered title rather than
+ * assumed in either direction.
+ *
+ * @param int $post_id Project post ID.
+ * @return string Eyebrow text, or '' when there is nothing non-redundant.
+ */
+function skybird_projects_meta_line( $post_id ) {
+	$terms = get_the_terms( $post_id, SKYBIRD_PROJECTS_TAXONOMY );
+	$area  = ( ! empty( $terms ) && ! is_wp_error( $terms ) ) ? reset( $terms )->name : '';
+
+	$bits = array();
+
+	if ( $area && false === stripos( (string) get_the_title( $post_id ), $area ) ) {
+		$bits[] = $area . ', NC';
+	}
+
+	$completed = get_post_meta( $post_id, 'completion_date', true );
+
+	if ( $completed ) {
+		// strtotime() returns false on junk, and date_i18n( 'F Y', false )
+		// renders "December 1969" rather than failing. A malformed date from
+		// the import is a bug to leave blank, not to publish as 1969.
+		$timestamp = strtotime( (string) $completed );
+
+		if ( $timestamp ) {
+			$bits[] = sprintf(
+				/* translators: %s: month and year, e.g. September 2026. */
+				__( 'Completed %s', 'skybird-projects' ),
+				date_i18n( 'F Y', $timestamp )
+			);
+		}
+	}
+
+	return implode( ' · ', $bits );
+}
+
+/**
  * Generated alt text for a project's images.
  *
  * Built from this project's own stored product and location fields — which

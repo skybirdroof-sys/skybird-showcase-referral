@@ -469,6 +469,51 @@ it(
 	'completion date appears in the eyebrow already'
 );
 
+// The eyebrow rule, exercised rather than grepped. This defect shipped twice
+// off the same assumption, and both times only a rendered page caught it:
+// 2026-09-17 the line restated the H1 verbatim; 2026-09-18 the shortened
+// version still collapsed to "Youngsville, NC" under "Roof Replacement in
+// Youngsville, NC" whenever completion_date was empty. Grepping the template
+// could not have caught the second one -- the bug was in what the code
+// produced, not in what it said. Hence the extraction to a function.
+$GLOBALS['wp_fixture']['terms'] = array( (object) array( 'term_id' => 8, 'name' => 'Youngsville', 'slug' => 'youngsville' ) );
+
+// The real 2026-09-18 case: locked title, no completion date.
+$GLOBALS['wp_fixture']['title']     = 'Roof Replacement in Youngsville, NC';
+$GLOBALS['wp_fixture']['post_meta'] = array();
+eq( 'title already carries the town, no date -> empty eyebrow', '', skybird_projects_meta_line( 1 ) );
+
+// Same title, with a date: the date alone, never the town again.
+$GLOBALS['wp_fixture']['post_meta'] = array( 'completion_date' => '2026-09-04' );
+eq( 'title carries the town -> date only', 'Completed September 2026', skybird_projects_meta_line( 1 ) );
+
+// An editor rewrote the title and dropped the town: the eyebrow restores it.
+$GLOBALS['wp_fixture']['title']     = 'Storm damage repair after the September hail';
+eq(
+	'title without the town -> town and date',
+	'Youngsville, NC ' . chr( 0xC2 ) . chr( 0xB7 ) . ' Completed September 2026',
+	skybird_projects_meta_line( 1 )
+);
+
+// Case must not decide it -- a lowercased title still contains the town.
+$GLOBALS['wp_fixture']['title']     = 'roof replacement in youngsville, nc';
+$GLOBALS['wp_fixture']['post_meta'] = array();
+eq( 'town match is case-insensitive', '', skybird_projects_meta_line( 1 ) );
+
+// A malformed date must not publish as December 1969. strtotime() returns
+// false on junk and date_i18n( 'F Y', false ) renders the epoch quite happily.
+$GLOBALS['wp_fixture']['title']     = 'Roof Replacement in Youngsville, NC';
+$GLOBALS['wp_fixture']['post_meta'] = array( 'completion_date' => 'not a date' );
+eq( 'unparseable completion date is dropped, not rendered as 1969', '', skybird_projects_meta_line( 1 ) );
+
+// No area assigned at all: no crash, no stray ", NC".
+$GLOBALS['wp_fixture']['terms']     = array();
+$GLOBALS['wp_fixture']['post_meta'] = array( 'completion_date' => '2026-09-04' );
+eq( 'no service area -> date only', 'Completed September 2026', skybird_projects_meta_line( 1 ) );
+
+unset( $GLOBALS['wp_fixture']['title'] );
+$GLOBALS['wp_fixture']['post_meta'] = array();
+
 // --- Report ----------------------------------------------------------------
 
 /**

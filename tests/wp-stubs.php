@@ -220,7 +220,9 @@ function get_posts() {
 	return array();
 }
 function get_the_title( $post = 0 ) {
-	return 'Test Project';
+	return isset( $GLOBALS['wp_fixture']['title'] )
+		? $GLOBALS['wp_fixture']['title']
+		: 'Test Project';
 }
 function get_the_post_thumbnail_url() {
 	return '';
