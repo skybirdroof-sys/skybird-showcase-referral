@@ -1,7 +1,7 @@
 # 11 — Resume Here
 
 Skybird Project Showcase + Referral System · Phase 4
-Last worked 2026-09-17 evening. Written as a pickup point, because the next session may be a fresh one with none of this in context.
+Last worked 2026-09-18. Written as a pickup point, because the next session may be a fresh one with none of this in context.
 
 ---
 
@@ -12,8 +12,9 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | Piece | State |
 |---|---|
 | CompanyCam side | ✅ Verified live. Tags, label, curated set, test project all real (`07` §1) |
-| WordPress plugin | ✅ Built, 108 assertions, **installs and activates on real WordPress** |
+| WordPress plugin | ✅ Built, 127 assertions, **installs and activates on real WordPress** |
 | Plugin REST write | ✅ **27/27 on the fourth run, 2026-09-17.** Three bugs found and fixed along the way |
+| Project page rendering | ✅ **Verified on a real render, 2026-09-18** — desktop and phone width, top and bottom (`11` §Rendering) |
 | n8n workflow | ✅ Built as importable JSON, 24 nodes. **Never imported or executed** |
 | `project.label_added` webhook | ❌ Not created. The delivery leg has never been proven |
 | End-to-end run | ❌ Not attempted |
@@ -34,7 +35,29 @@ The TasteWP sandbox from 9/17 has expired. That cost nothing — it was disposab
 3. **Optional:** install **Advanced Custom Fields** (free) from the plugin directory. Clears the admin notice and confirms the field group registers.
 4. **Tools → Skybird Self Test → Run the checks.** Copy the plain-text box.
 
-**Done 2026-09-17: 27 passed, 0 failed.** What remains unverified is *rendering* — see the plugin README's status table. Nothing has ever loaded a project page, placed the map shortcode, or run with ACF active.
+**Done 2026-09-17: 27 passed, 0 failed.**
+
+## Rendering — done 2026-09-18
+
+A project page has now been loaded on a real WordPress install, at desktop
+and at phone width, top and bottom. Four defects came out of it, all fixed:
+
+| Defect | How it surfaced | Fix |
+|---|---|---|
+| Page rendered outside the site chrome | Block-theme sandbox fell through to the deprecated theme-compat stubs | Theme-aware `skybird_projects_header()` / `_footer()` wrappers |
+| Subtitle restated the H1 verbatim | First render | Replaced with an eyebrow carrying location + completion date |
+| Eyebrow *still* restated the H1 | Second render, on a project with **no completion date** — the first fix only hid it when a date happened to be set | Print the area only when the title does not already contain it |
+| Unparseable `completion_date` would render as "December 1969" | Found while extracting the rule; `date_i18n( 'F Y', false )` renders the epoch rather than failing | Guard `strtotime()` before formatting |
+
+The recurring lesson, third time now: **the stub suite is a regression net,
+not evidence the thing works.** 121 passing assertions still shipped an
+eyebrow that duplicated its own H1, because the template's *source* was
+correct and only its *output* was wrong. That is why the eyebrow rule now
+lives in `skybird_projects_meta_line()` rather than inline in the template —
+a function the suite can exercise, rather than markup it can only grep.
+
+Still unverified: the **map shortcode** (never placed on a page) and the
+**ACF field group** (ACF has been inactive on every run so far).
 
 If the zips aren't to hand, rebuild them:
 
