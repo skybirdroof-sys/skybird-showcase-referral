@@ -457,3 +457,75 @@ Item 4 unblocks writing to WordPress. Item 8b is parallel work, not a gate. With
 Contrary to the assumption that no repo existed, **`skybirdroof-sys/skybird-showcase-referral` already exists** and is what this session is working in — `main` plus the Phase 4 branch. No new repo was created. All eight Phase 1–3 documents are now committed under `docs/`, which is why this document can cite them by path.
 
 Nothing in this document required code. No live system was modified.
+
+---
+
+## 9. Pre-run re-verification, 2026-09-18
+
+Re-checked live against CompanyCam immediately before the first n8n run,
+because §1 was recorded on 2026-09-16 and the curation could have drifted.
+Read-only throughout; nothing was written.
+
+### 9.1 The test project is still in the assumed state
+
+| | |
+|---|---|
+| Project | `110848078` · Bill Najdecki #2561 |
+| Address | 2001 Silverleaf Drive, **Youngsville, NC 27596** |
+| Coordinates | `36.07117, -78.55830` — real, present |
+| Labels | **exactly one**: `Website Showcase` (id `27372191`) |
+| Photos on project | 419 |
+| `Showcase` (`27372163`) | **4 photos** |
+| `Showcase Cover` (`27372182`) | **1 photo** (`3553007383`) |
+| All four | `internal: false`, `processing_status: processed` |
+
+`city` is `Youngsville`, so `Curate` derives `areaSlug = youngsville`, which
+matches the seeded term. The back-link will resolve to
+`/service-areas/youngsville-nc/`.
+
+### 9.2 Two things that would have broken the first run, both already handled
+
+**The cover is also tagged `Showcase`.** Photo `3553007383` appears in both
+filtered lists, so the naive read of "4 Showcase + 1 Cover" is wrong — it is
+4 total, one of which is the cover. `Curate` already excludes it
+(`capped.filter((p) => p.id !== cover.id)`), so the page gets 1 cover and
+**3** gallery photos, with nothing appearing twice. Confirmed against the
+node source, not assumed.
+
+**Three of the four photos have `coordinates: {lat: 0, lon: 0}`.** Only
+`3421903489` — the one Jacob took himself — carries real coordinates. Had
+the pin offset been computed from photo coordinates, three runs in four
+would have placed the pin in the Gulf of Guinea. `Curate` takes the offset
+from `project.coordinates`, which is populated and correct. Also confirmed
+against the source.
+
+Neither was a latent bug. Both are recorded because the *data* makes them
+look like bugs on inspection, and the next person reading the curated set
+will have the same alarm.
+
+### 9.3 `completion_date` will be populated on this run
+
+`Curate` derives it from `cover.captured_at` — `2026-09-10`. So the first
+draft's eyebrow will read **"Completed September 2026"**, which is the
+non-redundant case the template was fixed for on 2026-09-18. The empty-date
+case that exposed the duplication bug will not reproduce here.
+
+### 9.4 No `project.label_added` webhook exists — §2.3 still holds
+
+Three webhooks are registered on company `798255`, none of them ours:
+
+| id | URL | Scopes | Enabled |
+|---|---|---|---|
+| 266045 | `handsome-salmon-665.convex.site/webhooks/companycam/photo` | `photo.created`, `photo.updated` | yes |
+| 266046 | `handsome-salmon-665.convex.site/webhooks/companycam/document` | `document.created` | yes |
+| 266047 | `handsome-salmon-665.convex.site/webhooks/companycam/video` | `video.created` | yes |
+
+All three created `2026-08-03T13:28:26Z`, all `authorization_header_set:
+false`. This answers the standing open item "who owns
+`handsome-salmon-665.convex.site`" only partially — it identifies *what it
+receives*, not who runs it. **Every photo and video event on the account is
+being delivered to a Convex deployment nobody in this project has
+identified.** That is a data-egress question for Jacob, independent of
+Phase 4. It does not block this build: the scopes do not overlap with
+`project.label_added`, and CompanyCam's 25-error disable threshold is
+per-subscription, so a failing Convex endpoint cannot disable ours.
