@@ -13,6 +13,17 @@
  * GET /api/sheet?tab=KPI  ->  text/csv
  */
 
+/* Netlify environment keys are case-sensitive, and a mistyped key here fails
+ * silently — the gate would report "no password set" and the board would sit
+ * open with nothing logged. Match exactly, then fall back to a case-insensitive
+ * lookup so TALON_PASSWORD / Talon_password / talon_password all resolve. */
+function env(name) {
+  if (process.env[name] !== undefined) return process.env[name];
+  const wanted = name.toLowerCase();
+  const found = Object.keys(process.env).find((key) => key.toLowerCase() === wanted);
+  return found ? process.env[found] : undefined;
+}
+
 const DEFAULT_TABS = {
   KPI: 'KPI',
   TOP5: 'Daily Top-Five Progress',
@@ -25,8 +36,8 @@ const DEFAULT_TABS = {
 function slots() {
   return Object.keys(DEFAULT_TABS).map((slot) => ({
     slot,
-    name: (process.env[`SHEET_TAB_${slot}`] || DEFAULT_TABS[slot]).trim(),
-    gid: (process.env[`SHEET_GID_${slot}`] || '').trim(),
+    name: (env(`SHEET_TAB_${slot}`) || DEFAULT_TABS[slot]).trim(),
+    gid: (env(`SHEET_GID_${slot}`) || '').trim(),
   }));
 }
 
@@ -45,7 +56,7 @@ exports.handler = async (event) => {
 
   // Trimmed: a value pasted into the Netlify UI can carry a trailing space or
   // newline, which would otherwise be encoded into the URL and 502 every tab.
-  const sheetId = (process.env.SHEET_ID || '').trim();
+  const sheetId = (env('SHEET_ID') || '').trim();
   if (!sheetId) {
     // 501 tells the client "proxy exists but is unconfigured", so it can fall
     // back to a direct CSV read if CONFIG.sheetId was set.

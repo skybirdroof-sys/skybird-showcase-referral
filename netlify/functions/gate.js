@@ -10,6 +10,17 @@
 
 const crypto = require('crypto');
 
+/* Netlify environment keys are case-sensitive, and a mistyped key here fails
+ * silently — the gate would report "no password set" and the board would sit
+ * open with nothing logged. Match exactly, then fall back to a case-insensitive
+ * lookup so TALON_PASSWORD / Talon_password / talon_password all resolve. */
+function env(name) {
+  if (process.env[name] !== undefined) return process.env[name];
+  const wanted = name.toLowerCase();
+  const found = Object.keys(process.env).find((key) => key.toLowerCase() === wanted);
+  return found ? process.env[found] : undefined;
+}
+
 const json = (statusCode, payload) => ({
   statusCode,
   headers: {
@@ -27,9 +38,13 @@ function sameSecret(a, b) {
 }
 
 exports.handler = async (event) => {
-  const expected = (process.env.TALON_PASSWORD || '').trim();
+  const expected = (env('TALON_PASSWORD') || '').trim();
 
   if (event.httpMethod === 'GET') {
+    if (expected === '') {
+      // Visible in the function log, so an open board is never a silent state.
+      console.log('[talon] gate disabled: no TALON_PASSWORD set');
+    }
     return json(200, { required: expected !== '' });
   }
 
