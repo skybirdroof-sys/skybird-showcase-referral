@@ -15,7 +15,7 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | WordPress plugin | ✅ Built, 127 assertions, **installs and activates on real WordPress** |
 | Plugin REST write | ✅ **27/27 on the fourth run, 2026-09-17.** Three bugs found and fixed along the way |
 | Project page rendering | ✅ **Verified on a real render, 2026-09-18** — desktop and phone width, top and bottom (`11` §Rendering) |
-| n8n workflow | ✅ Built as importable JSON, 24 nodes. **Never imported or executed** |
+| n8n workflow | ✅ Imported into n8n Cloud 2026-09-18, 23 nodes, no import errors. **Never executed** |
 | `project.label_added` webhook | ❌ Not created. The delivery leg has never been proven |
 | End-to-end run | ❌ Not attempted |
 
@@ -121,3 +121,43 @@ Both were invisible to the harness because it records registration arguments wit
 `skybirdroofing.net`, `app.n8n.cloud`, `api.companycam.com` and the sandbox hosts are all **blocked** from the build environment. The account has one environment, `Default — trusted network access`, and that preset permits a fixed list of development hosts with no per-domain additions (`07` §3). Changing it requires switching the environment's network setting, not adding domains — and then a new session.
 
 Consequence: the checks above have to be run by a person, or the environment changed. The CompanyCam MCP connector is unaffected and is how everything in `07` §1 was verified.
+
+
+---
+
+## Next action, 2026-09-18 — Task 2: credentials and Config
+
+The workflow is imported and on the canvas. It was reworked that same day for
+**n8n Cloud, Community (free)**, where `$env` is blocked and `$vars` is
+Pro-only — see `n8n/README.md` for why and what changed. **Re-import the
+current JSON first**; the copy already on the canvas is the old `$env` build
+and every config reference in it is dead.
+
+Then, in order — `n8n/README.md` § Import has the full table:
+
+1. Create three credentials: `CompanyCam Webhook Auth` (Header Auth),
+   `CompanyCam API` (Header Auth), `WordPress skybird-sync` (Basic Auth).
+2. Attach each to its nodes; the `REPLACE_ME_*` placeholders will not resolve
+   on their own.
+3. Set `wpBase` in the **Config** node to the sandbox URL.
+4. Activate, copy the **Production** webhook URL — not the Test URL.
+5. Create the CompanyCam subscription on `project.label_added` against that
+   URL, with `authorization_header` matching the webhook credential exactly.
+
+### Two decisions waiting on Jacob
+
+- **Which WordPress.** The `skybird-sync` user does not exist yet (needs
+  Euan). For the first run that does not matter: prove it against a TasteWP
+  sandbox with a sandbox admin Application Password, per `09` §3.2 — prove on
+  a throwaway, then install on production. `wpBase` is the only field that
+  changes afterwards.
+- **Who creates the CompanyCam subscription.** It needs the shared bearer
+  secret in two places, n8n and CompanyCam. Claude has CompanyCam write tools
+  and can create it, but would have to be told the secret, which would put it
+  in the session transcript. Jacob creating it himself keeps it out. His call.
+
+### Still true
+
+Nothing has been executed. The four things a first run has to prove are in
+`n8n/README.md`, and the test project was re-verified on 2026-09-18 (`07` §9)
+and is ready: one label, four Showcase photos, one of them the cover.
