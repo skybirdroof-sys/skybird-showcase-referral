@@ -37,6 +37,11 @@ h1, h2, h3, p, ul, li { margin: 0; padding: 0; }
 html, body {
   height: 100%;
   margin: 0;
+  /* Android Chrome "font boosting" inflates text inside blocks it decides are
+     articles, which pushes panel content past the geometry every other size is
+     derived from. Everything here is already sized from --u, so opt out. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   background: var(--bg);
   color: var(--ink);
   font-family: "Inter", "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -438,12 +443,14 @@ body { -webkit-font-smoothing: antialiased; }
   min-height: 0;
 }
 
+/* Square at all costs. Give the box a definite size on ONE axis and let
+   aspect-ratio derive the other; capping both (max-width AND max-height) is
+   what turned the rings into ellipses on a phone. Here the height is the
+   definite axis, bounded by the row; the narrow/short layout swaps to width. */
 .hud {
   position: relative;
-  width: calc(var(--u) * 25);
-  height: calc(var(--u) * 25);
-  max-width: 100%;
-  max-height: 100%;
+  height: min(calc(var(--u) * 25), 100%);
+  width: auto;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -755,15 +762,47 @@ body { -webkit-font-smoothing: antialiased; }
 /* --------------------------------------------------------- narrow fallback */
 /* TV landscape is the target; this keeps a laptop or phone check legible. */
 
-@media (max-aspect-ratio: 1/1) {
-  :root { --u: min(2.4vw, 1.1vh); }
+/* Phones, in either orientation. Landscape on a phone is short rather than
+   narrow, and the TV layout squeezed into 300px of height is unreadable long
+   before it starts overlapping — so stack and scroll for both. A real TV
+   (1080 tall) and a laptop (768) are well clear of these thresholds. */
+@media (max-aspect-ratio: 1/1), (max-height: 520px) {
   .board { height: auto; min-height: 100%; overflow-y: auto; }
   html, body { overflow: auto; }
   .zones { grid-template-columns: 1fr; }
-  .hud-stage { order: -1; height: calc(var(--u) * 26); }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; height: auto; }
   .chrome { grid-template-columns: 1fr; justify-items: start; }
   .chrome__mid, .chrome__meta { justify-self: start; }
+  .chrome__mid { justify-items: start; }
+
+  /* Width becomes the definite axis, so the cluster stays circular however
+     little height the stack leaves it. It also shrinks: on a phone the rings
+     are branding, and the numbers are the reason someone opened the page. */
+  .hud-stage { height: auto; }
+  .hud { height: auto; width: min(calc(var(--u) * 16), 52vw); }
+  .panel { padding: calc(var(--u) * 1.1) calc(var(--u) * 1.2); }
+}
+
+/* Portrait: one column, orb as a small banner above the numbers. */
+@media (max-aspect-ratio: 1/1) {
+  :root { --u: min(2.4vw, 1.1vh); }
+  .hud-stage { order: -1; }
+}
+
+/* Phone landscape — short, but wide enough to keep two columns. Scale off
+   height, which is the scarce dimension here, and drop the rings below the
+   numbers rather than ahead of them. */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  :root { --u: min(1.15vw, 3.1vh); }
+  .zones { grid-template-columns: 1fr 1fr; }
+  .panel--rest { grid-column: 1; grid-row: 1; }
+  .panel--top5 { grid-column: 2; grid-row: 1; }
+  .hud-stage { grid-column: 1 / -1; grid-row: 2; }
+  .hud { width: min(calc(var(--u) * 16), 30vh); }
+  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .chrome { grid-template-columns: auto 1fr auto; align-items: center; }
+  .chrome__mid { justify-self: center; justify-items: center; }
+  .chrome__meta { justify-self: end; }
 }
 
 @media (prefers-reduced-motion: reduce) {
