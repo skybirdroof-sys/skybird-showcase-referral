@@ -46,6 +46,16 @@ test('literal zero renders as zero', () => {
   assert.equal(fmtRest(0), '0.0');
 });
 
+test('cash never shows cents on the TV', () => {
+  // A wall display rounds to the dollar; the cents stay in the Sheet. Values
+  // here are the live ones from 2026-09-18.
+  assert.equal(fmtUsd(320.26), '$320');
+  assert.equal(fmtUsd(46750.07), '$46,750');
+  assert.equal(fmtUsd(26624.53), '$26,625'); // rounds, not truncates
+  assert.equal(fmtUsd(108367.14), '$108,367');
+  assert.equal(fmtUsd(51915.73), '$51,916');
+});
+
 test('number formats match the TV spec', () => {
   assert.equal(fmtUsd(186400), '$186,400');
   assert.equal(fmtPct(38.46), '38.5%');
