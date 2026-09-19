@@ -70,41 +70,57 @@ exports.handler = async (event) => {
   const match = slots().find((s) => s.name.toLowerCase() === tab.toLowerCase());
   if (!match) return text(403, `Tab "${tab}" is not exposed by this board.`);
 
-  const selector = match.gid
-    ? `gid=${encodeURIComponent(match.gid)}`
-    : `sheet=${encodeURIComponent(match.name)}`;
+  /* A gid survives a tab being RENAMED but not a tab being rebuilt: the ops bot
+   * recreates a tab when it changes its shape, and the new tab gets a new gid.
+   * A stale gid then fails forever and that zone goes blank — which is exactly
+   * what happened to KPI and Meta. So try the gid, then fall back to the tab
+   * name before giving up. Both failing is still a real failure. */
+  const attempts = [];
+  if (match.gid) attempts.push({ by: 'gid', selector: `gid=${encodeURIComponent(match.gid)}` });
+  attempts.push({ by: 'name', selector: `sheet=${encodeURIComponent(match.name)}` });
 
-  const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}` +
-    `/gviz/tq?tqx=out:csv&${selector}`;
+  const problems = [];
 
-  try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      headers: { 'user-agent': 'talon-tv/1.0 (+netlify-function)' },
-    });
+  for (const attempt of attempts) {
+    const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}` +
+      `/gviz/tq?tqx=out:csv&${attempt.selector}`;
 
-    if (!res.ok) {
-      return text(502, `Google returned ${res.status} for tab "${match.name}".`);
+    try {
+      const res = await fetch(url, {
+        redirect: 'follow',
+        headers: { 'user-agent': 'talon-tv/1.0 (+netlify-function)' },
+      });
+
+      if (!res.ok) {
+        problems.push(`${attempt.by}: Google returned ${res.status}`);
+        continue;
+      }
+
+      const body = await res.text();
+
+      // Google answers with an HTML sign-in page when the Sheet isn't link-shared.
+      if (body.trim().startsWith('<')) {
+        problems.push(`${attempt.by}: no CSV — check the Sheet is shared "anyone with the link can view"`);
+        continue;
+      }
+
+      return {
+        statusCode: 200,
+        headers: {
+          'content-type': 'text/csv; charset=utf-8',
+          // Names the route taken, so a stale gid shows up in a header rather
+          // than only as a blank tile on the wall.
+          'x-talon-resolved-by': attempt.by,
+          // A wall display refreshes every few minutes; 30s of edge cache keeps
+          // multiple screens from hammering Google without showing stale data.
+          'cache-control': 'public, max-age=0, s-maxage=30',
+        },
+        body,
+      };
+    } catch (err) {
+      problems.push(`${attempt.by}: ${err && err.message ? err.message : err}`);
     }
-
-    const body = await res.text();
-
-    // Google answers with an HTML sign-in page when the Sheet isn't link-shared.
-    if (body.trim().startsWith('<')) {
-      return text(502, `Tab "${match.name}" did not return CSV — check the Sheet is shared "anyone with the link can view".`);
-    }
-
-    return {
-      statusCode: 200,
-      headers: {
-        'content-type': 'text/csv; charset=utf-8',
-        // A wall display refreshes every few minutes; 30s of edge cache keeps
-        // multiple screens from hammering Google without showing stale data.
-        'cache-control': 'public, max-age=0, s-maxage=30',
-      },
-      body,
-    };
-  } catch (err) {
-    return text(502, `Sheet fetch failed: ${err && err.message ? err.message : err}`);
   }
+
+  return text(502, `Tab "${match.name}" could not be read — ${problems.join('; ')}.`);
 };
