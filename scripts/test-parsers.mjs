@@ -2,7 +2,7 @@
    Run: npm test */
 
 import assert from 'node:assert/strict';
-import { buildModelFromCsv, kpiFor, loadLive, NoSourceError } from '../assets/js/sheet.js';
+import { buildModelFromCsv, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
@@ -247,6 +247,68 @@ test('a human stamp with no zone is kept verbatim rather than guessed at', () =>
   const model = buildModelFromCsv({ meta });
   assert.equal(model.updated.date, null);
   assert.equal(model.updated.raw, 'Wed Sep 17 4:05 PM');
+});
+
+/* --- monthly / weekly periods ------------------------------------------ */
+
+test('a KPI tab with no Period column still reads as monthly', () => {
+  // The live Sheet today. This must not change behaviour.
+  const model = buildModelFromCsv({ kpi: KPI_CSV });
+  assert.equal(kpiFor(model, 'Appointments Set', 'monthly').number, 41);
+  assert.equal(kpiFor(model, 'Appointments Set').number, 41, 'default period is monthly');
+  assert.equal(kpiFor(model, 'Appointments Set', 'weekly'), null, 'no weekly rows yet');
+});
+
+test('the same metric can appear once per period without colliding', () => {
+  const csv = [
+    'Metric,Period,Value,Target,Unit',
+    'Cash Collected,monthly,"$142,900",,USD',
+    'Cash Collected,weekly,"$31,450",,USD',
+    'Close Rates,Monthly,38.5%,45%,pct',
+    'Close Rates,WEEKLY,35%,45%,pct',
+  ].join('\n');
+  const model = buildModelFromCsv({ kpi: csv });
+  assert.equal(kpiFor(model, 'Cash Collected', 'monthly').number, 142900);
+  assert.equal(kpiFor(model, 'Cash Collected', 'weekly').number, 31450);
+  assert.equal(kpiFor(model, 'Close Rates', 'monthly').percent, 38.5);
+  assert.equal(kpiFor(model, 'Close Rates', 'weekly').percent, 35);
+});
+
+test('period spellings normalise, and unknown ones are dropped', () => {
+  assert.equal(normalizePeriod(''), 'monthly');
+  assert.equal(normalizePeriod('MTD'), 'monthly');
+  assert.equal(normalizePeriod(' Weekly '), 'weekly');
+  assert.equal(normalizePeriod('L10'), 'weekly');
+  assert.equal(normalizePeriod('quarterly'), null);
+
+  const csv = [
+    'Metric,Period,Value,Unit',
+    'Cash Collected,quarterly,"$999,999",USD',
+  ].join('\n');
+  const model = buildModelFromCsv({ kpi: csv });
+  assert.equal(kpiFor(model, 'Cash Collected', 'monthly'), null, 'a quarter must not show as the month');
+  assert.equal(kpiFor(model, 'Cash Collected', 'weekly'), null);
+});
+
+test('the label always describes the view on screen', () => {
+  const meta = [
+    'Key,Value',
+    'period_label_monthly,September MTD',
+    'period_label_weekly,Week of Sep 14-20',
+    'default_period,monthly',
+  ].join('\n');
+  const model = buildModelFromCsv({ meta });
+  assert.equal(periodLabel(model, 'monthly'), 'September MTD');
+  assert.equal(periodLabel(model, 'weekly'), 'Week of Sep 14-20');
+  assert.equal(model.meta.defaultPeriod, 'monthly');
+});
+
+test('a generic period_label describes the default view only, never the other', () => {
+  // Today's Meta tab: one generic label and nothing period-specific.
+  const meta = ['Key,Value', 'period_label,as-of Morning Runway live'].join('\n');
+  const model = buildModelFromCsv({ meta });
+  assert.equal(periodLabel(model, 'monthly'), 'as-of Morning Runway live');
+  assert.equal(periodLabel(model, 'weekly'), 'Weekly', 'must not relabel weekly with the monthly string');
 });
 
 /* --- one missing tab must not take the board down ---------------------- */

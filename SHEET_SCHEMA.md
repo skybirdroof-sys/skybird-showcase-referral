@@ -38,6 +38,22 @@ labels on the TV:
 | `Total AR Over 60 Days` | USD | ProLine |
 | `Cash Collected` | USD | ProLine |
 
+Optional column: **`Period`** — `monthly` or `weekly`.
+
+The TV defaults to the monthly set; a **Weekly** toggle in the header switches
+the eight tiles to the weekly (L10) set. To provide both, write the eight metric
+rows twice — one set `Period = monthly`, one set `Period = weekly`.
+
+- A **blank** `Period` counts as `monthly`, so a KPI tab without this column
+  renders exactly as it does today. Adding the column is optional and
+  backwards-compatible.
+- Accepted spellings: `monthly` / `month` / `mtd`, and `weekly` / `week` / `wtd`
+  / `l10`. Case and punctuation are ignored.
+- Anything else (`quarterly`, `ytd`) is **dropped with a console warning** —
+  better a missing tile than a quarter displayed as the month.
+- Metric strings stay identical across both sets; the Period column is what
+  separates them.
+
 Column notes:
 
 - **Value** — may be blank. `$`, `,` and `%` are stripped, so `$186,400`, `186400`
@@ -122,7 +138,10 @@ Key | Value
 | Key | Example | Effect |
 |---|---|---|
 | `last_updated_et` | `2026-09-17T16:05:00-04:00` | Drives the board's **Last updated** clock. ISO or human ET text. Falls back to the board's own fetch time when absent. |
-| `period_label` | `Week of Sep 14–20` or `MTD` | Centre of the top chrome. Blank = nothing shown. |
+| `period_label` | `September MTD` | Describes the **default** view only. Never reused to label the other period. |
+| `period_label_monthly` | `September MTD` | Shown when the board is on Monthly. Preferred over `period_label`. |
+| `period_label_weekly` | `Week of Sep 14–20` | Shown when the board is on Weekly. |
+| `default_period` | `monthly` | Which view a fresh browser opens on. Defaults to `monthly`. |
 | `site_title` | `Talon` | Documented for Talon's own use; the page title is hard-coded to Talon. |
 | `refresh_seconds` | `180` | Client refresh cadence, clamped to 120–300. |
 

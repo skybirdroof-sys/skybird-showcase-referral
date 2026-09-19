@@ -51,5 +51,13 @@ export const CONFIG = {
     { metric: 'Cash Collected', unit: 'usd' },
   ],
 
+  /* Reporting periods for the eight tiles. `monthly` is the wall's default;
+     `weekly` is the set used in the Tuesday L10 scorecard. A KPI row with a
+     blank Period column counts as the default period, so a Sheet written
+     before this column existed keeps rendering unchanged. */
+  periods: ['monthly', 'weekly'],
+  defaultPeriod: 'monthly',
+  periodStorageKey: 'talon.period',
+
   timeZone: 'America/New_York',
 };

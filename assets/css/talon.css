@@ -108,7 +108,52 @@ body { -webkit-font-smoothing: antialiased; }
   color: var(--ink-3);
 }
 
-.chrome__mid { justify-self: center; }
+.chrome__mid {
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: calc(var(--u) * 0.35);
+}
+
+/* Period toggle: monthly / weekly for the L10 scorecard. */
+.period {
+  display: inline-flex;
+  padding: calc(var(--u) * 0.16);
+  border: 1px solid rgba(47, 230, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.period__btn {
+  font: inherit;
+  font-size: calc(var(--u) * 0.92);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.12);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: calc(var(--u) * 0.34) calc(var(--u) * 1.1);
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.period__btn:hover { color: var(--ink); }
+
+.period__btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.period__btn.is-active {
+  color: #04141a;
+  background: var(--cyan);
+  box-shadow: 0 0 calc(var(--u) * 1.2) var(--cyan-glow);
+}
+
+/* Weekly is the exception view, so it carries the alert colour. */
+.period__btn[data-period="weekly"].is-active {
+  background: var(--amber);
+  box-shadow: 0 0 calc(var(--u) * 1.2) rgba(255, 176, 32, 0.4);
+}
 
 .chrome__period {
   font-size: calc(var(--u) * 1.15);

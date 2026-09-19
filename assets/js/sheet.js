@@ -85,6 +85,7 @@ function parseKpi(csv) {
   return records(csv)
     .map((r) => ({
       metric: String(pick(r, ['metric', 'kpi', 'name'])).trim(),
+      period: String(pick(r, ['period', 'periodtype', 'range', 'cadence'])).trim(),
       value: pick(r, ['value']),
       target: pick(r, ['target', 'goal']),
       unit: String(pick(r, ['unit', 'units'])).trim(),
@@ -172,6 +173,19 @@ function parseMeta(csv) {
 
 /* --- value guards ------------------------------------------------------ */
 
+/* A blank Period means the default period: the KPI tab predates this column,
+   and a Sheet that never adopts it must keep working exactly as it does now.
+   An unrecognised period is dropped rather than guessed at — better a missing
+   tile than a weekly number displayed as the month. */
+export function normalizePeriod(raw) {
+  const text = String(raw ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!text) return CONFIG.defaultPeriod;
+  if (['monthly', 'month', 'mtd', 'm', 'monthtodate'].includes(text)) return 'monthly';
+  if (['weekly', 'week', 'wtd', 'w', 'l10', 'weektodate'].includes(text)) return 'weekly';
+  return null;
+}
+
+
 /* Daily Top Five is count-based: five items, 20% each. Anything outside that
    set is bad data (a cell has been corrupted into a timestamp before now), and
    bad data must read as missing rather than as a number nobody scored. */
@@ -222,11 +236,25 @@ export function normalizeModel(raw) {
   const meta = { ...((raw.rest && raw.rest.meta) || {}), ...(raw.meta || {}) };
   const kpiRows = Array.isArray(raw.kpi) ? raw.kpi : [];
   const kpi = new Map();
+  const periodsSeen = {};
   for (const row of kpiRows) {
     const key = norm(row.metric);
-    if (!key || kpi.has(key)) continue;
-    kpi.set(key, {
+    if (!key) continue;
+
+    const period = normalizePeriod(row.period);
+    if (period === null) {
+      console.warn(`[talon] ignoring KPI row with unknown Period "${row.period}":`, row.metric);
+      continue;
+    }
+
+    // Keyed by period + metric, so the same eight labels can appear twice.
+    const mapKey = `${period}::${key}`;
+    if (kpi.has(mapKey)) continue; // first row wins, as before
+
+    periodsSeen[period] = true;
+    kpi.set(mapKey, {
       ...row,
+      period,
       number: parseValue(row.value),
       targetNumber: parseValue(row.target),
       percent: parsePercent(row.value),
@@ -278,8 +306,15 @@ export function normalizeModel(raw) {
     meta: {
       lastUpdatedEt: metaStamp,
       periodLabel: meta.periodlabel || meta.periodLabel || '',
+      periodLabels: {
+        monthly: meta.periodlabelmonthly || meta.periodLabelMonthly || '',
+        weekly: meta.periodlabelweekly || meta.periodLabelWeekly || '',
+      },
+      defaultPeriod: normalizePeriod(meta.defaultperiod || meta.defaultPeriod || '')
+        || CONFIG.defaultPeriod,
       refreshSeconds: parseValue(meta.refreshseconds ?? meta.refreshSeconds),
     },
+    periodsSeen,
     kpi,
     top5,
     rest: { index, computed, people },
@@ -368,6 +403,20 @@ export async function loadFixture(name) {
   return normalizeModel({ ...raw, mode: name, example: true });
 }
 
-export function kpiFor(model, metric) {
-  return model.kpi.get(norm(metric)) || null;
+export function kpiFor(model, metric, period) {
+  const want = period || CONFIG.defaultPeriod;
+  return model.kpi.get(`${want}::${norm(metric)}`) || null;
+}
+
+/* The label describing the view currently on screen. A period-specific label
+   wins; the generic `period_label` only describes the default view, so it is
+   never reused for the other one; otherwise just the period's name. */
+export function periodLabel(model, period) {
+  const want = period || CONFIG.defaultPeriod;
+  const labels = (model.meta && model.meta.periodLabels) || {};
+  if (labels[want]) return labels[want];
+  if (want === (model.meta?.defaultPeriod || CONFIG.defaultPeriod) && model.meta?.periodLabel) {
+    return model.meta.periodLabel;
+  }
+  return want === 'weekly' ? 'Weekly' : 'Monthly';
 }

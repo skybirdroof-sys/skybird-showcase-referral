@@ -2,7 +2,7 @@
    Anything null becomes an em dash, never a 0. */
 
 import { CONFIG } from './config.js';
-import { kpiFor } from './sheet.js';
+import { kpiFor, periodLabel } from './sheet.js';
 import {
   EMPTY, fmtByUnit, fmtPct, fmtRest, fmtEtStamp, normalizeUnit, clamp,
 } from './format.js';
@@ -16,6 +16,7 @@ const el = {
   restValue: () => document.getElementById('rest-value'),
   restChips: () => document.getElementById('rest-chips'),
   period: () => document.getElementById('period-label'),
+  periodToggle: () => document.getElementById('period-toggle'),
   updated: () => document.getElementById('last-updated'),
   badgeStale: () => document.getElementById('badge-stale'),
   badgeExample: () => document.getElementById('badge-example'),
@@ -183,12 +184,12 @@ function renderTop5(model) {
   }
 }
 
-function renderTiles(model) {
+function renderTiles(model, period) {
   for (const spec of CONFIG.tiles) {
     const node = el.tiles().querySelector(`[data-metric="${norm(spec.metric)}"]`);
     if (!node) continue;
 
-    const row = kpiFor(model, spec.metric);
+    const row = kpiFor(model, spec.metric, period);
     const unit = normalizeUnit(row?.unit) || spec.unit;
     const number = unit === 'pct' ? (row ? row.percent : null) : (row ? row.number : null);
     const text = row ? fmtByUnit(number, unit) : EMPTY;
@@ -210,7 +211,17 @@ function renderTiles(model) {
 }
 
 function renderChrome(model, state) {
-  el.period().textContent = model.meta.periodLabel || '';
+  const period = state.period || CONFIG.defaultPeriod;
+
+  // The label always describes what is on screen, so a board left on weekly
+  // says so rather than quietly showing week numbers under a monthly heading.
+  el.period().textContent = periodLabel(model, period);
+
+  for (const btn of el.periodToggle().querySelectorAll('.period__btn')) {
+    const active = btn.dataset.period === period;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  }
 
   // Newest timestamp the Sheet gave us (Meta, or any tab's Updated column),
   // reformatted only when it carried a real offset; otherwise shown as written.
@@ -239,10 +250,12 @@ function renderChrome(model, state) {
 }
 
 export function renderModel(model, state = {}) {
+  const period = state.period || CONFIG.defaultPeriod;
   document.documentElement.dataset.mode = model.mode;
+  document.documentElement.dataset.period = period;
   renderRest(model);
   renderTop5(model);
-  renderTiles(model);
+  renderTiles(model, period);
   renderChrome(model, state);
   el.board().hidden = false;
 }

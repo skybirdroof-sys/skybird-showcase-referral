@@ -3,33 +3,123 @@
   "meta": {
     "periodLabel": "EXAMPLE DATA · empty state",
     "lastUpdatedEt": "",
-    "refreshSeconds": "180"
+    "refreshSeconds": "180",
+    "periodLabelMonthly": "EXAMPLE DATA · empty state",
+    "defaultPeriod": "monthly"
   },
   "kpi": [
-    { "metric": "Appointments Set",     "value": "", "target": "", "unit": "count" },
-    { "metric": "Cost per Appt",        "value": "", "target": "", "unit": "USD" },
-    { "metric": "Contracts Signed $$",  "value": "", "target": "", "unit": "USD" },
-    { "metric": "Close Rates",          "value": "", "target": "", "unit": "pct" },
-    { "metric": "Jobs Completed",       "value": "", "target": "", "unit": "count" },
-    { "metric": "Sent CoC cash sitting","value": "", "target": "", "unit": "USD" },
-    { "metric": "Total AR Over 60 Days","value": "", "target": "", "unit": "USD" },
-    { "metric": "Cash Collected",       "value": "", "target": "", "unit": "USD" }
+    {
+      "metric": "Appointments Set",
+      "value": "",
+      "target": "",
+      "unit": "count",
+      "period": "monthly"
+    },
+    {
+      "metric": "Cost per Appt",
+      "value": "",
+      "target": "",
+      "unit": "USD",
+      "period": "monthly"
+    },
+    {
+      "metric": "Contracts Signed $$",
+      "value": "",
+      "target": "",
+      "unit": "USD",
+      "period": "monthly"
+    },
+    {
+      "metric": "Close Rates",
+      "value": "",
+      "target": "",
+      "unit": "pct",
+      "period": "monthly"
+    },
+    {
+      "metric": "Jobs Completed",
+      "value": "",
+      "target": "",
+      "unit": "count",
+      "period": "monthly"
+    },
+    {
+      "metric": "Sent CoC cash sitting",
+      "value": "",
+      "target": "",
+      "unit": "USD",
+      "period": "monthly"
+    },
+    {
+      "metric": "Total AR Over 60 Days",
+      "value": "",
+      "target": "",
+      "unit": "USD",
+      "period": "monthly"
+    },
+    {
+      "metric": "Cash Collected",
+      "value": "",
+      "target": "",
+      "unit": "USD",
+      "period": "monthly"
+    }
   ],
   "top5": [
-    { "person": "Margaret", "today": "", "week": "" },
-    { "person": "Travis",   "today": "", "week": "" },
-    { "person": "John",     "today": "", "week": "" },
-    { "person": "Henry",    "today": "", "week": "" },
-    { "person": "Anas",     "today": "", "week": "" },
-    { "person": "Jacob",    "today": "", "week": "" }
+    {
+      "person": "Margaret",
+      "today": "",
+      "week": ""
+    },
+    {
+      "person": "Travis",
+      "today": "",
+      "week": ""
+    },
+    {
+      "person": "John",
+      "today": "",
+      "week": ""
+    },
+    {
+      "person": "Henry",
+      "today": "",
+      "week": ""
+    },
+    {
+      "person": "Anas",
+      "today": "",
+      "week": ""
+    },
+    {
+      "person": "Jacob",
+      "today": "",
+      "week": ""
+    }
   ],
   "rest": {
     "index": "",
     "people": [
-      { "person": "Jacob", "days": "", "projects": "" },
-      { "person": "John",  "days": "", "projects": "" },
-      { "person": "Henry", "days": "", "projects": "" },
-      { "person": "Anas",  "days": "", "projects": "" }
+      {
+        "person": "Jacob",
+        "days": "",
+        "projects": ""
+      },
+      {
+        "person": "John",
+        "days": "",
+        "projects": ""
+      },
+      {
+        "person": "Henry",
+        "days": "",
+        "projects": ""
+      },
+      {
+        "person": "Anas",
+        "days": "",
+        "projects": ""
+      }
     ]
   }
 }

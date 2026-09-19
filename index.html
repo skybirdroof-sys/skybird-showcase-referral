@@ -34,6 +34,13 @@
         <span class="chrome__company">Skybird Roofing</span>
       </div>
       <div class="chrome__mid">
+        <!-- Monthly is the wall's normal state; weekly is for the Tuesday L10.
+             Weekly lights amber so a board left on it reads as "not the usual
+             view" from across the room. -->
+        <div class="period" id="period-toggle" role="group" aria-label="Reporting period">
+          <button class="period__btn" type="button" data-period="monthly">Monthly</button>
+          <button class="period__btn" type="button" data-period="weekly">Weekly</button>
+        </div>
         <span class="chrome__period" id="period-label"></span>
       </div>
       <div class="chrome__meta">

@@ -100,6 +100,15 @@ URL switches (work locally and in production):
 | `/?mode=empty` | all-blank fixture, to check empty states |
 | `/?refresh=240` | override refresh seconds (clamped to 120–300) |
 | press `r` | force an immediate refresh (handy while tuning) |
+| press `m` / `w` | switch the tiles between Monthly and Weekly (L10) |
+
+The eight tiles carry two sets of numbers: **Monthly** (the wall's default) and
+**Weekly** for the Tuesday L10 scorecard. The header toggle switches between
+them with no refetch — both sets arrive in the same `KPI` tab, separated by a
+`Period` column (see `SHEET_SCHEMA.md`). The choice is remembered per browser,
+nothing auto-reverts, and Weekly lights amber so a board left on it reads as
+"not the usual view" from across the room. A KPI tab with no `Period` column
+behaves exactly as before: everything counts as monthly.
 
 ---
 
