@@ -6,7 +6,30 @@ Top Five blanked correctly (Margaret's 09:10 bump kept, five seats now reading
 8.2 / 5.8 / 3.5 / 3.1, `run_log` carrying three rows. The wall is telling the
 truth about what has been scored today. Thank you.
 
-This is the one risk left, and it has nothing to do with the TV.
+This is the one risk left, it has nothing to do with the TV, and it is about a
+person rather than a dashboard.
+
+---
+
+## Before tomorrow's 8:30 rebuild
+
+The rebuild runs again tomorrow morning and will delete another day of
+Margaret's annotations. Two things should happen today, ahead of any fix and
+ahead of any of the questions below.
+
+**1. Tell her today.** She should hear before tonight that cell comments do not
+survive the overnight rebuild, so she does not put anything she needs into one
+between now and the fix. If she has been losing annotations without knowing
+why, she has been quietly absorbing a defect that was never hers. That
+conversation is owed today, not when the fix ships.
+
+**2. Protect tomorrow's run.** Either snapshot her comments before the replace
+and restore them after, or skip the replace tomorrow and write only the clock
+column. If neither is possible by 8:30, say so and Jacob can decide whether the
+rebuild runs at all tomorrow. A day of stale clocks costs her far less than a
+day of deleted notes.
+
+Nothing below is urgent by comparison. These two are.
 
 ---
 
@@ -69,12 +92,19 @@ from "snapshot and restore" to "stop replacing the file".
 ## Two things that are not code
 
 - **How long has the replace been running?** That is how long this has been
-  happening.
-- **Does Margaret know her comments don't survive the night?** If she has been
-  losing annotations without knowing why, she should be told today, before the
-  fix lands, so she can stop putting anything she needs into a comment. If she
-  already learned to avoid them, that is a workaround she built around a bug
-  and it should still be fixed.
+  happening, and it sizes what she has already absorbed.
+- **If she has already worked around this** — stopped using comments because
+  they kept vanishing — that is a workaround she built around our defect. It
+  still gets fixed, and she should get the feature back, not keep the habit.
+
+## Whose call the fix is
+
+Margaret's, on anything she can see. Restoring her annotations after a replace
+is invisible to her and needs nobody's permission. Changing where she puts
+notes, adding a column, asking her to work differently — that needs her yes
+first, and "it would be easier for the rebuild" is not a reason she has to
+accept. Ask her what would make the morning easier while you are in there;
+do not design it for her.
 
 ## Interim, until the root fix ships
 
