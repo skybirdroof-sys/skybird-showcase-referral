@@ -144,17 +144,35 @@ Then, in order — `n8n/README.md` § Import has the full table:
 5. Create the CompanyCam subscription on `project.label_added` against that
    URL, with `authorization_header` matching the webhook credential exactly.
 
-### Two decisions waiting on Jacob
+### Resolved 2026-09-21 by Euan's second reply (`09`, Second reply)
 
-- **Which WordPress.** The `skybird-sync` user does not exist yet (needs
-  Euan). For the first run that does not matter: prove it against a TasteWP
-  sandbox with a sandbox admin Application Password, per `09` §3.2 — prove on
-  a throwaway, then install on production. `wpBase` is the only field that
-  changes afterwards.
+- **Which WordPress: the `/shenzhou/` staging clone.** `skybird-sync` now
+  exists as an Editor there and on the live site, and staging is a clone of
+  the real stack — Hub Child, WPBakery, the real plugin set. That exercises
+  what TasteWP could not. **The plugin has to be installed on staging first**;
+  it has only ever run on a sandbox. Set `wpBase` to the staging URL.
+- **No security plugins on the site**, so nothing should block Application
+  Passwords or the REST API.
+
+### Before using the sync credential
+
+The Application Password came through in the body of a plain email and is now
+in two mailboxes, a PDF and a session transcript. It is an **Editor**
+credential on the **live** site. **Revoke it, generate a replacement, and
+paste the replacement straight into the n8n credential** — see `09` §4. The
+exposed one is tolerable against `/shenzhou/` only, never production.
+
+Also: the received value contains a `%`, which
+`wp_generate_password( 24, false )` cannot emit. If it 401s, that is why —
+get a fresh one rather than debugging the request.
+
+### Still waiting on Jacob
+
 - **Who creates the CompanyCam subscription.** It needs the shared bearer
   secret in two places, n8n and CompanyCam. Claude has CompanyCam write tools
   and can create it, but would have to be told the secret, which would put it
-  in the session transcript. Jacob creating it himself keeps it out. His call.
+  in the session transcript — exactly what went wrong with the WordPress
+  password. **Recommend Jacob creates it himself.**
 
 ### Still true
 
