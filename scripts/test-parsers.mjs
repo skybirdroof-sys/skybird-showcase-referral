@@ -370,6 +370,23 @@ await (async function proxyStaysAliveAcrossRefreshes() {
   });
 })();
 
+await (async function gvizErrorPayloadIsNotData() {
+  // gviz answers a stale gid with HTTP 200 and a JS payload, not an error.
+  // Treating it as CSV made the tab report success and parse to zero rows,
+  // which is how the KPI and Meta zones went blank with no badge at all.
+  const payload = '/*O_o*/\ngoogle.visualization.Query.setResponse({"status":"error"});';
+  stubFetch(async (tab) => (okCsv[tab]
+    ? { ok: true, status: 200, text: async () => okCsv[tab] }
+    : { ok: true, status: 200, text: async () => payload }));
+
+  const model = await loadLive();
+  test('a gviz error payload counts as an unavailable tab, not empty data', () => {
+    assert.equal(model.sources.top5, 'ok');
+    assert.equal(model.sources.rest, 'unavailable', 'must not be reported as a healthy, empty tab');
+    assert.match(model.sourceErrors.join(' '), /non-CSV/);
+  });
+})();
+
 await (async function everyTabDown() {
   stubFetch(async () => ({ ok: false, status: 502, text: async () => 'boom' }));
   let thrown = null;

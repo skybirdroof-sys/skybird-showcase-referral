@@ -41,6 +41,24 @@ function slots() {
   }));
 }
 
+/* gviz does not fail cleanly. A bad gid, a deleted tab or a query error comes
+ * back as HTTP 200 whose body is a JavaScript payload (a slash-star O_o marker
+ * followed by google.visualization.Query.setResponse) rather than an error
+ * status or HTML. Accepting that as CSV is worse than a 502: the tab reports
+ * success, parses to zero rows, and the zone goes quietly blank with no badge
+ * and no fallback to the tab name. So a body counts as CSV only if it is not
+ * HTML, not a gviz payload, and its first line actually has a delimiter. */
+function notCsv(body) {
+  const t = String(body ?? '').trim();
+  if (t === '') return 'empty response';
+  if (t.startsWith('<')) return 'HTML, not CSV - check the Sheet is shared "anyone with the link can view"';
+  if (t.startsWith('/*') || t.includes('google.visualization.Query.setResponse')) {
+    return 'gviz error payload - the tab id or name did not resolve';
+  }
+  if (!t.split('\n', 1)[0].includes(',')) return 'single-column response, not a Talon tab';
+  return null;
+}
+
 const text = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
   headers: {
@@ -98,9 +116,9 @@ exports.handler = async (event) => {
 
       const body = await res.text();
 
-      // Google answers with an HTML sign-in page when the Sheet isn't link-shared.
-      if (body.trim().startsWith('<')) {
-        problems.push(`${attempt.by}: no CSV — check the Sheet is shared "anyone with the link can view"`);
+      const why = notCsv(body);
+      if (why) {
+        problems.push(`${attempt.by}: ${why}`);
         continue;
       }
 

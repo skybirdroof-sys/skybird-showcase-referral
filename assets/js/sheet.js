@@ -22,10 +22,17 @@ function gvizUrl(tab) {
     `/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
 }
 
+/* Same rule as the Function applies here, so a direct-CSV read can't be fooled
+   either. gviz answers a bad gid or a missing tab with HTTP 200 and a
+   JavaScript payload (a slash-star O_o marker plus
+   google.visualization.Query.setResponse), which is not HTML and would
+   otherwise sail through as valid CSV and parse to nothing. */
 function looksLikeCsv(text) {
   const t = String(text ?? '').trim();
-  // Google hands back an HTML error page for a bad id / unshared Sheet.
-  return t !== '' && !t.startsWith('<');
+  if (t === '') return false;
+  if (t.startsWith('<')) return false;
+  if (t.startsWith('/*') || t.includes('google.visualization.Query.setResponse')) return false;
+  return t.split('\n', 1)[0].includes(',');
 }
 
 /**
