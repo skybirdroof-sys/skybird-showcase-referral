@@ -177,3 +177,108 @@ skybird-projects/
 ```
 
 The security-plugin answer (§2) affects whether Application Passwords will *authenticate* against production. It does not affect the plugin's code, so it gates testing, not writing.
+
+---
+
+# Second reply — Euan, 2026-09-18 15:53
+
+Answers to the 2026-09-17 follow-up. All three questions answered, plus
+confirmation on the two paid options and the hub structure. **Everything in
+`01-api-audit.md` §2.2 is now closed.**
+
+## 1. Security plugin — "No security plugins on the site"
+
+The last §2.2 unknown, and the answer removes the most likely cause of a 401
+against production. Nothing is restricting the REST API or Application
+Passwords. `07-phase-4-preflight.md` §4.2's remaining escalation is discharged.
+
+## 2. The sync user exists
+
+`skybird-sync`, **Editor**, `skybirdroof+wpsync@gmail.com`, created by Euan on
+**both the published site and the staging site**, with an Application Password
+issued.
+
+**The password is not recorded in this repo, and must not be.** See
+§4 below — it needs replacing before it is used against production.
+
+## 3. `/shenzhou/` staging — "already set as noindex and blocked from crawlers"
+
+Confirmed. Raised as a courtesy, not a dependency; closed.
+
+**This changes where the first run should happen.** The plan of record
+(`09` §3.2, from Euan's first reply) was to prove the plugin on a throwaway
+instance we control, because no staging was available to us. One now is, the
+sync user is already on it, and it is a clone of the live site — same Hub
+Child theme, same WPBakery, same plugin set, same WordPress version.
+
+A TasteWP sandbox proved what a sandbox can prove: registration, the REST
+write, and rendering under *a* theme. It cannot prove the parts that only fail
+on the real stack — the template under Hub Child rather than a block theme,
+the shortcode inside WPBakery, and interaction with whatever else is
+installed. Staging can.
+
+**Revised target for the first end-to-end run: the `/shenzhou/` staging
+clone**, not TasteWP and not production. Drafts only either way.
+
+## 4. The Application Password arrived in plain email — treat it as burned
+
+Euan sent the Application Password in the body of an email. It now exists, in
+plaintext, in at least: his Sent items, Jacob's inbox, the PDF export of that
+thread, and the Claude session transcript that PDF was read into. None of
+those is a credential store, and email is not a channel that can be un-sent.
+
+It is an **Editor**-role credential on the **live production site**. Editor can
+publish, edit and delete any post, and upload media — so this is not a
+read-only exposure.
+
+**Recommended, in order:**
+
+1. Revoke that Application Password in `skybird-sync`'s WordPress profile
+   (Users → skybird-sync → Application Passwords → Revoke). Revocation is
+   immediate and does not affect the user account.
+2. Generate a replacement **and paste it straight into the n8n credential**,
+   so it never passes through email or chat. WordPress shows it once.
+3. If a password is needed for the staging run before that happens, the
+   exposed one is tolerable **against `/shenzhou/` only** — a noindexed clone
+   — and never against the live site.
+
+This is a process point, not a criticism of Euan: the request did not say how
+to send it, and it should have. Any future credential request from this
+project should name the channel.
+
+### A likely transcription problem, flag not a fix
+
+The password as received contains a `%`. WordPress generates Application
+Passwords with `wp_generate_password( 24, false )` — the `false` suppresses
+special characters, leaving `[a-zA-Z0-9]` only. A `%` cannot appear in one.
+
+So either the PDF/email mangled the string, or a character was substituted in
+transit. **Do not assume the received value is correct.** If it 401s, that is
+the reason, and the answer is a fresh password rather than debugging the
+request. Since it is being replaced anyway (§4), this mostly matters for not
+losing an hour to a mysterious 401 first.
+
+## 5. Both paid options — confirmed skipped
+
+"Sounds good" to both: no ACF Pro, no WP Staging Pro. The reasoning in the
+first reply stands unchanged.
+
+## 6. Hub structure — "Yes, aligned"
+
+`/projects/{slug}/`, no global all-projects page competing with the service
+areas, each project linking back to its area, `-nc` URLs canonical. That is
+what `03-structure-signoff.md` §2 specified and what the plugin implements;
+the back-link verified on a real render 2026-09-18 builds exactly this path.
+
+## What this closes, and what is left
+
+| Was open | Now |
+|---|---|
+| Security plugin (`01` §2.2, `07` §4.2) | ✅ None installed |
+| `skybird-sync` user | ✅ Exists, Editor, both sites |
+| `/shenzhou/` noindex | ✅ Confirmed |
+| Where to prove the first run | ✅ **Staging**, revised from "a throwaway" |
+| Application Password handling | ⚠️ **Exposed — revoke and reissue** |
+
+Nothing is now waiting on Pitch Peak. The remaining Phase 4 work is n8n
+configuration, the webhook subscription, and the first run.
