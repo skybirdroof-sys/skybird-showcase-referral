@@ -321,6 +321,39 @@ test('a generic period_label describes the default view only, never the other', 
   assert.equal(periodLabel(model, 'weekly'), 'Weekly', 'must not relabel weekly with the monthly string');
 });
 
+/* --- gviz header auto-detection ---------------------------------------- */
+
+test('a mangled multi-row gviz header is reported, not silently empty', () => {
+  // Exactly what the live endpoint returned without headers=1: gviz folded the
+  // first three rows into the header and space-joined them.
+  const mangled = [
+    '"Metric Appointments Set Cost per Appt","Period monthly monthly","Value ","Target ","Unit count USD"',
+    '"Contracts Signed $$","monthly","46750.07","","USD"',
+    '"Jobs Completed","monthly","8","","count"',
+  ].join('\n');
+
+  const model = buildModelFromCsv({ kpi: mangled });
+  assert.equal(kpiFor(model, 'Contracts Signed $$'), null, 'the mangled header makes rows unusable');
+  assert.equal(model.sources.kpi, 'unparsed', 'and that must be visible, not silent');
+  assert.match(model.sourceErrors.join(' '), /no rows parsed/);
+});
+
+test('the same tab parses correctly once gviz is pinned to one header row', () => {
+  const clean = [
+    'Metric,Period,Value,Target,Unit',
+    'Appointments Set,monthly,,,count',
+    'Cost per Appt,monthly,,,USD',
+    'Contracts Signed $$,monthly,46750.07,,USD',
+    'Jobs Completed,monthly,8,,count',
+  ].join('\n');
+
+  const model = buildModelFromCsv({ kpi: clean });
+  assert.equal(kpiFor(model, 'Contracts Signed $$').number, 46750.07);
+  assert.equal(kpiFor(model, 'Jobs Completed').number, 8);
+  assert.equal(kpiFor(model, 'Appointments Set').number, null, 'blank stays blank');
+  assert.notEqual(model.sources.kpi, 'unparsed');
+});
+
 /* --- one missing tab must not take the board down ---------------------- */
 
 const okCsv = {

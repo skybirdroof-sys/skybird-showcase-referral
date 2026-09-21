@@ -48,6 +48,12 @@ function slots() {
  * success, parses to zero rows, and the zone goes quietly blank with no badge
  * and no fallback to the tab name. So a body counts as CSV only if it is not
  * HTML, not a gviz payload, and its first line actually has a delimiter. */
+/* headers=1 is not optional. Without it gviz GUESSES how many leading rows are
+ * header by column type, and a text column whose first data rows are blank
+ * (KPI!Value, Meta!Value) makes it swallow those rows into the header and
+ * space-join them - "Metric Appointments Set Cost per Appt" as one cell. The
+ * tab then parses to zero usable rows and the zone goes blank. Pinning it to
+ * one header row is the difference between eight numbers and eight dashes. */
 function notCsv(body) {
   const t = String(body ?? '').trim();
   if (t === '') return 'empty response';
@@ -101,7 +107,7 @@ exports.handler = async (event) => {
 
   for (const attempt of attempts) {
     const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}` +
-      `/gviz/tq?tqx=out:csv&${attempt.selector}`;
+      `/gviz/tq?tqx=out:csv&headers=1&${attempt.selector}`;
 
     try {
       const res = await fetch(url, {

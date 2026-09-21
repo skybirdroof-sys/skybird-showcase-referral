@@ -17,9 +17,12 @@ const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 let proxyWorks = null; // null = untested, false = fall back to direct CSV
 
+/* headers=1 pins gviz to a single header row. Left to guess, it folds leading
+   rows whose numeric column is still blank into the header and space-joins
+   them, which silently produces a tab with no usable rows. */
 function gvizUrl(tab) {
   return `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}` +
-    `/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+    `/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(tab)}`;
 }
 
 /* Same rule as the Function applies here, so a direct-CSV read can't be fooled
@@ -335,14 +338,40 @@ export function normalizeModel(raw) {
 /* CSV text (all four tabs) -> board model. Exported so it can be exercised
    without a network: see scripts/test-parsers.mjs. */
 export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', sources, sourceErrors }) {
-  return normalizeModel({
-    mode: 'live',
+  const parsed = {
     kpi: parseKpi(kpi),
     top5: parseTop5(top5),
     rest: parseRest(rest),
     meta: parseMeta(meta),
-    sources,
-    sourceErrors,
+  };
+
+  /* A tab that fetched fine but yielded nothing usable is a parse failure, not
+     an empty tab, and it must not read as healthy. This is how the mangled
+     gviz header went unnoticed: CSV arrived, every row was dropped, and the
+     zone just went blank. */
+  const marks = { ...(sources || {}) };
+  const errors = [...(sourceErrors || [])];
+  const rowCount = {
+    kpi: parsed.kpi.length,
+    top5: parsed.top5.length,
+    rest: parsed.rest.people.length + (parsed.rest.index === null ? 0 : 1),
+    meta: Object.keys(parsed.meta).length,
+  };
+
+  for (const [key, csv] of Object.entries({ kpi, top5, rest, meta })) {
+    const hasContent = String(csv).trim().split('\n').length > 1;
+    if (hasContent && rowCount[key] === 0) {
+      marks[key] = 'unparsed';
+      errors.push(`${key}: CSV arrived but no rows parsed - check the header row`);
+      console.warn(`[talon] tab "${key}" returned CSV but parsed to zero rows`);
+    }
+  }
+
+  return normalizeModel({
+    mode: 'live',
+    ...parsed,
+    sources: marks,
+    sourceErrors: errors,
   });
 }
 
