@@ -853,3 +853,80 @@ credential path rather than a code change to the pipeline, and it should be
 weighed carefully: a shim that authenticates from a custom header is writing
 our own authentication, which is a much worse trade than waiting for a
 platform setting. Do not build one without a decision recorded here.
+
+---
+
+## 13. Proof the `Authorization` header never reaches PHP, 2026-09-22 01:20
+
+WP Engine's first reply said their platform forwards `Authorization` and that
+the evidence did not point to a platform limitation. Fair, given what they had.
+This is the test that settles it.
+
+### 13.1 The discriminator
+
+Run from a browser console **on `https://www.skybirdroofing.net`** — canonical
+host, no redirect, no integration in the path:
+
+```javascript
+// 1. A correct Application Password
+fetch('/wp-json/wp/v2/users/me', {
+  headers: { Authorization: 'Basic ' + btoa('skybird-sync:<correct>') }
+}).then(r => r.json()).then(console.log)
+// → 401 {code: "rest_not_logged_in", message: "You are not currently logged in."}
+
+// 2. A deliberately wrong one
+fetch('/wp-json/wp/v2/users/me', {
+  headers: { Authorization: 'Basic ' + btoa('skybird-sync:thisiswrongonpurpose') }
+}).then(r => r.json()).then(console.log)
+// → 401 {code: "rest_not_logged_in", message: "You are not currently logged in."}
+```
+
+**Byte-identical responses.** That is the whole argument.
+
+`wp_authenticate_application_password()` returns **`incorrect_password`** —
+"The provided password is an invalid application password" — when it reads a
+header and the password does not match. Getting `rest_not_logged_in` for a
+*wrong* password means WordPress never ran that check, because
+`$_SERVER['PHP_AUTH_USER']` / `HTTP_AUTHORIZATION` was not populated.
+
+A credential cannot be rejected if it is never read. The header is not arriving.
+
+### 13.2 Everything eliminated, in order
+
+| Hypothesis | Eliminated by |
+|---|---|
+| Mangled password (the `%`) | Fresh passwords on both sites, correct shape — 24 chars, alphanumeric, six groups of four |
+| Wrong role | 401 not 403; and now, no auth attempt at all |
+| Staging's broken rewrites | Production fails identically |
+| Application Passwords disabled | `/wp-json/` advertises `application-passwords` |
+| WP Engine page cache | Fails on the `/wp-json/` path form too, not just `?rest_route=` |
+| **Cross-origin redirect dropping the header** | Tested directly on `www.` with **no** redirect. Still fails |
+| n8n's credential or client | Reproduced in a browser console, no n8n involved |
+| The credential being wrong | A *deliberately wrong* password returns the identical error |
+
+### 13.3 A correction to §12.1
+
+§12.1 claimed an empty **Last Used** proves the credential is "never evaluated
+rather than rejected". **That was wrong.** WordPress writes `last_used` only on
+success, so a rejected password leaves it empty too. That column does not
+distinguish the two cases and part of the original argument rested on it.
+
+§13.1's wrong-password test is what actually distinguishes them, and it reaches
+the same conclusion by sound reasoning rather than lucky reasoning.
+
+### 13.4 The near-miss worth keeping
+
+The first browser test ran from `skybirdroofing.net` (no `www`) and the console
+showed the request landing on `https://www.skybirdroofing.net/...`. A redirect
+had occurred, and browsers and HTTP clients drop `Authorization` across a
+cross-origin redirect — which `example.com` → `www.example.com` is.
+
+That was a genuinely strong hypothesis, it explained every symptom, and n8n
+would have been vulnerable to it too (`followRedirect: true`, and
+`Config.wpBase` was set without `www` while WP Engine lists
+**www.skybirdroofing.net** as the primary domain).
+
+It was wrong — the `www` test failed identically. But **`wpBase` should carry
+the `www` regardless.** Hitting the canonical host directly avoids a redirect
+on every one of the four WordPress calls, and removes a real failure mode from
+the pipeline whatever else is going on.
