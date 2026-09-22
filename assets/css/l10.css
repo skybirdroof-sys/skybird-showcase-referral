@@ -153,6 +153,14 @@
 
 .card__face--back { transform: rotateY(180deg); }
 
+/* The front face is a size container so the value below can be sized against
+   the CARD rather than the viewport. Viewport units got this wrong in both
+   directions: at five columns a 54px "$101,305.20" is wider than a 318px card,
+   and on a narrow window the same rule left the number far smaller than it
+   needed to be. The container sits on the face, not on .card__inner, because
+   containment on the preserve-3d element would flatten the flip. */
+.card__face--front { container-type: inline-size; }
+
 .card__group {
   margin: 0 0 6px;
   font-size: clamp(9px, 0.72vw, 11px);
@@ -179,14 +187,24 @@
    across the middle of every card. */
 .card__value {
   margin: auto 0;
-  font-size: clamp(30px, 3.4vw, 54px);
+  /* 15cqi keeps the longest figure this page shows - "$101,305.20", eleven
+     glyphs - inside the card at every column count. NEVER wrap: a dollar
+     amount broken across two lines reads as two numbers, and this page exists
+     to be transcribed accurately into Ninety. */
+  font-size: clamp(22px, 15cqi, 46px);
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.05;
   color: #fff;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  /* Digits of equal width, so the column of figures scans cleanly and a value
+     cannot change width just because a 1 became a 7 on refresh. */
+  font-variant-numeric: tabular-nums;
 }
 
-.card__value.is-empty { color: var(--ink-3); font-size: clamp(22px, 2vw, 32px); }
+.card__value.is-empty {
+  color: var(--ink-3);
+  font-size: clamp(22px, 2vw, 32px);
+}
 
 .card__foot {
   margin-top: 10px;
