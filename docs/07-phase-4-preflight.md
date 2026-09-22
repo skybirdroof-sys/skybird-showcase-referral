@@ -836,6 +836,13 @@ support questions:
    Basic Auth returns `You are not currently logged in.`, and the password's
    **Last Used** column stays empty — so the credential is never evaluated.
 
+**Ticket filed 2026-09-22: WP Engine support reference `B21531`.** Their
+first-line assistant escalated rather than answering, confirming this needs
+environment-level inspection. Two portal checks done first, both read-only and
+both negative, and both are in the ticket so support does not re-ask:
+**Web rules** and **Redirect rules** are empty on this environment, so nothing
+custom is stripping the header — the behaviour is platform default.
+
 **If WP Engine will not pass the header**, the fallback is an alternative
 credential path rather than a code change to the pipeline, and it should be
 weighed carefully: a shim that authenticates from a custom header is writing

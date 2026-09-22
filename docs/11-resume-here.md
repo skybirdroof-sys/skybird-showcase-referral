@@ -179,3 +179,72 @@ get a fresh one rather than debugging the request.
 Nothing has been executed. The four things a first run has to prove are in
 `n8n/README.md`, and the test project was re-verified on 2026-09-18 (`07` §9)
 and is ready: one label, four Showcase photos, one of them the cover.
+
+
+---
+
+# Where it stands, 2026-09-22 00:45
+
+The first real end-to-end run happened tonight. It got 19 of 23 nodes deep and
+stopped on something that is not ours to fix.
+
+## Proven on real data — no longer assumed
+
+| | |
+|---|---|
+| CompanyCam webhook `282006` | Created, `project.label_added`, `authorization_header_set: true` |
+| **Delivery fires on a label add** | ✅ CompanyCam's log: `success: true`, **200 in 542 ms** |
+| **Header Auth on the webhook** | ✅ A real delivery authenticated and ran |
+| **Payload parse** | ✅ Shape captured and corrected — see `07` §11, payload saved under `docs/vendor/companycam/` |
+| **Label filter** | ✅ `isOurs: true` for Website Showcase, `false` for Pipedrive Deal, on live data |
+| **Plugin on production** | ✅ Installed, active; `projects` and `service-areas` routes both answer |
+
+## Blocked — WP Engine ticket `B21531`
+
+Every WordPress write fails because Application Passwords never authenticate.
+The `Authorization` header is not reaching PHP. Both production and the
+`/shenzhou/` clone, fresh passwords on each. Full diagnosis and everything
+ruled out: `07` §12.
+
+**This is not a code problem and no change to this repo can fix it.** Do not
+build a custom-header auth shim as a workaround without recording that decision
+first — `07` §12.5 says why.
+
+## When WP Engine replies
+
+If they pass the header through, the remaining path is short — the workflow and
+plugin are already configured and saved:
+
+1. Fire the trigger: remove `Website Showcase` from Bill Najdecki
+   (`110848078`), confirm it cleared, add it back.
+2. Watch Executions. The next four nodes are all first-time:
+   `Already Drafted?` → `Get Project` (first real test of
+   `api.companycam.com/v2`, which the audit calls legacy) → `Curate` →
+   `Upload Media` → `Create Draft`.
+3. Check **Last Used** on the production Application Password. It populating is
+   the proof the credential path works.
+
+## Current n8n state
+
+- Workflow active, 23 nodes, all nine credentials attached
+- `Config.wpBase` = `https://skybirdroofing.net` (production)
+- **`Already Drafted?` URL is still the `users/me` diagnostic.** Restore it
+  before the next run:
+  ```
+  {{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/projects&companycam_project_id={{ $json.projectId }}&status=any&per_page=1
+  ```
+- `CompanyCam API` credential holds the `webhook-setup` key (read+write). Swap
+  to the read-only `Skybird Website Sync` key and delete `webhook-setup` once
+  the run passes — `01` §1.6 specifies read-only for Phase 4.
+
+## Traps that cost time tonight, so they don't again
+
+- **n8n retry replays upstream node outputs.** Change `Config` → fire a fresh
+  delivery. Change the failing node or a credential → retry is fine. (`07` §12.3)
+- **Removing a label in CompanyCam's UI can silently not take.** Verify the
+  label list before concluding a trigger failed. (`07` §11.5)
+- **A rejected delivery leaves no execution at all.** Header Auth is enforced
+  before the workflow runs, so check CompanyCam's delivery log, not n8n.
+- **Read the resolved URL under an HTTP node's URL field.** It shows what was
+  actually requested. A double slash from an empty expression looks exactly
+  like a dead API host.
