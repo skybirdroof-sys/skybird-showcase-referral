@@ -797,3 +797,47 @@ which answer correctly on production for unauthenticated reads.
 **This is not a code problem.** Nothing in the plugin or the workflow can make
 a stripped header arrive. The next step is whichever of §12.2's two causes the
 REST index points to, and both are outside this repo.
+
+### 12.5 Resolved: cause A, and the host is WP Engine
+
+`https://skybirdroofing.net/wp-json/` returns:
+
+```json
+"authentication": { "application-passwords": { "endpoints": ... } }
+```
+
+So the feature is **enabled**. Cause B is out; it is cause A — the
+`Authorization` header is not reaching PHP.
+
+The same response lists a **`wpe/cache-...`** REST namespace. That is WP
+Engine's must-use plugin: **the site is hosted on WP Engine.**
+
+That reframes both of tonight's blockers as one cause:
+
+- WP Engine serves through **nginx**. There is **no `.htaccess`**, so the
+  directive in §12.2 cause A has nowhere to live, and Settings → Permalinks
+  had no file to write — which is why saving it changed nothing for
+  `/shenzhou/` (§10). The rewrite diagnosis in §10 was right about the
+  *symptom* and wrong about the *mechanism*.
+- The header pass-through is likewise an nginx-level concern, not a file
+  anyone with FTP can add.
+
+**The ask, and it is not ours to action:** the WP Engine environment must pass
+the `Authorization` header through to PHP so REST Application Passwords
+authenticate. WP Engine support can confirm and enable this per environment.
+The account is Pitch Peak's, so the request goes through Euan.
+
+Two things to include when asking, because they pre-empt the first round of
+support questions:
+
+1. `/wp-json/` already advertises `application-passwords`, so the feature is
+   on and the request is not "please enable Application Passwords".
+2. `GET /?rest_route=/wp/v2/users/me` with a valid Application Password over
+   Basic Auth returns `You are not currently logged in.`, and the password's
+   **Last Used** column stays empty — so the credential is never evaluated.
+
+**If WP Engine will not pass the header**, the fallback is an alternative
+credential path rather than a code change to the pipeline, and it should be
+weighed carefully: a shim that authenticates from a custom header is writing
+our own authentication, which is a much worse trade than waiting for a
+platform setting. Do not build one without a decision recorded here.
