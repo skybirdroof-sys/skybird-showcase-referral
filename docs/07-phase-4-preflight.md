@@ -591,3 +591,113 @@ root `.htaccess` is intact.
 Their staging clone is half-functional: the admin works, the REST API works,
 and every front-end URL 404s. Same category as the `/shenzhou/` noindex
 question — a courtesy flag, not a dependency. Phase 4 has a way around it.
+
+---
+
+## 11. The delivery leg fired for the first time, 2026-09-22
+
+Webhook `282006` created against the n8n production URL, scope
+`project.label_added`, `authorization_header_set: true`. A real label add on
+project `111393392` (Bill Pate #2601) produced a real delivery.
+
+### 11.1 The four things a first run had to prove (§2.3) — three proven
+
+| | |
+|---|---|
+| Delivery fires on a label add | ✅ CompanyCam's own delivery log: `success: true` |
+| n8n acks fast enough that the error counter never moves | ✅ **200 in 542 ms** |
+| The caller is authenticated | ✅ Header Auth matched; an unauthenticated POST never reaches the workflow |
+| The filter rejects the other seven labels | ⏳ not yet exercised on a real non-matching delivery |
+
+The third row replaces the original `X-CompanyCam-Signature` criterion, which
+`docs/06-trigger-design.md` withdrew on 2026-09-18 when the HMAC check was
+replaced with Header Auth.
+
+**This was the unproven leg the whole phase existed for.** The 9/14 test was a
+manual pull; nothing had ever been delivered.
+
+### 11.2 The payload shape is not what the legacy docs said
+
+Captured verbatim in `docs/vendor/companycam/project.label_added-payload.json`.
+
+```
+{ event_type, created_at, webhook_id,
+  payload: { project: {...}, label: {...} } }
+```
+
+`01-api-audit.md` §1.3 says "`payload` matches the object (a `project.*` event
+carries the Project)". **It does not.** The project sits one level deeper, under
+`payload.payload.project`.
+
+Reading it a level too shallow gave `projectId: ''`, which built a request to
+`https://api.companycam.com/v2/projects//labels` — note the double slash — and
+returned 404. **That 404 looked exactly like a dead base URL**, and was briefly
+diagnosed as one. It was not: the resolved URL shown under the node's URL field
+is what settled it. `event_type` resolving correctly while `projectId` came
+back empty is the tell that the envelope is right and the inner shape is wrong.
+
+### 11.3 The event carries the label, so the fetch fallback is demoted
+
+`payload.payload.label` is the label that was just added — `value`,
+`display_value`, `tag_type`. `06-trigger-design.md` assumed this had to be
+fetched, and `n8n/README.md` recorded the question as unverified.
+
+The event's label is **strictly more precise than the fetch**, which is why
+this is an improvement rather than just a simplification:
+
+- `GET /projects/{id}/labels` answers *"does this project carry Website
+  Showcase at all"*. That is true when someone adds `Gutter Cleaning` to a
+  project showcased last month — a false positive the idempotency check would
+  then have to catch.
+- The event answers *"which label was just added"*. That is the actual
+  question `project.label_added` is asking.
+
+`Check Label` now reads the event's label. `Fetch Project Labels` and
+`Re-check Label` remain as a fallback for the payload changing shape again,
+reached only when the event carries no label at all, and `Re-check Label`
+carries a comment saying why it is the weaker test.
+
+### 11.4 Three smaller corrections from the same payload
+
+**`integrations[]` is present in webhook payloads.** §2.2 recorded it as
+"absent entirely" based on the API's project response. In the webhook payload
+it is present:
+
+```json
+"integrations": [ { "type": "ProLine", "relation_id": null } ]
+```
+
+This refines §2.2 rather than reversing it. ProLine is a *declared* integration
+type on the project, with **`relation_id: null`** — declared but unlinked. That
+is consistent with Jacob's 2026-09-16 statement that the CompanyCam↔ProLine
+bridge does not exist for new jobs: the slot is there and nothing is in it.
+There is also a top-level `integration_relation_id: null`. Neither gives a
+ProLine job id, so §2.4.2 stands and nothing here populates the product fields.
+
+**Photo URLs have moved host.** §1.5 records "plain `static.companycam.com/…jpg`".
+The webhook payload returns `img.companycam.com/<hash>/rs:fit:4032:4032/q:80/<base64>.jpg`
+— an image-proxy form with transformation parameters in the path. The REST API
+still returns `static.companycam.com` URLs with `?d=4032x4032`. So the two
+surfaces disagree, and neither is worth depending on: §1.5's decision to
+download into the WordPress Media Library already covers this, and `Curate`
+takes its URLs from the API response rather than the payload.
+
+**Timestamps differ by surface.** The webhook payload uses Unix integers
+(`created_at: 1790047740`); the REST API returns ISO 8601 strings. Nothing
+currently reads a timestamp from the payload — `Curate` derives
+`completionDate` from the cover photo's API `captured_at` — but anything added
+later must not assume one format.
+
+### 11.5 Operational notes from the same session
+
+**Removing and re-adding a label in the UI can silently do nothing.** An
+attempt on project `110848078` produced no delivery, and the project's
+`updated_at` was still `2026-09-14T20:01:32Z` afterwards — the removal never
+registered, so the re-add was a no-op and CompanyCam correctly sent nothing.
+Verify label state before concluding a trigger failed to fire.
+
+**A rejected delivery leaves no execution.** Header Auth is enforced by n8n
+before the workflow runs, so a 403 produces no execution entry at all. When
+nothing appears in Executions, check CompanyCam's delivery log — it
+distinguishes "never sent", "sent and rejected", and "sent and accepted", none
+of which look different from inside n8n.

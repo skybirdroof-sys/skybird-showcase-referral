@@ -1,0 +1,57 @@
+{
+  "_note": "Captured verbatim from a real delivery, 2026-09-22T03:29:00Z, webhook 282006, project Bill Pate #2601. This is the first time this project has ever seen the payload shape; the trigger design was written from the legacy docs. See docs/07-phase-4-preflight.md 11.",
+  "event_type": "project.label_added",
+  "created_at": 1790047740,
+  "payload": {
+    "project": {
+      "id": "111393392",
+      "company_id": "798255",
+      "creator_id": "2870072",
+      "creator_type": "User",
+      "creator_name": "Jacob Vollmer",
+      "integration_relation_id": null,
+      "status": "active",
+      "archived": false,
+      "public": true,
+      "name": "Bill Pate #2601",
+      "slug": "J7AFPDJqH3ZVSDRi",
+      "project_url": "https://app.companycam.com/projects/111393392",
+      "public_url": "https://app.companycam.com/timeline/J7AFPDJqH3ZVSDRi",
+      "geofence": [],
+      "created_at": 1785806951,
+      "updated_at": 1786125059,
+      "embedded_project_url": "https://app.companycam.com/embed/projects/J7AFPDJqH3ZVSDRi",
+      "photo_count": 56,
+      "capture_photo_deeplink": "ccam://camera/111393392/QmlsbCBQYXRlICMyNjAx",
+      "primary_contact": null,
+      "integrations": [
+        { "type": "ProLine", "relation_id": null }
+      ],
+      "notepad": null,
+      "address": {
+        "street_address_1": "108 Torhunta Drive",
+        "street_address_2": null,
+        "city": "Goldsboro",
+        "state": "NC",
+        "postal_code": null,
+        "country": "US"
+      },
+      "feature_image": [
+        { "type": "original", "uri": "https://img.companycam.com/<hash>/rs:fit:4032:4032/q:80/<base64>.jpg", "url": "https://img.companycam.com/<hash>/rs:fit:4032:4032/q:80/<base64>.jpg" },
+        { "type": "web", "uri": "https://img.companycam.com/<hash>/rs:fit:400:400/q:80/<base64>.jpg", "url": "https://img.companycam.com/<hash>/rs:fit:400:400/q:80/<base64>.jpg" },
+        { "type": "thumbnail", "uri": "https://img.companycam.com/<hash>/rs:fit:250:250/q:80/<base64>.jpg", "url": "https://img.companycam.com/<hash>/rs:fit:250:250/q:80/<base64>.jpg" }
+      ],
+      "coordinates": { "lat": 35.4490392, "lon": -77.8761499 }
+    },
+    "label": {
+      "id": "27372191",
+      "company_id": "798255",
+      "display_value": "Website Showcase",
+      "value": "website showcase",
+      "created_at": 1789415954,
+      "updated_at": 1789415954,
+      "tag_type": "project"
+    }
+  },
+  "webhook_id": 282006
+}
