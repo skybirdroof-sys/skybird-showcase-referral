@@ -1,7 +1,15 @@
 /* Level 10 scorecard page. Shares the board's tokens from talon.css; this file
    only adds the card grid, the flip mechanics and the trend figure. Unlike the
-   TV board this page is read at a desk, so it scrolls and uses px-ish sizing
-   rather than the --u TV unit. */
+   TV board this page is read at a desk, so it uses px-ish sizing rather than
+   the --u TV unit.
+
+   All nine measurables have to be on screen at once - this is a page someone
+   reads off while typing into Ninety, and scrolling to find the ninth card
+   defeats that. So the grid is one continuous flow of nine cards (5 + 4 on a
+   1080p monitor) whose rows share whatever height is left under the header,
+   and the group name rides on each card rather than on a heading row of its
+   own. It still scrolls, but only on a window too short to hold the cards at
+   a legible size. */
 
 .l10-body {
   height: auto;
@@ -15,7 +23,7 @@
   min-height: 100vh;
   padding: clamp(16px, 2.2vw, 34px);
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
   gap: clamp(12px, 1.4vw, 20px);
   background:
     radial-gradient(70% 50% at 50% 0%, rgba(47, 230, 255, 0.06), transparent 70%),
@@ -76,6 +84,8 @@
   color: var(--ink-3);
 }
 
+.l10__hint { margin-top: 6px; }
+
 .l10__note { min-height: 1.2em; color: var(--amber-dim); }
 
 /* --- grid ------------------------------------------------------------- */
@@ -83,18 +93,19 @@
 .l10__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* The rows divide the height left under the header, down to a floor that
+     still fits a readable trend chart; past that the page scrolls. */
+  grid-auto-rows: minmax(200px, 1fr);
   gap: clamp(12px, 1.2vw, 20px);
-  align-content: start;
+  align-content: stretch;
 }
 
-.l10__group-label {
-  grid-column: 1 / -1;
-  margin: 8px 0 0;
-  font-size: clamp(11px, 0.9vw, 14px);
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--cyan-dim);
+/* Nine cards land as 5 + 4 rather than whatever auto-fit happens to compute.
+   Two rows is the whole point, so the rule starts at laptop width: four
+   columns would give 4 + 4 + 1, three rows and an orphan, which is what put
+   the ninth card below the fold. */
+@media (min-width: 1240px) {
+  .l10__grid { grid-template-columns: repeat(5, 1fr); }
 }
 
 /* --- card / flip ------------------------------------------------------ */
@@ -104,7 +115,8 @@
   display: block;
   cursor: pointer;
   perspective: 1400px;
-  min-height: 250px;
+  height: 100%;
+  min-height: 200px;
   font: inherit;
   color: inherit;
 }
@@ -141,6 +153,17 @@
 
 .card__face--back { transform: rotateY(180deg); }
 
+.card__group {
+  margin: 0 0 6px;
+  font-size: clamp(9px, 0.72vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan-dim);
+}
+
+.card__group:empty { display: none; }
+
 .card__measurable {
   margin: 0;
   font-size: clamp(13px, 1.05vw, 16px);
@@ -151,8 +174,11 @@
   line-height: 1.25;
 }
 
+/* Centred between the name and the footer rather than pinned above the footer:
+   the cards are taller now, and a value sitting low left a band of dead space
+   across the middle of every card. */
 .card__value {
-  margin: auto 0 0;
+  margin: auto 0;
   font-size: clamp(30px, 3.4vw, 54px);
   font-weight: 800;
   line-height: 1;

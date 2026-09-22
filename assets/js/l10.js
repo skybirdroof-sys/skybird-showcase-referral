@@ -69,6 +69,15 @@ function cardElement(card) {
   const front = document.createElement('div');
   front.className = 'card__face card__face--front';
 
+  /* The group used to be a full-width heading row between blocks of cards.
+     Four of those rows pushed the last three measurables below the fold on a
+     1080p screen, so the group rides on the card instead: cards stay in Sort
+     order, which keeps each group a contiguous run, and every card still says
+     which group it belongs to without spending a row on it. */
+  const group = document.createElement('p');
+  group.className = 'card__group';
+  group.textContent = card.group || '';
+
   const name = document.createElement('h2');
   name.className = 'card__measurable';
   name.textContent = card.measurable;
@@ -105,7 +114,7 @@ function cardElement(card) {
   owner.className = 'card__foot';
   owner.textContent = card.hit === null ? '' : `owner ${card.owner || EMPTY}`;
 
-  front.append(name, value, foot);
+  front.append(group, name, value, foot);
   if (card.hit !== null) front.append(owner);
 
   /* back */
@@ -213,17 +222,7 @@ function render(model) {
     grid.dataset.signature = signature;
     grid.textContent = '';
 
-    let lastGroup = null;
-    for (const card of model.cards) {
-      if (card.group && card.group !== lastGroup) {
-        lastGroup = card.group;
-        const label = document.createElement('p');
-        label.className = 'l10__group-label';
-        label.textContent = card.group;
-        grid.append(label);
-      }
-      grid.append(cardElement(card));
-    }
+    for (const card of model.cards) grid.append(cardElement(card));
 
     // A measurable that vanished loses its flip state; the rest keep theirs.
     const present = new Set(model.cards.map((c) => norm(c.measurable)));

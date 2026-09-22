@@ -58,9 +58,12 @@ export function segments(points) {
  * @param {string} opts.title            accessible name for the figure
  */
 export function trendChart({ points, goal = null, goalOp = '', format = String, title = 'Weekly trend' }) {
+  /* The viewBox is close to the shape of the box it lands in. It is scaled with
+     "meet", so a wider-than-the-card aspect would letterbox and leave a band of
+     dead space above and below the plot inside a tall card. */
   const W = 420;
-  const H = 190;
-  const PAD = { top: 22, right: 10, bottom: 26, left: 8 };
+  const H = 250;
+  const PAD = { top: 22, right: 10, bottom: 30, left: 8 };
 
   const svg = el('svg', {
     viewBox: `0 0 ${W} ${H}`,
