@@ -176,6 +176,7 @@ function parseRest(csv) {
 function parseL10Current(csv) {
   return records(csv)
     .map((r) => ({
+      period: String(pick(r, ['period', 'view', 'week'])).trim(),
       sort: parseValue(pick(r, ['sort', 'order'])),
       group: String(pick(r, ['group'])).trim(),
       measurable: String(pick(r, ['measurable', 'metric', 'name'])).trim(),
@@ -227,7 +228,19 @@ export function buildL10FromCsv({ current = '', history = '', meta = '' }) {
   const currentRows = parseL10Current(current);
   const historyRows = parseL10History(history);
 
-  const cards = currentRows
+  /* Nine measurables per view, so without this filter every card appears
+     twice - once for the completed week and once for the week in progress.
+     A row with no Period belongs to whatever view is showing. */
+  const view = normalizeL10View(metaRows.l10viewdefault) || CONFIG.l10DefaultView;
+  const forView = currentRows.filter((row) => {
+    const rowView = normalizeL10View(row.period);
+    return rowView === null || rowView === view;
+  });
+  /* If the sheet only carries the other view, show that rather than nothing:
+     an empty page hides numbers that exist. */
+  const rows = forView.length ? forView : currentRows;
+
+  const cards = rows
     .map((row) => {
       const value = parseValue(row.value);
       const goal = parseValue(row.goal);
@@ -265,13 +278,15 @@ export function buildL10FromCsv({ current = '', history = '', meta = '' }) {
   const trendWeeks = parseValue(metaRows.l10trendweeks) || CONFIG.l10TrendWeeks;
 
   return {
-    weekLabel: metaRows.l10weeklabel || (cards[0] && cards[0].weekLabel) || '',
+    view,
+    weekLabel: metaRows[`l10weeklabel${view}`] || metaRows.l10weeklabel
+      || (cards[0] && cards[0].weekLabel) || '',
     trendWeeks,
     cards,
     history: history_,
     refreshSeconds: parseValue(metaRows.refreshseconds),
     updated: freshest(metaRows.lastupdatedet || '', [
-      ...currentRows.map((r) => r.updated),
+      ...rows.map((r) => r.updated),
     ]),
     fetchedAt: new Date(),
   };
@@ -341,6 +356,18 @@ function parseMeta(csv) {
    and a Sheet that never adopts it must keep working exactly as it does now.
    An unrecognised period is dropped rather than guessed at — better a missing
    tile than a weekly number displayed as the month. */
+/* The L10 tab carries the same kind of column the KPI tab does, but its values
+   are "last" and "current": the completed week the Level 10 meeting reviews,
+   and the partial week in progress. A blank value belongs to whichever view is
+   showing, so a tab without the column keeps working. */
+export function normalizeL10View(raw) {
+  const v = norm(raw);
+  if (v === '' ) return null;
+  if (v === 'last' || v === 'lastweek' || v === 'prior' || v === 'completed') return 'last';
+  if (v === 'current' || v === 'currentweek' || v === 'thisweek' || v === 'wtd') return 'current';
+  return null;
+}
+
 export function normalizePeriod(raw) {
   const text = String(raw ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!text) return CONFIG.defaultPeriod;

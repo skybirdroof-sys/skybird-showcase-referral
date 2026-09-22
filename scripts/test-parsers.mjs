@@ -2,7 +2,7 @@
    Run: npm test */
 
 import assert from 'node:assert/strict';
-import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
@@ -530,6 +530,66 @@ test('hitStatus refuses a verdict when either side is unknown', () => {
     const bare = buildL10FromCsv({ current, history, meta: 'key,value\n' });
     assert.equal(bare.weekLabel, 'Sep 14–20');
     assert.equal(bare.trendWeeks, CONFIG.l10TrendWeeks);
+  });
+})();
+
+(function l10PeriodColumn() {
+  /* The live tab grew a Period column: nine rows for the completed week the
+     Level 10 meeting reviews, and nine for the week in progress. Without a
+     filter every measurable rendered twice. */
+  const current = [
+    'Period,Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,WeekLabel,Source,Notes,Updated ET',
+    'last,1,Marketing > Leads,Appointments Set,JV,>=,8,6,count,Sep 14–20,GHL,,x',
+    'last,3,Claims > Contracts,Contracts Signed - $$,JV,>=,60000,80525.48,usd,Sep 14–20,ProLine,,x',
+    'current,1,Marketing > Leads,Appointments Set,JV,>=,8,1,count,Sep 21–27,GHL,,x',
+    'current,3,Claims > Contracts,Contracts Signed - $$,JV,>=,60000,,usd,Sep 21–27,ProLine,,x',
+  ].join('\n');
+
+  test('each measurable appears once, from the completed week by default', () => {
+    const model = buildL10FromCsv({ current, meta: 'key,value\n' });
+    assert.equal(model.cards.length, 2, 'one card per measurable, not one per row');
+    assert.equal(model.view, 'last');
+    assert.deepEqual(model.cards.map((c) => c.value), [6, 80525.48]);
+  });
+
+  test('Meta l10_view_default can select the week in progress', () => {
+    const meta = 'key,value\nl10_view_default,current\nl10_week_label_current,Sep 21–27\n';
+    const model = buildL10FromCsv({ current, meta });
+    assert.equal(model.view, 'current');
+    assert.deepEqual(model.cards.map((c) => c.value), [1, null]);
+    assert.equal(model.weekLabel, 'Sep 21–27', 'the header follows the view');
+  });
+
+  test('the week label prefers the per-view Meta key', () => {
+    const meta = 'key,value\nl10_week_label,stale\nl10_week_label_last,Sep 14–20\n';
+    assert.equal(buildL10FromCsv({ current, meta }).weekLabel, 'Sep 14–20');
+  });
+
+  test('a tab with no Period column still renders every row', () => {
+    const bare = [
+      'Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,WeekLabel',
+      '1,Sales,Appointments Set,JV,>=,8,6,count,Sep 14–20',
+      '3,Sales,Contracts Signed - $$,JV,>=,60000,80525.48,usd,Sep 14–20',
+    ].join('\n');
+    assert.equal(buildL10FromCsv({ current: bare, meta: 'key,value\n' }).cards.length, 2);
+  });
+
+  test('a sheet holding only the other view shows it rather than nothing', () => {
+    const onlyCurrent = [
+      'Period,Sort,Measurable,GoalOp,Goal,Value,Unit,WeekLabel',
+      'current,1,Appointments Set,>=,8,1,count,Sep 21–27',
+    ].join('\n');
+    const model = buildL10FromCsv({ current: onlyCurrent, meta: 'key,value\n' });
+    assert.equal(model.cards.length, 1, 'an empty page would hide a number that exists');
+  });
+
+  test('normalizeL10View is tolerant but never guesses', () => {
+    assert.equal(normalizeL10View('last'), 'last');
+    assert.equal(normalizeL10View('Last Week'), 'last');
+    assert.equal(normalizeL10View('current'), 'current');
+    assert.equal(normalizeL10View('This Week'), 'current');
+    assert.equal(normalizeL10View(''), null, 'blank belongs to whichever view is showing');
+    assert.equal(normalizeL10View('quarterly'), null);
   });
 })();
 

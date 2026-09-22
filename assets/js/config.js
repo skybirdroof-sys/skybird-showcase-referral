@@ -44,6 +44,10 @@ export const CONFIG = {
      an em dash. Set to [] to accept any 0-100 number. */
   top5ValidToday: [0, 20, 40, 60, 80, 100],
 
+  /* Which L10 view to show when the Meta tab does not say: the completed week
+     the Level 10 meeting actually reviews, not the partial week in progress. */
+  l10DefaultView: 'last',
+
   /* The eight cash/ops tiles. `metric` must match the Sheet's KPI!A values
      exactly. `unit` is the fallback when the Sheet's Unit cell is blank. */
   tiles: [
