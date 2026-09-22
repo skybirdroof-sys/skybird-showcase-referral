@@ -701,3 +701,99 @@ before the workflow runs, so a 403 produces no execution entry at all. When
 nothing appears in Executions, check CompanyCam's delivery log — it
 distinguishes "never sent", "sent and rejected", and "sent and accepted", none
 of which look different from inside n8n.
+
+---
+
+## 12. WordPress Application Passwords do not authenticate — both sites, 2026-09-22
+
+The run reaches `Already Drafted?`, the first WordPress call, and stops there.
+
+```
+400 rest_invalid_param  "Invalid parameter(s): status"
+  └─ details.status: rest_forbidden_status "Status is forbidden." (401)
+```
+
+The outer 400 is a wrapper. The inner code and status are what matter:
+WordPress returns **401** when it sees no logged-in user and 403 when it sees
+one lacking permission. 401 means the request arrives unauthenticated.
+`status=any` is only permitted for a user who can edit, so it is refused.
+
+### 12.1 What was ruled out, and how
+
+| Hypothesis | Ruled out by |
+|---|---|
+| Wrong/mangled Application Password (the `%`) | A freshly generated one failed identically. Twice, on two sites |
+| `skybird-sync` lacks the role | Inner status is 401, not 403. A wrong role authenticates and then forbids |
+| Staging's broken `.htaccess` | **Production fails identically**, and production's rewrites work |
+| The plugin is not installed on production | The error names the `status` param, so WordPress resolved the `projects` route. `rest_no_route` would mean not installed |
+| A bad retry | Confirmed on a fresh delivery, not a retry. See §12.3 |
+
+Isolated with the `status` parameter removed entirely:
+
+```
+GET https://skybirdroofing.net/?rest_route=/wp/v2/users/me   (Basic Auth)
+  → "Authorization failed" / "You are not currently logged in."
+```
+
+Nothing simpler exists to test. The credential is correct and WordPress does
+not see it.
+
+Corroborated from WordPress's own side: on staging, the Application Password
+row shows **Last Used: —** and **Last IP: —**. Those columns only populate on a
+successful authentication. It has never authenticated once.
+
+### 12.2 The two remaining causes, and why they need different fixes
+
+**A. The `Authorization` header never reaches PHP.** WordPress's stock
+`.htaccess` contains only rewrite rules. Passing that header through needs a
+separate directive WordPress never writes:
+
+```apache
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+```
+
+Under Apache with mod_php the header arrives natively; under CGI/FastCGI/PHP-FPM
+it is dropped without that line. This is a **server-config** fix.
+
+**B. Application Passwords are disabled** on the install, via the
+`wp_is_application_passwords_available` filter. Plenty of plugins and snippets
+do this, not only security ones. This is a **WordPress-side** fix.
+
+Distinguished by the REST index at `/wp-json/`: an `authentication` object
+containing `application-passwords` means the feature is live, so cause A. An
+empty one means cause B.
+
+Euan confirmed no security plugins (`09`, Second reply §1), which was accurate
+and does not cover this — the profile page shows an "Editorial Notifications"
+section, so something is extending user features.
+
+### 12.3 n8n's retry replays upstream node outputs — a real trap
+
+"Retry from node with error" re-reads the **failing node's own parameters**
+from the saved workflow and fetches **credentials live**, but replays the
+**stored outputs of upstream nodes**. So a change to `Config` — which is where
+`wpBase` lives — is invisible to a retry, and the retried run keeps calling the
+old URL no matter what has been saved.
+
+Cost an entire cycle: `wpBase` had been correctly changed to production and the
+retry kept resolving to `/shenzhou/`, which read as the edit not having taken.
+
+**The rule:** change anything upstream of the failure → fire a fresh delivery.
+Change the failing node or a credential → retry is valid.
+
+This is also why the fresh-password tests were sound. Credentials are not
+cached, so those retries genuinely exercised the new password.
+
+### 12.4 What this blocks, and what it does not
+
+Blocked: every WordPress write. `Already Drafted?`, `Upload Media`,
+`Get Area Term`, `Create Draft` — four of the 23 nodes, and the last four in
+the chain.
+
+Not blocked, and now proven: the delivery leg (§11), Header Auth on the
+webhook, the payload parse, the label filter, and the plugin's REST routes,
+which answer correctly on production for unauthenticated reads.
+
+**This is not a code problem.** Nothing in the plugin or the workflow can make
+a stripped header arrive. The next step is whichever of §12.2's two causes the
+REST index points to, and both are outside this repo.
