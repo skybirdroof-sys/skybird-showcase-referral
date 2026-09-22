@@ -529,3 +529,65 @@ identified.** That is a data-egress question for Jacob, independent of
 Phase 4. It does not block this build: the scopes do not overlap with
 `project.label_added`, and CompanyCam's 25-error disable threshold is
 per-subscription, so a failing Convex endpoint cannot disable ours.
+
+---
+
+## 10. The `/shenzhou/` staging clone has no working rewrites, 2026-09-21
+
+Verified from an incognito browser, so these are the responses n8n would get.
+
+| URL | Result |
+|---|---|
+| `/shenzhou/?rest_route=/` | ✅ JSON |
+| `/wp-json/` (live site) | ✅ JSON |
+| `/shenzhou/wp-json/` | ❌ **the live site's branded 404** |
+| `/shenzhou/wp-json/wp/v2/projects` | ❌ same |
+| `/shenzhou/sample-page/` | ❌ same |
+
+An ordinary page 404s too, so **no pretty permalink resolves on the clone**.
+This is not REST-specific and not caused by the plugin.
+
+### Why, and why the permalink flush did nothing
+
+`/shenzhou/wp-json/` is not a real directory, so it needs a rewrite to reach
+the clone's `index.php`. With the clone's subdirectory `.htaccess` missing or
+carrying the wrong `RewriteBase`, Apache falls through to the **root**
+`.htaccess`, which hands the request to the **live** WordPress — which has
+never heard of that path and serves its own 404. The live branding on the
+error page is the tell, and it is what distinguishes this from a REST problem.
+
+Settings → Permalinks → Save rewrites the rules *in the database*. The broken
+part is the `.htaccess` file, so the flush cannot touch it. Done anyway, twice,
+to rule it out.
+
+`?rest_route=` works because `/shenzhou/?rest_route=/` resolves to
+`/shenzhou/index.php` by DirectoryIndex, with no rewriting involved.
+
+### What was done about it
+
+The four WordPress nodes now call `?rest_route=`, which needs no rewrite and
+works on production as well — so this is a compatibility improvement, not a
+staging-only patch. See `n8n/README.md`.
+
+### What is still limited
+
+The plugin's `/projects/{slug}/` pages need that same rewrite and **will 404
+on staging**. Rendering was verified on a sandbox (§ `11` Rendering) but the
+thing staging was chosen for — Hub Child instead of a block theme, and the
+shortcode inside WPBakery — can only be checked via a form that needs no
+rewrite:
+
+```
+https://skybirdroofing.net/shenzhou/?p=<post-id>&preview=true
+```
+
+That renders the single-project template through the real theme, which is the
+part worth seeing. The pretty URL itself is not what needs proving here —
+production's rewrites work, and the live `/wp-json/` check above shows the
+root `.htaccess` is intact.
+
+### Worth telling Pitch Peak, not worth blocking on
+
+Their staging clone is half-functional: the admin works, the REST API works,
+and every front-end URL 404s. Same category as the `/shenzhou/` noindex
+question — a courtesy flag, not a dependency. Phase 4 has a way around it.
