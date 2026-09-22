@@ -41,8 +41,31 @@ non-secret value is a **Config** node.
      `Get Area Term`, `Create Draft`
 
 3. Open the **Config** node and set `wpBase` to the target site, no trailing
-   slash. The sandbox while proving this out; production afterwards. It is the
-   only place that URL appears.
+   slash. The `/shenzhou/` staging clone while proving this out; production
+   afterwards. It is the only place that URL appears.
+
+### REST is called as `?rest_route=`, not `/wp-json/`
+
+`{wpBase}/wp-json/wp/v2/...` is the pretty form and it needs an Apache
+rewrite. `{wpBase}/?rest_route=/wp/v2/...` resolves straight to `index.php`
+and needs none. WordPress serves both, always.
+
+Found on the staging clone, 2026-09-21: `/shenzhou/?rest_route=/` returned
+JSON while `/shenzhou/wp-json/` returned **the live site's branded 404**.
+That is the signature of a missing or wrong `RewriteBase` in the clone's
+subdirectory `.htaccess` — `/shenzhou/wp-json/` is not a real directory, so
+without a rule to route it into the clone Apache falls through to the root
+`.htaccess` and the *live* WordPress answers a path it has never heard of.
+Saving Settings → Permalinks does not fix this; the broken part is the
+rewrite file, not the permalink option.
+
+The query-string form sidesteps it without touching Pitch Peak's server, and
+since it also works on production there is no reason to switch back.
+
+**What this does not fix:** the plugin's own `/projects/{slug}/` pages need
+the same rewrite, so they will 404 on staging too. Preview a draft with the
+query-string form instead — `{wpBase}/?p=<id>&preview=true` — which needs no
+rewrite either.
 4. **Activate the workflow**, then copy the **Production** webhook URL from the
    Webhook node.
 5. Create the CompanyCam subscription against that URL, scope

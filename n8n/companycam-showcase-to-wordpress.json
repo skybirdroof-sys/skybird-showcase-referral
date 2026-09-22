@@ -198,7 +198,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/projects?companycam_project_id={{ $json.projectId }}&status=any&per_page=1",
+        "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/projects&companycam_project_id={{ $json.projectId }}&status=any&per_page=1",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth"
@@ -216,7 +216,8 @@
           "id": "REPLACE_ME",
           "name": "WordPress skybird-sync"
         }
-      }
+      },
+      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
     },
     {
       "parameters": {
@@ -381,7 +382,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/media",
+        "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/media",
         "options": {},
         "method": "POST",
         "authentication": "genericCredentialType",
@@ -412,7 +413,8 @@
           "id": "REPLACE_ME",
           "name": "WordPress skybird-sync"
         }
-      }
+      },
+      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
     },
     {
       "parameters": {
@@ -430,7 +432,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/service-areas?slug={{ $('Curate').first().json.areaSlug }}",
+        "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/service-areas&slug={{ $('Curate').first().json.areaSlug }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth"
@@ -448,7 +450,8 @@
           "id": "REPLACE_ME",
           "name": "WordPress skybird-sync"
         }
-      }
+      },
+      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
     },
     {
       "parameters": {
@@ -466,7 +469,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Config').first().json.wpBase }}/wp-json/wp/v2/projects",
+        "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/projects",
         "options": {},
         "method": "POST",
         "authentication": "genericCredentialType",
@@ -488,7 +491,8 @@
           "id": "REPLACE_ME",
           "name": "WordPress skybird-sync"
         }
-      }
+      },
+      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
     }
   ],
   "connections": {
