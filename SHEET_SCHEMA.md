@@ -127,6 +127,67 @@ Rest Index | <company avg> |  | Updated ET
 
 ---
 
+## Tab: `L10 Scorecard`
+
+Feeds the separate [Level 10 scorecard page](l10.html) at `/l10.html` — the nine
+measurables Jacob types into Ninety → Leadership Team → Weekly every Tuesday.
+The TV board does not read this tab.
+
+Row 1 headers:
+
+```
+Sort | Group | Measurable | Owner | GoalOp | Goal | Value | Unit | WeekLabel | Source | Notes | Updated ET
+```
+
+Exactly nine rows, `Sort` 1–9. The `Measurable` text is the join key to
+`L10 History`, so it must match character for character:
+
+| Sort | Group | Measurable | Unit |
+|---|---|---|---|
+| 1 | Sales | `Appointments Set` | `count` |
+| 2 | Sales | `Cost per Appointment Set` | `usd` |
+| 3 | Sales | `Contracts Signed - $$` | `usd` |
+| 4 | Sales | `Close Rate - John` | `percent` |
+| 5 | Sales | `Close Rate - Anas` | `percent` |
+| 6 | Sales | `Close Rate - Henry` | `percent` |
+| 7 | Production | `Jobs Completed` | `count` |
+| 8 | Cash | `Total AR Over 60 Days` | `usd` |
+| 9 | Cash | `Cash Collected` | `usd` |
+
+**`Appointments Set`, not `Appoinments Set`.** Ninety's own measurable carries
+that typo; the sheet and the page both spell it correctly.
+
+- `GoalOp` is one of `>=`, `>`, `<=`, `<`, `=` (the glyphs `≥` and `≤` are also
+  accepted). The Hit/Miss pill compares `Value` to `Goal` with that operator and
+  no invented scaling.
+- A blank `Value` shows `—` and **no pill at all** — unknown is not a miss. A
+  literal `0` is judged normally.
+- `Unit` picks the formatter: `usd` → `$1,234.56`, `percent` → `42%`,
+  anything else → an integer count. This page keeps cents, unlike the TV board,
+  because these figures are transcribed rather than read across a room.
+- `Owner` may be blank; it renders as `—`.
+
+## Tab: `L10 History`
+
+The 13-week trend behind each card. One row per measurable per visible week.
+
+Row 1 headers:
+
+```
+WeekStart | WeekEnd | WeekLabel | Sort | Group | Measurable | Owner | GoalOp | Goal | Value | Unit | Source | SourceDetail | Updated ET
+```
+
+- `WeekStart` is an ISO date (`2026-09-14`) and is what the chart sorts on, so
+  rows may be appended in any order.
+- `WeekLabel` (`Sep 14–20`) is the axis tick and tooltip text.
+- **A blank `Value` is a gap, not a zero.** The chart ends one line and starts
+  another across it — a run of one surviving week draws as a lone dot. A literal
+  `0` is plotted at zero.
+- Rows whose `Measurable` matches no card are ignored; a measurable with no rows
+  at all gets an honest "No weekly history yet" back face.
+
+---
+
 ## Tab: `Meta` (optional, recommended)
 
 Row 1 headers:
@@ -144,6 +205,10 @@ Key | Value
 | `default_period` | `monthly` | Which view a fresh browser opens on. Defaults to `monthly`. |
 | `site_title` | `Talon` | Documented for Talon's own use; the page title is hard-coded to Talon. |
 | `refresh_seconds` | `180` | Client refresh cadence, clamped to 120–300. |
+| `l10_week_label` | `Week of Sep 14–20` | Header on the L10 page. Falls back to the first card's `WeekLabel`. |
+| `l10_page` | `L10 Scorecard` | Name of the current-week L10 tab, for Talon's own reference. |
+| `l10_history_tab` | `L10 History` | Name of the trend tab, likewise. |
+| `l10_trend_weeks` | `13` | How many week positions the trend charts show. |
 
 Unknown keys are ignored, so the tab is safe to extend.
 
@@ -161,6 +226,10 @@ lights up the moment it is wired, even before the `Rest Index` tab exists.
 corrupted into a timestamp — is treated as missing and drawn as `—` rather than
 rendered as a score nobody earned. `~5-day avg` is a mean, so it takes any
 number 0–100.
+
+The L10 page is independent of the board: if `L10 Scorecard` is missing the
+page says so and the TV board is unaffected, and if only `L10 History` is
+missing the nine cards still render with an empty back face.
 
 `Last updated` shows the newest stamp the board can parse across Meta
 `last_updated_et` and every tab's `Updated` / `Updated ET` column. ISO 8601 with
@@ -192,10 +261,16 @@ aliases the board accepts:
 | Unit | `Unit`, `Units` |
 | Updated | `Updated`, `Updated ET`, `Last updated` |
 | Meta key/value | `Key`/`Value`, `Name`/`Value`, `Setting`/`Val` |
+| Measurable | `Measurable`, `Metric`, `Name` |
+| Goal operator | `GoalOp`, `Op`, `Operator` |
+| Week label | `WeekLabel`, `Week` |
+| Week start | `WeekStart`, `Start` |
+| Sort | `Sort`, `Order` |
 
 Renaming a **tab** needs a matching env var (`SHEET_TAB_KPI`, `SHEET_TAB_TOP5`,
-`SHEET_TAB_REST`, `SHEET_TAB_META`) — the Function only proxies the four tabs it
-knows about.
+`SHEET_TAB_REST`, `SHEET_TAB_META`, `SHEET_TAB_L10`, `SHEET_TAB_L10_HISTORY`) —
+the Function only proxies the six tabs it knows about, so an unlisted tab name
+is refused rather than fetched.
 
 ---
 

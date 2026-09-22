@@ -1,0 +1,281 @@
+/* Level 10 scorecard page. Shares the board's tokens from talon.css; this file
+   only adds the card grid, the flip mechanics and the trend figure. Unlike the
+   TV board this page is read at a desk, so it scrolls and uses px-ish sizing
+   rather than the --u TV unit. */
+
+.l10-body {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+.l10 {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: clamp(16px, 2.2vw, 34px);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: clamp(12px, 1.4vw, 20px);
+  background:
+    radial-gradient(70% 50% at 50% 0%, rgba(47, 230, 255, 0.06), transparent 70%),
+    var(--bg);
+}
+
+.l10__chrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.l10__h1 {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 38px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--cyan);
+}
+
+.l10__sub {
+  margin: 4px 0 0;
+  font-size: clamp(12px, 1vw, 15px);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.l10__meta { display: flex; align-items: center; gap: 14px; }
+
+.l10__week {
+  font-size: clamp(13px, 1.1vw, 17px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.l10__back {
+  font-size: clamp(12px, 1vw, 15px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #04141a;
+  background: var(--cyan);
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.l10__back:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+.l10__hint, .l10__note {
+  margin: 0;
+  font-size: clamp(11px, 0.9vw, 14px);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.l10__note { min-height: 1.2em; color: var(--amber-dim); }
+
+/* --- grid ------------------------------------------------------------- */
+
+.l10__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: clamp(12px, 1.2vw, 20px);
+  align-content: start;
+}
+
+.l10__group-label {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  font-size: clamp(11px, 0.9vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan-dim);
+}
+
+/* --- card / flip ------------------------------------------------------ */
+
+.card {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  perspective: 1400px;
+  min-height: 250px;
+  font: inherit;
+  color: inherit;
+}
+
+.card:focus-visible .card__inner {
+  outline: 3px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+.card__inner {
+  position: relative;
+  height: 100%;
+  min-height: inherit;
+  transform-style: preserve-3d;
+  transition: transform 620ms cubic-bezier(0.22, 0.8, 0.24, 1);
+  border-radius: 14px;
+}
+
+.card.is-flipped .card__inner { transform: rotateY(180deg); }
+
+.card__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: clamp(12px, 1.1vw, 18px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card__face--back { transform: rotateY(180deg); }
+
+.card__measurable {
+  margin: 0;
+  font-size: clamp(13px, 1.05vw, 16px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  line-height: 1.25;
+}
+
+.card__value {
+  margin: auto 0 0;
+  font-size: clamp(30px, 3.4vw, 54px);
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+
+.card__value.is-empty { color: var(--ink-3); font-size: clamp(22px, 2vw, 32px); }
+
+.card__foot {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: clamp(11px, 0.9vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.card__goal { color: var(--amber-dim); }
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  border: 1px solid currentColor;
+}
+
+/* Status always carries its word, never colour alone. */
+.pill--hit { color: var(--hud-green); background: rgba(63, 240, 180, 0.12); }
+.pill--miss { color: var(--amber); background: rgba(255, 176, 32, 0.12); }
+
+/* --- trend face ------------------------------------------------------- */
+
+.card__back-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.card__back-title {
+  margin: 0;
+  font-size: clamp(11px, 0.95vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.card__weeks { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+
+.trend { width: 100%; flex: 1; min-height: 0; }
+
+.trend__grid { stroke: rgba(226, 240, 255, 0.1); stroke-width: 1; }
+
+.trend__line {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trend__dot { fill: var(--cyan); }
+
+.trend__dot--latest {
+  fill: #fff;
+  stroke: var(--cyan);
+  stroke-width: 2;
+}
+
+.trend__lone { fill: var(--cyan); }
+
+.trend__goal {
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0.8;
+}
+
+.trend__goal-label, .trend__tick, .trend__latest-label, .trend__empty {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend__goal-label { fill: var(--amber-dim); font-size: 11px; font-weight: 700; }
+.trend__tick { fill: var(--ink-3); font-size: 10px; font-weight: 700; }
+.trend__latest-label { fill: #fff; font-size: 13px; font-weight: 800; }
+.trend__empty { fill: var(--ink-3); font-size: 14px; font-weight: 700; }
+
+.card__summary {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+/* The table is the non-hover route to the numbers. Available to screen
+   readers always; shown on the card when the reader asks for it. */
+.trend__table {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card__inner { transition: opacity 160ms linear; }
+  .card.is-flipped .card__inner { transform: none; }
+  /* No rotation: swap the faces with a short crossfade instead. */
+  .card__face { backface-visibility: visible; -webkit-backface-visibility: visible; }
+  .card__face--back { transform: none; opacity: 0; pointer-events: none; }
+  .card.is-flipped .card__face--front { opacity: 0; pointer-events: none; }
+  .card.is-flipped .card__face--back { opacity: 1; pointer-events: auto; }
+  .card__face { transition: opacity 160ms linear; }
+}

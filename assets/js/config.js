@@ -17,7 +17,13 @@ export const CONFIG = {
     top5: 'Daily Top-Five Progress',
     rest: 'Rest Index',
     meta: 'Meta',
+    l10: 'L10 Scorecard',
+    l10History: 'L10 History',
   },
+
+  /* Level 10 scorecard page. Week count is a display cap; Meta
+     `l10_trend_weeks` overrides it. */
+  l10TrendWeeks: 13,
 
   /* Refresh cadence. The Meta tab's `refresh_seconds` overrides this, clamped
      to the 2-5 minute window the board is specified for. */

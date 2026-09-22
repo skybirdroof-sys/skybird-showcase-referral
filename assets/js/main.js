@@ -144,6 +144,7 @@ async function start() {
     if (key === 'r') tick();                 // manual refresh, for tuning
     if (key === 'm') setPeriod('monthly');   // monthly / weekly from a keyboard
     if (key === 'w') setPeriod('weekly');
+    if (key === 'l') window.location.href = '/l10';   // Level 10 scorecard
   });
 }
 

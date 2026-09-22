@@ -171,6 +171,160 @@ function parseRest(csv) {
   return { index, people, meta };
 }
 
+/* --- Level 10 scorecard ------------------------------------------------- */
+
+function parseL10Current(csv) {
+  return records(csv)
+    .map((r) => ({
+      sort: parseValue(pick(r, ['sort', 'order'])),
+      group: String(pick(r, ['group'])).trim(),
+      measurable: String(pick(r, ['measurable', 'metric', 'name'])).trim(),
+      owner: String(pick(r, ['owner'])).trim(),
+      goalOp: String(pick(r, ['goalop', 'op', 'operator'])).trim(),
+      goal: pick(r, ['goal', 'target']),
+      value: pick(r, ['value']),
+      unit: String(pick(r, ['unit', 'units'])).trim(),
+      weekLabel: String(pick(r, ['weeklabel', 'week'])).trim(),
+      notes: String(pick(r, ['notes', 'note'])).trim(),
+      updated: String(pick(r, ['updatedet', 'updated'])).trim(),
+    }))
+    .filter((row) => row.measurable !== '' && !/^note/i.test(row.measurable));
+}
+
+function parseL10History(csv) {
+  return records(csv)
+    .map((r) => ({
+      weekStart: String(pick(r, ['weekstart', 'start'])).trim(),
+      weekEnd: String(pick(r, ['weekend', 'end'])).trim(),
+      weekLabel: String(pick(r, ['weeklabel', 'week'])).trim(),
+      sort: parseValue(pick(r, ['sort', 'order'])),
+      measurable: String(pick(r, ['measurable', 'metric', 'name'])).trim(),
+      goalOp: String(pick(r, ['goalop', 'op'])).trim(),
+      goal: pick(r, ['goal', 'target']),
+      value: pick(r, ['value']),
+      unit: String(pick(r, ['unit', 'units'])).trim(),
+    }))
+    .filter((row) => row.measurable !== '' && !/^note/i.test(row.measurable));
+}
+
+/* >=, >, <=, <, = against the Sheet's own numbers. No invented scaling, and no
+   verdict at all unless both sides are real numbers - a blank value is unknown,
+   which is not a miss. */
+export function hitStatus(value, goal, goalOp) {
+  if (value === null || goal === null) return null;
+  switch (String(goalOp || '').trim()) {
+    case '>=': case '≥': return value >= goal;
+    case '>': return value > goal;
+    case '<=': case '≤': return value <= goal;
+    case '<': return value < goal;
+    case '=': case '==': return value === goal;
+    default: return null;
+  }
+}
+
+export function buildL10FromCsv({ current = '', history = '', meta = '' }) {
+  const metaRows = parseMeta(meta);
+  const currentRows = parseL10Current(current);
+  const historyRows = parseL10History(history);
+
+  const cards = currentRows
+    .map((row) => {
+      const value = parseValue(row.value);
+      const goal = parseValue(row.goal);
+      return {
+        ...row,
+        value,
+        goal,
+        hit: hitStatus(value, goal, row.goalOp),
+      };
+    })
+    .sort((a, b) => {
+      if (a.sort !== null && b.sort !== null) return a.sort - b.sort;
+      return a.measurable.localeCompare(b.measurable);
+    });
+
+  /* History joined on the exact measurable string (defensive trim only), and
+     ordered by WeekStart so the x axis is chronological rather than sheet
+     order. A blank Value stays null: it is a gap in the line, not a zero. */
+  const history_ = new Map();
+  for (const row of historyRows) {
+    const key = norm(row.measurable);
+    if (!history_.has(key)) history_.set(key, []);
+    history_.get(key).push({
+      weekStart: row.weekStart,
+      weekLabel: row.weekLabel || row.weekStart,
+      value: parseValue(row.value),
+      goal: parseValue(row.goal),
+      goalOp: row.goalOp,
+    });
+  }
+  for (const series of history_.values()) {
+    series.sort((a, b) => String(a.weekStart).localeCompare(String(b.weekStart)));
+  }
+
+  const trendWeeks = parseValue(metaRows.l10trendweeks) || CONFIG.l10TrendWeeks;
+
+  return {
+    weekLabel: metaRows.l10weeklabel || (cards[0] && cards[0].weekLabel) || '',
+    trendWeeks,
+    cards,
+    history: history_,
+    refreshSeconds: parseValue(metaRows.refreshseconds),
+    updated: freshest(metaRows.lastupdatedet || '', [
+      ...currentRows.map((r) => r.updated),
+    ]),
+    fetchedAt: new Date(),
+  };
+}
+
+export function historyFor(model, measurable) {
+  return model.history.get(norm(measurable)) || [];
+}
+
+export async function loadL10() {
+  const { tabs } = CONFIG;
+  const wanted = [
+    ['current', tabs.l10],
+    ['history', tabs.l10History],
+    ['meta', tabs.meta],
+  ];
+
+  const settled = await Promise.all(wanted.map(async ([key, tab]) => {
+    try {
+      return { key, tab, csv: await fetchTabCsv(tab) };
+    } catch (error) {
+      return { key, tab, csv: '', error };
+    }
+  }));
+
+  const csv = { current: '', history: '', meta: '' };
+  const sources = {};
+  const sourceErrors = [];
+  let noSource = 0;
+
+  for (const result of settled) {
+    csv[result.key] = result.csv;
+    if (result.error) {
+      sources[result.key] = 'unavailable';
+      sourceErrors.push(`${result.tab}: ${result.error.message}`);
+      if (result.error instanceof NoSourceError) noSource += 1;
+      console.warn(`[talon] L10 tab "${result.tab}" unavailable:`, result.error.message);
+    } else {
+      sources[result.key] = 'ok';
+    }
+  }
+
+  if (sources.current !== 'ok') {
+    if (noSource) throw new NoSourceError('No data source for the L10 scorecard.');
+    throw new Error(sourceErrors.join(' · ') || 'L10 Scorecard could not be read');
+  }
+
+  const model = buildL10FromCsv(csv);
+  model.sources = sources;
+  model.sourceErrors = sourceErrors;
+  return model;
+}
+
 function parseMeta(csv) {
   const out = {};
   for (const r of records(csv)) {

@@ -2,7 +2,8 @@
    Run: npm test */
 
 import assert from 'node:assert/strict';
-import { buildModelFromCsv, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { segments } from '../assets/js/chart.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
@@ -429,6 +430,125 @@ await (async function everyTabDown() {
     assert.match(thrown.message, /Rest Index|KPI|Daily Top-Five/);
   });
 })();
+
+/* --- L10 scorecard ----------------------------------------------------- */
+
+test('hitStatus honours every goal operator the sheet uses', () => {
+  assert.equal(hitStatus(12, 12, '>='), true);
+  assert.equal(hitStatus(11, 12, '>='), false);
+  assert.equal(hitStatus(12, 12, '≥'), true);      // the sheet may store the glyph
+  assert.equal(hitStatus(13, 12, '>'), true);
+  assert.equal(hitStatus(12, 12, '>'), false);
+  assert.equal(hitStatus(240, 250, '<'), true);
+  assert.equal(hitStatus(250, 250, '<'), false);
+  assert.equal(hitStatus(250, 250, '<='), true);
+  assert.equal(hitStatus(250, 250, '≤'), true);
+});
+
+test('hitStatus refuses a verdict when either side is unknown', () => {
+  assert.equal(hitStatus(null, 12, '>='), null, 'a blank value is unknown, not a miss');
+  assert.equal(hitStatus(12, null, '>='), null);
+  assert.equal(hitStatus(12, 12, ''), null, 'no operator means no pill');
+  assert.equal(hitStatus(12, 12, 'about'), null);
+  assert.equal(hitStatus(0, 3, '>='), false, 'an explicit zero still gets judged');
+});
+
+(function l10FromCsv() {
+  /* Shaped like the real tabs: out-of-order Sort, an intentionally blank
+     current Value, a literal zero, and history rows shuffled so the ordering
+     has to come from WeekStart rather than sheet order. */
+  const current = [
+    'Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,WeekLabel,Source,Notes,Updated ET',
+    '7,Production,Jobs Completed,Ops,>=,3,0,count,Sep 14–20,CompanyCam,,Mon Sep 21 · 9:01 PM ET',
+    '1,Sales,Appointments Set,Team,>=,12,14,count,Sep 14–20,CRM,,Mon Sep 21 · 9:01 PM ET',
+    '4,Sales,Close Rate - John,John,>=,40,,percent,Sep 14–20,CRM,,Mon Sep 21 · 9:01 PM ET',
+    '2,Sales,Cost per Appointment Set,Team,<,250,212.5,usd,Sep 14–20,Ads,,Mon Sep 21 · 9:01 PM ET',
+  ].join('\n');
+
+  const history = [
+    'WeekStart,WeekEnd,WeekLabel,Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,Source,SourceDetail,Updated ET',
+    '2026-09-14,2026-09-20,Sep 14–20,1,Sales,Appointments Set,Team,>=,12,14,count,CRM,,',
+    '2026-06-29,2026-07-05,Jun 29–Jul 5,1,Sales,Appointments Set,Team,>=,12,9,count,CRM,,',
+    '2026-08-31,2026-09-06,Aug 31–Sep 6,1,Sales,Appointments Set,Team,>=,12,,count,CRM,,',
+    '2026-09-07,2026-09-13,Sep 7–13,1,Sales,Appointments Set,Team,>=,12,0,count,CRM,,',
+    '2026-09-14,2026-09-20,Sep 14–20,7,Production,Jobs Completed,Ops,>=,3,0,count,CompanyCam,,',
+  ].join('\n');
+
+  const meta = [
+    'key,value',
+    'l10_week_label,Week of Sep 14–20',
+    'l10_trend_weeks,13',
+    'refresh_seconds,120',
+  ].join('\n');
+
+  const model = buildL10FromCsv({ current, history, meta });
+
+  test('L10 cards come back in Sort order, not sheet order', () => {
+    assert.deepEqual(model.cards.map((c) => c.measurable), [
+      'Appointments Set',
+      'Cost per Appointment Set',
+      'Close Rate - John',
+      'Jobs Completed',
+    ]);
+  });
+
+  test('L10 keeps the corrected Appointments Set spelling', () => {
+    assert.ok(model.cards.some((c) => c.measurable === 'Appointments Set'));
+    assert.ok(!/Appoinments/i.test(current + JSON.stringify(model.cards)));
+  });
+
+  test('a blank current Value stays null while a literal zero survives', () => {
+    const byName = new Map(model.cards.map((c) => [c.measurable, c]));
+    assert.equal(byName.get('Close Rate - John').value, null);
+    assert.equal(byName.get('Close Rate - John').hit, null, 'blank must not render a Miss pill');
+    assert.equal(byName.get('Jobs Completed').value, 0);
+    assert.equal(byName.get('Jobs Completed').hit, false);
+    assert.equal(byName.get('Cost per Appointment Set').value, 212.5);
+    assert.equal(byName.get('Cost per Appointment Set').hit, true);
+  });
+
+  test('L10 history is ordered by WeekStart and keeps gaps as null', () => {
+    const series = historyFor(model, 'Appointments Set');
+    assert.deepEqual(series.map((p) => p.weekStart), [
+      '2026-06-29', '2026-08-31', '2026-09-07', '2026-09-14',
+    ]);
+    assert.deepEqual(series.map((p) => p.value), [9, null, 0, 14]);
+  });
+
+  test('history joins on the measurable name, trim-tolerant', () => {
+    assert.equal(historyFor(model, '  Appointments Set ').length, 4);
+    assert.equal(historyFor(model, 'Close Rate - John').length, 0, 'no history yet is an empty series');
+  });
+
+  test('L10 reads its week label and trend width from Meta', () => {
+    assert.equal(model.weekLabel, 'Week of Sep 14–20');
+    assert.equal(model.trendWeeks, 13);
+    assert.equal(model.refreshSeconds, 120);
+  });
+
+  test('the week label falls back to the current rows when Meta is silent', () => {
+    const bare = buildL10FromCsv({ current, history, meta: 'key,value\n' });
+    assert.equal(bare.weekLabel, 'Sep 14–20');
+    assert.equal(bare.trendWeeks, CONFIG.l10TrendWeeks);
+  });
+})();
+
+test('a null in a trend series breaks the line instead of bridging it', () => {
+  const points = [
+    { label: 'w1', value: 9 },
+    { label: 'w2', value: null },
+    { label: 'w3', value: 0 },
+    { label: 'w4', value: 14 },
+  ];
+  const runs = segments(points);
+  assert.equal(runs.length, 2, 'the gap must end one run and start another');
+  assert.deepEqual(runs[0].map((p) => p.index), [0]);
+  assert.deepEqual(runs[1].map((p) => p.index), [2, 3], 'an explicit zero is plotted, not skipped');
+});
+
+test('a series with no values at all yields no runs to draw', () => {
+  assert.deepEqual(segments([{ value: null }, { value: undefined }]), []);
+});
 
 test('config keeps Talon\'s locked scoring set', () => {
   assert.deepEqual(CONFIG.top5ValidToday, [0, 20, 40, 60, 80, 100]);

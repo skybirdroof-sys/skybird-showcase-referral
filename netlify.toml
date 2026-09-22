@@ -17,6 +17,17 @@
   to = "/index.html"
   status = 200
 
+# Level 10 scorecard page, and the same page under the secret path.
+[[redirects]]
+  from = "/l10"
+  to = "/l10.html"
+  status = 200
+
+[[redirects]]
+  from = "/t/*/l10"
+  to = "/l10.html"
+  status = 200
+
 # The publish dir is the repo root, so keep source folders from being served.
 [[redirects]]
   from = "/netlify/*"

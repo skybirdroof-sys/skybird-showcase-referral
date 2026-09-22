@@ -29,6 +29,8 @@ const DEFAULT_TABS = {
   TOP5: 'Daily Top-Five Progress',
   REST: 'Rest Index',
   META: 'Meta',
+  L10: 'L10 Scorecard',
+  L10_HISTORY: 'L10 History',
 };
 
 /* Each slot resolves to a tab name (SHEET_TAB_*) and, optionally, a stable gid

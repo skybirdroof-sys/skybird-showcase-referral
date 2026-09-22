@@ -18,6 +18,12 @@ displays them.** It never computes a KPI from a source system, never caches
 numbers server-side, and never invents a value: a blank Sheet cell renders as
 `—`, and a literal `0` in the Sheet renders as `0`.
 
+There is one other page: **`/l10.html`**, the Level 10 scorecard. Nine flip
+cards, one per Ninety measurable — front is the current L10 week, back is the
+13-week trend. It is a desk page for Tuesday's Level 10 meeting, not a wall
+page, and it reads its own two Sheet tabs. The **L10** button in the board's
+top-right (or the `L` key) opens it; **Back to board** or `Esc` returns.
+
 Product name is **Talon**. Site name suggestion: `talon-tv`.
 
 ---
@@ -52,7 +58,8 @@ SHEET_SCHEMA.md             exact tabs and column headers Talon must write
 
 1. Create one Sheet (suggested name: **Talon Board**) with the tabs and headers
    in [`SHEET_SCHEMA.md`](SHEET_SCHEMA.md) — `KPI`, `Daily Top-Five Progress`,
-   `Rest Index`, and optionally `Meta`. Header spelling matters; row order does not.
+   `Rest Index`, and optionally `Meta`. For the L10 page also add
+   `L10 Scorecard` and `L10 History`. Header spelling matters; row order does not.
 2. **Share → Anyone with the link → Viewer.** The board reads the published
    CSV view; it never authenticates as a user.
 3. Copy the Sheet id out of the URL:
@@ -128,6 +135,8 @@ Then in **Site settings → Environment variables**:
 | `SHEET_ID` | yes | the Sheet id from step 1 |
 | `TALON_PASSWORD` | optional | set it to turn on the passphrase gate |
 | `SHEET_TAB_KPI` / `SHEET_TAB_TOP5` / `SHEET_TAB_REST` / `SHEET_TAB_META` | optional | only if you rename tabs |
+| `SHEET_TAB_L10` / `SHEET_TAB_L10_HISTORY` | optional | only if you rename the L10 tabs |
+| `SHEET_GID_L10` / `SHEET_GID_L10_HISTORY` | optional | numeric gids, if you would rather address the L10 tabs by id than by name |
 
 Redeploy after changing env vars — Functions read them at runtime, but the
 deploy is what picks up new values.
@@ -224,6 +233,11 @@ hand/Talon-written.
 | Rest Index | one decimal (`2.4`) |
 | Blank cell | `—` |
 | Literal `0` | `0` |
+
+The TV board drops cents on purpose — nobody reads `$186,432.19` from across the
+room. The **L10 page keeps them** (`$22,039.40`), because those figures get typed
+into Ninety and the cents have to match. Inside the small trend charts the goal
+label alone is shortened to `goal ≥ $40,000`, to keep it from crowding the plot.
 
 ---
 
