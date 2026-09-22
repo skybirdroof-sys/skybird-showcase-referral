@@ -2,13 +2,14 @@
   "name": "talon-tv",
   "version": "1.0.0",
   "private": true,
-  "description": "Talon — Skybird Roofing office TV dashboard (static site + Netlify Functions)",
+  "description": "Talon \u2014 Skybird Roofing office TV dashboard (static site + Netlify Functions)",
   "type": "module",
   "scripts": {
     "dev": "npx --yes netlify-cli dev",
     "dev:static": "npx --yes serve . --listen 5173",
     "test": "node scripts/test-parsers.mjs",
-    "check": "node scripts/check-naming.mjs"
+    "check": "node scripts/check-naming.mjs",
+    "sound": "node scripts/make-ding.mjs"
   },
   "license": "UNLICENSED"
 }

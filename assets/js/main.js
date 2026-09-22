@@ -1,8 +1,12 @@
 /* Talon board bootstrap: gate -> first paint -> auto-refresh loop. */
 
 import { CONFIG } from './config.js';
-import { loadLive, loadFixture, normalizeModel, NoSourceError } from './sheet.js';
-import { buildTiles, renderModel, setStale } from './render.js';
+import { loadLive, loadFixture, loadTop5, normalizeModel, NoSourceError } from './sheet.js';
+import {
+  buildTiles, renderModel, setStale,
+  renderCelebrationState, pulsePerson, announce, renderSoundButton, renderTop5Rows,
+} from './render.js';
+import { createCelebrations, createSound } from './celebrate.js';
 import { ensureAccess } from './gate.js';
 import { startHud } from './hud.js';
 import { clamp } from './format.js';
@@ -21,12 +25,30 @@ function storedPeriod() {
   }
 }
 
+/* The celebration engine and the ding. Both are created before the first
+   fetch, so the very first set of rows the board sees becomes the baseline and
+   nothing is celebrated on boot. */
+const sound = createSound();
+
+const celebrations = createCelebrations({
+  onCelebrate(item) {
+    sound.play();
+    if (item.hundred) pulsePerson(item.key, CONFIG.celebrate.hundredPulseMs);
+    announce(item.hundred
+      ? `${item.person} completed all five, ${item.to} percent.`
+      : `${item.person} is at ${item.to} percent, up from ${item.from === null ? 'none' : item.from + ' percent'}.`);
+  },
+  onState: renderCelebrationState,
+});
+
 const state = {
   lastModel: null,
   lastFetchAt: null,
   refreshMs: CONFIG.refreshSeconds * 1000,
   timer: null,
   loading: false,
+  top5Timer: null,
+  pollingTop5: false,
   period: storedPeriod() || CONFIG.defaultPeriod,
   periodPinned: storedPeriod() !== null,
 };
@@ -86,6 +108,10 @@ async function tick() {
       state.period = model.meta.defaultPeriod;
     }
     renderModel(model, { stale: false, lastFetchAt: state.lastFetchAt, period: state.period });
+    /* The full refresh sees the same rows as the fast poll. Identical values
+       are a no-op in the engine, so feeding it from both paths cannot
+       double-fire, and whichever arrives first wins the ding. */
+    celebrations.observe(model.top5);
   } catch (err) {
     console.error('[talon] refresh failed', err);
 
@@ -112,11 +138,42 @@ function schedule() {
   state.timer = setTimeout(tick, state.refreshMs);
 }
 
+/* --- the fast Top Five poll -------------------------------------------- */
+
+/* One tab, every dozen seconds, entirely separate from the board refresh. A
+   failure here is silent on purpose: the numbers already on screen stay, and
+   the board's own refresh owns the stale badge. A celebration nobody gets is
+   better than a red flag on the wall every time a poll blips. */
+async function pollTop5() {
+  if (MODE !== 'live' || state.pollingTop5) return;
+  state.pollingTop5 = true;
+  try {
+    const rows = await loadTop5();
+    if (rows.length) {
+      renderTop5Rows(rows);
+      celebrations.observe(rows);
+    }
+  } catch (err) {
+    console.warn('[talon] Top Five poll failed (board unaffected):', err && err.message ? err.message : err);
+  } finally {
+    state.pollingTop5 = false;
+    scheduleTop5();
+  }
+}
+
+function scheduleTop5() {
+  clearTimeout(state.top5Timer);
+  if (document.hidden || MODE !== 'live') return;
+  state.top5Timer = setTimeout(pollTop5, CONFIG.top5PollSeconds * 1000);
+}
+
 function onVisibility() {
   if (document.hidden) {
     clearTimeout(state.timer);
+    clearTimeout(state.top5Timer);
     return;
   }
+  scheduleTop5();
   const age = state.lastFetchAt ? Date.now() - state.lastFetchAt.getTime() : Infinity;
   if (age >= state.refreshMs) tick();
   else schedule();
@@ -125,14 +182,33 @@ function onVisibility() {
 async function start() {
   buildTiles();
   await ensureAccess();
+
+  /* Typing the passphrase is a real user gesture, and Chrome's activation is
+     sticky for the life of the document - so the person who unlocks the board
+     unlocks the ding with it, and nobody has to find the sound control. On a
+     screen with no gate this no-ops and the control says "SOUND - TAP". */
+  sound.unlock();
+
   startHud();
 
   // Paint the empty skeleton immediately so the TV is never a black screen.
   renderModel(emptyModel(), { stale: false, lastFetchAt: null, period: state.period });
 
   await tick();
+  scheduleTop5();
 
   document.addEventListener('visibilitychange', onVisibility);
+
+  /* The control is also the gesture that unlocks audio, which is why it says
+     "SOUND - TAP" until playback has actually been allowed. */
+  sound.onChange(renderSoundButton);
+  document.getElementById('sound-toggle').addEventListener('click', () => sound.toggle());
+
+  /* Any click or key anywhere counts as the gesture too, so on a screen that
+     someone does touch the control never has to be found. */
+  const unlockOnce = () => { sound.unlock(); };
+  document.addEventListener('pointerdown', unlockOnce, { once: true });
+  document.addEventListener('keydown', unlockOnce, { once: true });
 
   document.getElementById('period-toggle').addEventListener('click', (event) => {
     const btn = event.target.closest('.period__btn');
@@ -145,6 +221,7 @@ async function start() {
     if (key === 'm') setPeriod('monthly');   // monthly / weekly from a keyboard
     if (key === 'w') setPeriod('weekly');
     if (key === 'l') window.location.href = '/l10';   // Level 10 scorecard
+    if (key === 's') sound.toggle();                 // silence the ding
   });
 }
 

@@ -200,7 +200,18 @@ function maxAgeFor(slot) {
   return (CONTRACT[slot] || {}).maxAgeHours || 48;
 }
 
+/* Edge cache TTL per tab. The Top Five strip is polled every dozen seconds for
+ * the celebration ding, so 30s of shared cache would make a ding up to half a
+ * minute late - long enough that nobody in the room connects it to the thing
+ * that caused it. It still caches, just briefly, so five screens in the office
+ * do not become five times the requests to Google. Nothing else on the board
+ * moves minute to minute. */
+function cacheSecondsFor(slot) {
+  return slot === 'TOP5' ? 8 : 30;
+}
+
 module.exports = {
+  cacheSecondsFor,
   env, DEFAULT_TABS, slots, gvizUrl, notCsv,
   CONTRACT, norm, headerCells, driftFor, stampAgeHours, maxAgeFor,
 };

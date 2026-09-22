@@ -44,6 +44,7 @@
         <span class="chrome__period" id="period-label"></span>
       </div>
       <div class="chrome__meta">
+        <button class="sound" id="sound-toggle" type="button" aria-pressed="true">SOUND ON</button>
         <a class="chrome__l10" href="/l10" id="l10-link">L10</a>
         <span class="badge badge--example" id="badge-example" hidden>example data</span>
         <span class="badge badge--stale" id="badge-stale" hidden>feed stale</span>
@@ -106,6 +107,10 @@
 
     <!-- Zone C: eight cash/ops tiles -->
     <section class="tiles" id="tiles" aria-label="Cash and ops metrics"></section>
+
+    <!-- Celebrations are announced here as well as shown, so the ding is not
+         the only non-visual signal that something happened. -->
+    <p id="top5-live" class="visually-hidden" role="status" aria-live="polite"></p>
   </main>
 
   <noscript>

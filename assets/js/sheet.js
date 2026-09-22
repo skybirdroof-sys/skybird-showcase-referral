@@ -666,6 +666,24 @@ export function periodLabel(model, period) {
   return want === 'weekly' ? 'Weekly' : 'Monthly';
 }
 
+/* Just the Top Five tab, for the fast celebration poll. The board's own
+   refresh stays on the Meta cadence: this exists so a closed item shows up in
+   seconds without re-fetching five tabs, the HUD, and everything else.
+   Throws on failure - the caller keeps the last good rows on screen. */
+export async function loadTop5() {
+  const csv = await fetchTabCsv(CONFIG.tabs.top5);
+  const rows = parseTop5(csv);
+  if (!rows.length && String(csv).trim().split('\n').length > 1) {
+    throw new Error('Top Five: CSV arrived but no rows parsed - check the header row');
+  }
+  return rows.map((row) => ({
+    person: row.person,
+    today: validToday(parseValue(row.today), row),
+    week: inRange(parseValue(row.week)),
+    updated: row.updated,
+  }));
+}
+
 /* The weekly series behind a tile's sparkline, newest last and trimmed to the
    number of weeks a tile can legibly show. Unknown measurable -> empty. */
 export function trendFor(model, measurable, weeks = CONFIG.tileTrendWeeks) {

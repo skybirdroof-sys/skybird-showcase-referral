@@ -72,6 +72,29 @@ export const CONFIG = {
      at 120x34 in a corner of a tile, more weeks is just a noisier squiggle. */
   tileTrendWeeks: 12,
 
+  /* --- Top Five celebrations (Phase 1) --------------------------------
+     The Top Five strip polls on its own clock, far faster than the rest of the
+     board: a ding that lands four minutes after someone closed an item is not
+     a celebration, it is a puzzle. The KPI tiles and the Rest Index keep the
+     Meta refresh_seconds cadence, because none of those numbers move minute to
+     minute. */
+  top5PollSeconds: 12,
+
+  celebrate: {
+    dingPath: '/public/sounds/ding.wav',
+    soundStorageKey: 'talon.sound',
+    /* The lowest Today % that counts as having closed something. Also the
+       threshold a blank must reach to read as a real first close. */
+    softGreenAt: 20,
+    /* How long one celebration holds the floor before the next in the queue.
+       The 4pm write can move three people at once and three dings on top of
+       each other tell you nothing about who they were for. */
+    dwellMs: 1800,
+    hundredDwellMs: 3000,
+    /* How long a name pulses when the increase lands on a full five of five. */
+    hundredPulseMs: 2600,
+  },
+
   /* Reporting periods for the eight tiles. `monthly` is the wall's default;
      `weekly` is the set used in the Tuesday L10 scorecard. A KPI row with a
      blank Period column counts as the default period, so a Sheet written

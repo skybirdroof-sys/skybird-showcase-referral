@@ -139,7 +139,13 @@ function renderRest(model) {
 }
 
 function renderTop5(model) {
-  const people = orderPeople(model.top5, CONFIG.top5Order);
+  renderTop5Rows(model.top5);
+}
+
+/* Takes rows rather than a model, so the fast celebration poll can repaint the
+   strip from one tab without a whole board model to hand. */
+export function renderTop5Rows(rows) {
+  const people = orderPeople(rows, CONFIG.top5Order);
   const host = el.top5();
 
   syncRows(host, people.map((p) => p.person), (name) => {
@@ -149,7 +155,20 @@ function renderTop5(model) {
 
     const label = document.createElement('span');
     label.className = 'top5__name';
-    label.textContent = name;
+
+    /* Always in the DOM, transparent until this person is the latest closer.
+       Reserving the width means switching it on cannot nudge the name sideways,
+       and it means the state is not carried by colour alone. */
+    const marker = document.createElement('span');
+    marker.className = 'top5__marker';
+    marker.setAttribute('aria-hidden', 'true');
+    marker.textContent = '●';
+
+    const who = document.createElement('span');
+    who.className = 'top5__who';
+    who.textContent = name;
+
+    label.append(marker, who);
 
     const track = document.createElement('div');
     track.className = 'top5__track';
@@ -257,6 +276,53 @@ function renderTileTrend(node, spec, model, unit) {
   host.hidden = false;
   host.append(sparkline({ points, format, label }));
   host.title = sparkSummary({ points, format, label });
+}
+
+/* Paints who has closed something today and who closed most recently. Kept
+   apart from renderTop5 so the fast celebration poll can repaint just this
+   without touching the bars, the numbers or anything else on the board. */
+export function renderCelebrationState({ lastCloser = null, scoring = new Set() } = {}) {
+  for (const row of el.top5().querySelectorAll('.top5__row')) {
+    const key = row.dataset.person;
+    row.classList.toggle('is-scoring', scoring.has(key));
+    row.classList.toggle('is-last-closer', key === lastCloser);
+  }
+}
+
+/* The pulse for a full five of five. transform and opacity only: a font-size
+   or padding change here would reflow the strip, and the board must not twitch
+   while somebody is looking at it. */
+export function pulsePerson(personKey, ms) {
+  const row = el.top5().querySelector(`.top5__row[data-person="${personKey}"]`);
+  if (!row) return;
+  row.classList.remove('is-pulsing');
+  void row.offsetWidth;            // restart the animation if it is still running
+  row.classList.add('is-pulsing');
+  setTimeout(() => row.classList.remove('is-pulsing'), ms);
+}
+
+/* A wall display has no hover and no screen reader, but the announcement is
+   also the non-visual channel for the celebration, so it is real markup rather
+   than a console log. */
+export function announce(text) {
+  const live = document.getElementById('top5-live');
+  if (live) live.textContent = text;
+}
+
+export function renderSoundButton({ enabled, unlocked }) {
+  const btn = document.getElementById('sound-toggle');
+  if (!btn) return;
+  const blocked = enabled && !unlocked;
+  btn.classList.toggle('is-off', !enabled);
+  btn.classList.toggle('is-blocked', blocked);
+  btn.setAttribute('aria-pressed', String(enabled));
+  btn.textContent = enabled ? (blocked ? 'SOUND — TAP' : 'SOUND ON') : 'SOUND OFF';
+  btn.title = !enabled
+    ? 'Celebrations are visual only. Click to turn the ding on.'
+    : blocked
+      ? 'This browser blocks audio until the page is clicked. Click here once to allow the ding.'
+      : 'Celebration ding is on. Click to silence it.';
+  btn.setAttribute('aria-label', btn.title);
 }
 
 function renderChrome(model, state) {

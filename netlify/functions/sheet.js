@@ -16,7 +16,7 @@
 /* The tab list, the gviz URL shape and the not-CSV guard live in one place so
  * the watchdog in health.js cannot disagree with this proxy about what a Talon
  * tab is. See netlify/lib/tabs.js. */
-const { env, slots, gvizUrl, notCsv } = require('../lib/tabs');
+const { env, slots, gvizUrl, notCsv, cacheSecondsFor } = require('../lib/tabs');
 
 const text = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -87,9 +87,10 @@ exports.handler = async (event) => {
           // Names the route taken, so a stale gid shows up in a header rather
           // than only as a blank tile on the wall.
           'x-talon-resolved-by': attempt.by,
-          // A wall display refreshes every few minutes; 30s of edge cache keeps
-          // multiple screens from hammering Google without showing stale data.
-          'cache-control': 'public, max-age=0, s-maxage=30',
+          // Shared edge cache, per tab: long enough that several screens do not
+          // multiply the load on Google, short enough that the Top Five poll
+          // still sees a close within seconds of it being written.
+          'cache-control': `public, max-age=0, s-maxage=${cacheSecondsFor(match.slot)}`,
         },
         body,
       };

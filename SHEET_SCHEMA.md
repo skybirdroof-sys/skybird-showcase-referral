@@ -229,6 +229,13 @@ its own zone — the board reports a data-source failure just when all three dat
 tabs (`KPI`, `Daily Top-Five Progress`, `Rest Index`) fail. So the Top 5 strip
 lights up the moment it is wired, even before the `Rest Index` tab exists.
 
+This tab is also the one Talon polls fastest — every 12 seconds — because an
+increase in `Today %` fires the celebration ding and turns that person's name
+green (README §10). Nothing about the schema changes for it: the board watches
+the same `Person` / `Today %` columns it always has, and only an increase
+between two polls counts. A decrease reads as the bot correcting itself, and a
+blank cell reads as a write in progress, so neither celebrates.
+
 `Today %` is validated against the locked count-based set
 **{0, 20, 40, 60, 80, 100}**. A value outside it — text, a stray `45`, a cell
 corrupted into a timestamp — is treated as missing and drawn as `—` rather than

@@ -4,7 +4,7 @@ A single-page, read-only wall display for the Skybird Roofing office TV. It show
 three things at a glance, in giant type, on a dark HUD:
 
 - **Rest Index** — average open-project days at rest across Jacob / John / Henry / Anas (lower is better)
-- **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person
+- **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person, with a ding and a green name when somebody closes one
 - **Eight cash/ops tiles** — Appointments Set, Cost per Appt, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, each with a 12-week sparkline where `L10 History` has a series for it
 
 In the middle sits the Talon HUD: concentric instrument rings — graticules, arc
@@ -298,7 +298,64 @@ Motion:
 Check changes against `/?mode=example` (full) and `/?mode=empty` (empty states)
 before deploying, then `npm test && npm run check`.
 
-## 10. The Sheet watchdog
+## 10. Top Five celebrations
+
+Somebody finishes an item on their Daily Top Five, the ops bot writes the new
+percentage, and within a few seconds the board dings once and turns that
+person's name bright green. That is the whole feature.
+
+The Top Five strip polls **its own tab every 12 seconds**, separate from the
+board refresh — a ding four minutes after the fact is a puzzle, not a
+celebration. The KPI tiles, Rest Index and HUD stay on the Meta
+`refresh_seconds` cadence, because none of those move minute to minute. The
+proxy caches that one tab at the edge for 8s rather than 30s, so several
+screens in the office don't multiply the load on Google while still seeing a
+close within seconds.
+
+Three rules stop it lying or nagging (all in `assets/js/celebrate.js`, all unit
+tested):
+
+- **The first successful poll is a baseline and never celebrates.** A TV that
+  boots at 8am must not ding six times for yesterday's work.
+- **Only an increase celebrates.** A decrease is the bot correcting itself; a
+  blank cell is a write in progress. A blank holds the last known value, so a
+  mid-write gap can't manufacture an increase when the number comes back. An
+  invalid `Today %` — anything outside {0, 20, 40, 60, 80, 100} — is a broken
+  cell, not a smaller win, and never fires anything. A person who was blank at
+  baseline and reaches 20 *is* a real first close, and does.
+- **One at a time.** The 4pm write can move three people at once; three dings
+  on top of each other tell you nothing about who they were for. They queue
+  and play ~1.8s apart.
+
+Colours: **bright green + a dot** for whoever closed most recently, **soft
+green** for anyone else at 20% or more, default white for blank or 0. The dot
+is always in the layout and only changes opacity, so the state is never carried
+by colour alone and switching it on can't nudge the row. An increase that lands
+on 100% pulses that name for ~2.6s — `transform` and opacity only, so the strip
+never reflows. Under `prefers-reduced-motion` the pulse is a fade, not a scale.
+
+### Sound
+
+Browsers refuse to play audio until the page has been interacted with, and a
+wall display never is. So:
+
+- The **SOUND ON / SOUND OFF** control in the top bar persists to
+  `localStorage` (`talon.sound`). Off means visual only — greens and pulses
+  still happen. `S` toggles it from a keyboard.
+- Unlocking the board with the passphrase counts as the gesture, so on the
+  normal path sound just works. Where it doesn't, the control reads **SOUND —
+  TAP** in amber and one click fixes it — it never fails silently.
+- For a kiosk nobody ever touches, launch Chrome with
+  `--autoplay-policy=no-user-gesture-required` and it needs no tap at all.
+
+The ding is `public/sounds/ding.wav` — 53 KB, 0.62s, mono. It is **synthesised,
+not sampled**: `npm run sound` regenerates it from `scripts/make-ding.mjs`, so
+there is no third-party licence attached to anything in this repo. Replacing it
+is just dropping another file at that path.
+
+---
+
+## 11. The Sheet watchdog
 
 Both ways the Sheet goes wrong are invisible from the board:
 
@@ -349,7 +406,7 @@ contract entry is a tab the watchdog cannot check.
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|

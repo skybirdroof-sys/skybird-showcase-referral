@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
+import { createCelebrations } from '../assets/js/celebrate.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
@@ -687,6 +688,151 @@ test('a series with no values at all yields no runs to draw', () => {
     const served = tabs.slots().map((s) => s.slot).sort();
     assert.deepEqual(served, Object.keys(tabs.CONTRACT).sort(),
       'a tab with no contract entry is a tab the watchdog cannot check');
+  });
+})();
+
+/* --- Top Five celebrations --------------------------------------------- */
+
+(function celebrations() {
+  /* A controllable clock, so the queue can be stepped without waiting on real
+     timers and the one-at-a-time rule can actually be asserted. */
+  function harness() {
+    const fired = [];
+    const states = [];
+    let pending = [];
+    const engine = createCelebrations({
+      onCelebrate: (item) => fired.push(item),
+      onState: (s) => states.push({ lastCloser: s.lastCloser, scoring: [...s.scoring].sort() }),
+      now: () => 0,
+      schedule: (fn) => { pending.push(fn); },
+    });
+    return {
+      engine,
+      fired,
+      states,
+      // Let the current celebration's dwell expire.
+      advance() { const run = pending; pending = []; for (const fn of run) fn(); },
+      get pendingTimers() { return pending.length; },
+    };
+  }
+
+  const rows = (obj) => Object.entries(obj).map(([person, today]) => ({ person, today }));
+
+  test('the first poll is a baseline and never celebrates', () => {
+    const h = harness();
+    const out = h.engine.observe(rows({ Margaret: 100, Travis: 40, John: 0, Jacob: null }));
+    assert.deepEqual(out, [], 'a TV booting at 8am must not ding for yesterday');
+    assert.equal(h.fired.length, 0);
+    assert.equal(h.engine.state.baselined, true);
+  });
+
+  test('an increase after baseline fires once, with who and how far', () => {
+    const h = harness();
+    h.engine.observe(rows({ Henry: 40 }));
+    const out = h.engine.observe(rows({ Henry: 60 }));
+    assert.equal(out.length, 1);
+    assert.deepEqual(
+      { person: out[0].person, from: out[0].from, to: out[0].to, hundred: out[0].hundred },
+      { person: 'Henry', from: 40, to: 60, hundred: false },
+    );
+    assert.equal(h.fired.length, 1);
+  });
+
+  test('the same value observed twice does not fire again', () => {
+    const h = harness();
+    h.engine.observe(rows({ Henry: 40 }));
+    h.engine.observe(rows({ Henry: 60 }));
+    h.engine.observe(rows({ Henry: 60 }));
+    h.engine.observe(rows({ Henry: 60 }));
+    assert.equal(h.fired.length, 1, 'the fast poll and the board refresh both feed this');
+  });
+
+  test('a decrease never celebrates, but is remembered as a correction', () => {
+    const h = harness();
+    h.engine.observe(rows({ Anas: 60 }));
+    assert.deepEqual(h.engine.observe(rows({ Anas: 40 })), [], 'the bot corrected itself');
+    assert.equal(h.fired.length, 0);
+    // Climbing back from the corrected figure is a real close, not a replay.
+    const out = h.engine.observe(rows({ Anas: 60 }));
+    assert.equal(out.length, 1);
+    assert.equal(out[0].from, 40);
+  });
+
+  test('an invalid or blank cell is held, not treated as a change', () => {
+    const h = harness();
+    h.engine.observe(rows({ John: 40 }));
+    assert.deepEqual(h.engine.observe(rows({ John: null })), [], 'a write in progress is not news');
+    assert.deepEqual(h.engine.observe(rows({ John: 45 })), [], '45 is a broken cell, not a smaller win');
+    assert.deepEqual(h.engine.observe(rows({ John: 'Sep 21' })), []);
+    // The held value means coming back to 40 is not a fresh close.
+    assert.deepEqual(h.engine.observe(rows({ John: 40 })), []);
+    assert.equal(h.fired.length, 0);
+  });
+
+  test('blank at baseline then 20 is a real first close', () => {
+    const h = harness();
+    h.engine.observe(rows({ Jacob: null }));
+    const out = h.engine.observe(rows({ Jacob: 20 }));
+    assert.equal(out.length, 1);
+    assert.equal(out[0].from, null);
+    assert.equal(out[0].to, 20);
+  });
+
+  test('blank to a literal zero is not a close', () => {
+    const h = harness();
+    h.engine.observe(rows({ Jacob: null }));
+    assert.deepEqual(h.engine.observe(rows({ Jacob: 0 })), [], 'zero of five is not an achievement');
+    assert.equal(h.fired.length, 0);
+  });
+
+  test('landing on 100 is flagged for the pulse', () => {
+    const h = harness();
+    h.engine.observe(rows({ Margaret: 80 }));
+    const out = h.engine.observe(rows({ Margaret: 100 }));
+    assert.equal(out[0].hundred, true);
+  });
+
+  test('a multi-person write celebrates one at a time, in board order', () => {
+    const h = harness();
+    h.engine.observe(rows({ Margaret: 0, Travis: 0, John: 0 }));
+    const out = h.engine.observe(rows({ Margaret: 20, Travis: 40, John: 60 }));
+    assert.equal(out.length, 3, 'all three are queued');
+    assert.equal(h.fired.length, 1, 'but only the first has played');
+    assert.deepEqual(h.fired.map((f) => f.person), ['Margaret']);
+
+    h.advance();
+    assert.deepEqual(h.fired.map((f) => f.person), ['Margaret', 'Travis']);
+    h.advance();
+    assert.deepEqual(h.fired.map((f) => f.person), ['Margaret', 'Travis', 'John']);
+    h.advance();
+    assert.equal(h.engine.state.running, false);
+    assert.equal(h.engine.state.queued, 0);
+  });
+
+  test('the bright-green closer moves to whoever closed most recently', () => {
+    const h = harness();
+    h.engine.observe(rows({ Henry: 20, Anas: 20 }));
+    h.engine.observe(rows({ Henry: 40, Anas: 20 }));
+    assert.equal(h.engine.state.lastCloser, 'henry');
+    h.advance();
+    h.engine.observe(rows({ Henry: 40, Anas: 40 }));
+    assert.equal(h.engine.state.lastCloser, 'anas');
+  });
+
+  test('everyone at 20 or more reads as scoring; zero and blank do not', () => {
+    const h = harness();
+    h.engine.observe(rows({ Margaret: 100, Travis: 20, John: 0, Henry: null }));
+    const latest = h.states[h.states.length - 1];
+    assert.deepEqual(latest.scoring, ['margaret', 'travis']);
+  });
+
+  test('someone added to the tab mid-day baselines rather than celebrating', () => {
+    const h = harness();
+    h.engine.observe(rows({ Henry: 40 }));
+    assert.deepEqual(h.engine.observe(rows({ Henry: 40, Kayla: 80 })), [],
+      'their first reading is not a close we watched happen');
+    const out = h.engine.observe(rows({ Henry: 40, Kayla: 100 }));
+    assert.deepEqual(out.map((o) => o.person), ['Kayla']);
   });
 })();
 
