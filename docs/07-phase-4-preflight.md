@@ -836,9 +836,14 @@ support questions:
    Basic Auth returns `You are not currently logged in.`, and the password's
    **Last Used** column stays empty — so the credential is never evaluated.
 
-**Ticket filed 2026-09-22: WP Engine support reference `B21531`.** Their
+**Raised with WP Engine 2026-09-22; not yet an open technical ticket.** Their
 first-line assistant escalated rather than answering, confirming this needs
-environment-level inspection. Two portal checks done first, both read-only and
+environment-level inspection. Support's first reply was an account-visibility
+question — `skybirdroofing.net` does not appear under Jacob's User Portal
+account in their lookup — so the technical question has not been reached yet.
+Jacob can see the install in the portal (`skybirdroof`, Production), which
+suggests the site sits on an account he has delegated access to rather than
+one he owns, most likely Pitch Peak's. Two portal checks done first, both read-only and
 both negative, and both are in the ticket so support does not re-ask:
 **Web rules** and **Redirect rules** are empty on this environment, so nothing
 custom is stripping the header — the behaviour is platform default.
