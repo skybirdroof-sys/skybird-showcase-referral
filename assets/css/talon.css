@@ -629,7 +629,12 @@ body { -webkit-font-smoothing: antialiased; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: var(--gap);
-  height: calc(var(--u) * 17.5);
+  /* Was 17.5u, before the tiles carried a sparkline. At 17.5u a tile had two
+     spare pixels, so adding a third row of content squeezed the value box and
+     the 75px glyphs were clipped by the tile's overflow. The height comes out
+     of the middle zone, which the grid gives 1fr: the HUD and the Rest hero
+     have slack to give and the number on a tile does not. */
+  height: calc(var(--u) * 20.5);
 }
 
 .tile {
@@ -666,6 +671,9 @@ body { -webkit-font-smoothing: antialiased; }
 }
 
 .tile__value {
+  /* flex: none for the same reason as .tile__trend: the number is the tile, and
+     a squeezed box clips descenders and comma tails at this size. */
+  flex: none;
   font-size: calc(var(--u) * 3.9);
   font-weight: 800;
   line-height: 1;
@@ -682,6 +690,60 @@ body { -webkit-font-smoothing: antialiased; }
   font-weight: 700;
   font-size: calc(var(--u) * 2.4);
   line-height: 1.6;
+}
+
+/* --- tile sparkline ---------------------------------------------------- */
+
+/* The weekly shape behind the number, sitting between the value and the footer.
+   Deliberately quiet: a 2px cyan line, no axes, no grid, no numbers. The value
+   above it is the thing being read from across the room; this only has to say
+   which direction it came from. */
+.tile__trend {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.5);
+  margin: calc(var(--u) * 0.3) 0 0;
+  /* flex: none so this row can never take height from the value above it: if
+     anything has to give on a short screen, it is the trend, not the number. */
+  flex: none;
+}
+
+.spark {
+  /* Stretched to the tile rather than kept to the viewBox aspect: a sparkline
+     is a shape, not a measured chart, and the vertical exaggeration is what
+     makes a small movement visible at four metres. */
+  width: 100%;
+  height: calc(var(--u) * 1.45);
+  overflow: visible;
+}
+
+.spark__line {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* The line is stretched non-uniformly, so without this the stroke would be
+     drawn thicker vertically than horizontally. */
+  vector-effect: non-scaling-stroke;
+}
+
+.spark__now { fill: #fff; }
+.spark__lone { fill: var(--cyan); }
+
+/* Amber is the board's "look here" colour and this is the tile it is reserved
+   for, so the AR trend carries it rather than the data cyan. */
+.tile--alert .spark__line { stroke: var(--amber); }
+.tile--alert .spark__lone { fill: var(--amber); }
+
+.tile__trend-label {
+  flex: none;
+  font-size: calc(var(--u) * 0.66);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.06);
+  color: var(--ink-3);
+  opacity: 0.75;
 }
 
 .tile__foot {

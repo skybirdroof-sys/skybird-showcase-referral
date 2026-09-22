@@ -6,6 +6,14 @@
 [functions]
   node_bundler = "esbuild"
 
+# The Sheet watchdog. 13:05 UTC is 9:05am Eastern while the US is on daylight
+# time and 8:05am once it is not - early enough that a tab which stopped being
+# written overnight is reported before the day starts. Netlify's scheduler
+# invokes it as a POST, which is what makes the scheduled run the one that
+# notifies while a manual GET of /api/health stays quiet.
+[functions."health"]
+  schedule = "5 13 * * *"
+
 [dev]
   framework = "#static"
 
@@ -48,6 +56,11 @@
 [[redirects]]
   from = "/api/gate"
   to = "/.netlify/functions/gate"
+  status = 200
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
   status = 200
 
 [[headers]]

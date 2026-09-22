@@ -13,59 +13,10 @@
  * GET /api/sheet?tab=KPI  ->  text/csv
  */
 
-/* Netlify environment keys are case-sensitive, and a mistyped key here fails
- * silently — the gate would report "no password set" and the board would sit
- * open with nothing logged. Match exactly, then fall back to a case-insensitive
- * lookup so TALON_PASSWORD / Talon_password / talon_password all resolve. */
-function env(name) {
-  if (process.env[name] !== undefined) return process.env[name];
-  const wanted = name.toLowerCase();
-  const found = Object.keys(process.env).find((key) => key.toLowerCase() === wanted);
-  return found ? process.env[found] : undefined;
-}
-
-const DEFAULT_TABS = {
-  KPI: 'KPI',
-  TOP5: 'Daily Top-Five Progress',
-  REST: 'Rest Index',
-  META: 'Meta',
-  L10: 'L10 Scorecard',
-  L10_HISTORY: 'L10 History',
-};
-
-/* Each slot resolves to a tab name (SHEET_TAB_*) and, optionally, a stable gid
- * (SHEET_GID_*). A gid survives someone renaming the tab, so it wins when set. */
-function slots() {
-  return Object.keys(DEFAULT_TABS).map((slot) => ({
-    slot,
-    name: (env(`SHEET_TAB_${slot}`) || DEFAULT_TABS[slot]).trim(),
-    gid: (env(`SHEET_GID_${slot}`) || '').trim(),
-  }));
-}
-
-/* gviz does not fail cleanly. A bad gid, a deleted tab or a query error comes
- * back as HTTP 200 whose body is a JavaScript payload (a slash-star O_o marker
- * followed by google.visualization.Query.setResponse) rather than an error
- * status or HTML. Accepting that as CSV is worse than a 502: the tab reports
- * success, parses to zero rows, and the zone goes quietly blank with no badge
- * and no fallback to the tab name. So a body counts as CSV only if it is not
- * HTML, not a gviz payload, and its first line actually has a delimiter. */
-/* headers=1 is not optional. Without it gviz GUESSES how many leading rows are
- * header by column type, and a text column whose first data rows are blank
- * (KPI!Value, Meta!Value) makes it swallow those rows into the header and
- * space-join them - "Metric Appointments Set Cost per Appt" as one cell. The
- * tab then parses to zero usable rows and the zone goes blank. Pinning it to
- * one header row is the difference between eight numbers and eight dashes. */
-function notCsv(body) {
-  const t = String(body ?? '').trim();
-  if (t === '') return 'empty response';
-  if (t.startsWith('<')) return 'HTML, not CSV - check the Sheet is shared "anyone with the link can view"';
-  if (t.startsWith('/*') || t.includes('google.visualization.Query.setResponse')) {
-    return 'gviz error payload - the tab id or name did not resolve';
-  }
-  if (!t.split('\n', 1)[0].includes(',')) return 'single-column response, not a Talon tab';
-  return null;
-}
+/* The tab list, the gviz URL shape and the not-CSV guard live in one place so
+ * the watchdog in health.js cannot disagree with this proxy about what a Talon
+ * tab is. See netlify/lib/tabs.js. */
+const { env, slots, gvizUrl, notCsv } = require('../lib/tabs');
 
 const text = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -92,7 +43,7 @@ exports.handler = async (event) => {
   const tab = (event.queryStringParameters && event.queryStringParameters.tab) || '';
   if (!tab) return text(400, 'Missing ?tab=');
 
-  // Whitelist: this proxy only ever reads the four Talon tabs.
+  // Whitelist: this proxy only ever reads the Talon tabs in netlify/lib/tabs.js.
   const match = slots().find((s) => s.name.toLowerCase() === tab.toLowerCase());
   if (!match) return text(403, `Tab "${tab}" is not exposed by this board.`);
 
@@ -108,8 +59,7 @@ exports.handler = async (event) => {
   const problems = [];
 
   for (const attempt of attempts) {
-    const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}` +
-      `/gviz/tq?tqx=out:csv&headers=1&${attempt.selector}`;
+    const url = gvizUrl(sheetId, attempt.selector);
 
     try {
       const res = await fetch(url, {

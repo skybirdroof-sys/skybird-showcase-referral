@@ -50,16 +50,27 @@ export const CONFIG = {
 
   /* The eight cash/ops tiles. `metric` must match the Sheet's KPI!A values
      exactly. `unit` is the fallback when the Sheet's Unit cell is blank. */
+/* `trend` is the `L10 History` Measurable whose weekly series draws this
+     tile's sparkline. The names differ from the tile labels because the KPI tab
+     and the L10 tab were written by different hands - "Cost per Appt" here is
+     "Cost per Appointment Set" there. A tile with no `trend` gets no sparkline:
+     Close Rates has no company-wide series (only the three per-closer ones,
+     all of them blank), and Sent CoC cash sitting is not in the history tab at
+     all. Neither gets a line invented for it. */
   tiles: [
-    { metric: 'Appointments Set', unit: 'count' },
-    { metric: 'Cost per Appt', unit: 'usd' },
-    { metric: 'Contracts Signed $$', unit: 'usd' },
+    { metric: 'Appointments Set', unit: 'count', trend: 'Appointments Set' },
+    { metric: 'Cost per Appt', unit: 'usd', trend: 'Cost per Appointment Set' },
+    { metric: 'Contracts Signed $$', unit: 'usd', trend: 'Contracts Signed - $$' },
     { metric: 'Close Rates', unit: 'pct', note: 'Anas · John · Henry' },
-    { metric: 'Jobs Completed', unit: 'count' },
+    { metric: 'Jobs Completed', unit: 'count', trend: 'Jobs Completed' },
     { metric: 'Sent CoC cash sitting', unit: 'usd' },
-    { metric: 'Total AR Over 60 Days', unit: 'usd', alert: true },
-    { metric: 'Cash Collected', unit: 'usd' },
+    { metric: 'Total AR Over 60 Days', unit: 'usd', alert: true, trend: 'Total AR Over 60 Days' },
+    { metric: 'Cash Collected', unit: 'usd', trend: 'Cash Collected' },
   ],
+
+  /* How many weeks a tile sparkline shows. Shorter than the L10 page's 13-25:
+     at 120x34 in a corner of a tile, more weeks is just a noisier squiggle. */
+  tileTrendWeeks: 12,
 
   /* Reporting periods for the eight tiles. `monthly` is the wall's default;
      `weekly` is the set used in the Tuesday L10 scorecard. A KPI row with a

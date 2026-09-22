@@ -5,7 +5,7 @@ three things at a glance, in giant type, on a dark HUD:
 
 - **Rest Index** — average open-project days at rest across Jacob / John / Henry / Anas (lower is better)
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person
-- **Eight cash/ops tiles** — Appointments Set, Cost per Appt, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected
+- **Eight cash/ops tiles** — Appointments Set, Cost per Appt, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, each with a 12-week sparkline where `L10 History` has a series for it
 
 In the middle sits the Talon HUD: concentric instrument rings — graticules, arc
 brackets, radial bar readouts, a hex core and a radar sweep — in blues and
@@ -30,9 +30,9 @@ Product name is **Talon**. Site name suggestion: `talon-tv`.
 
 ## Stack
 
-Static HTML + CSS + vanilla ES modules, plus two tiny Netlify Functions (Sheet
-CSV proxy, passphrase check). No build step, no framework, no bundler — the page
-a browser loads is the code in this repo.
+Static HTML + CSS + vanilla ES modules, plus three tiny Netlify Functions (Sheet
+CSV proxy, passphrase check, Sheet watchdog). No build step, no framework, no
+bundler — the page a browser loads is the code in this repo.
 
 ```
 index.html                  board markup (three zones + centre orb)
@@ -136,6 +136,8 @@ Then in **Site settings → Environment variables**:
 | `TALON_PASSWORD` | optional | set it to turn on the passphrase gate |
 | `SHEET_TAB_KPI` / `SHEET_TAB_TOP5` / `SHEET_TAB_REST` / `SHEET_TAB_META` | optional | only if you rename tabs |
 | `SHEET_TAB_L10` / `SHEET_TAB_L10_HISTORY` | optional | only if you rename the L10 tabs |
+| `ALERT_WEBHOOK_URL` | optional | where the Sheet watchdog posts when a tab needs a look — see below |
+| `HEALTH_MAX_AGE_HOURS` | optional | overrides every tab's staleness limit (hours) |
 | `SHEET_GID_L10` / `SHEET_GID_L10_HISTORY` | optional | numeric gids, if you would rather address the L10 tabs by id than by name |
 
 Redeploy after changing env vars — Functions read them at runtime, but the
@@ -296,7 +298,58 @@ Motion:
 Check changes against `/?mode=example` (full) and `/?mode=empty` (empty states)
 before deploying, then `npm test && npm run check`.
 
-## 10. Troubleshooting
+## 10. The Sheet watchdog
+
+Both ways the Sheet goes wrong are invisible from the board:
+
+- **Schema drift.** A column is added and the fetch still succeeds, so no badge
+  lights up. A `Period` column appeared on the `L10 Scorecard` tab and the L10
+  page rendered eighteen cards instead of nine for a day before anyone noticed.
+- **Staleness.** A tab stops being written but keeps serving its last values.
+  The fetch succeeds, so the amber **feed stale** badge — which only ever means
+  the fetch *failed* — stays dark. The `KPI` tab sat four days old showing
+  Friday's numbers as though they were today's.
+
+So `netlify/functions/health.js` checks every tab against the contract in
+`netlify/lib/tabs.js` — the same file the CSV proxy reads, so the two cannot
+disagree about what a tab should look like.
+
+```bash
+curl -s https://talon-tv.netlify.app/api/health | jq .status
+```
+
+Per tab it reports: whether it resolved (and by gid or by name), how many rows
+and columns came back, any **required column missing** (that breaks a zone →
+`error`), any **undocumented column** (drift → `warn`), and how old the newest
+timestamp is against that tab's limit. A tab is only judged stale on a stamp
+that carries its own timezone offset; a human stamp like `Mon Sep 21 · 9:01 PM
+ET` is displayable but not comparable, so it is skipped rather than guessed at.
+
+Limits are 30h for the daily tabs, 48h for `KPI` and `Meta`, and 192h (a week
+and a day) for the two weekly L10 tabs. Override with `HEALTH_MAX_AGE_HOURS`
+for all of them or `HEALTH_MAX_AGE_KPI`, `HEALTH_MAX_AGE_TOP5`,
+`HEALTH_MAX_AGE_REST`, `HEALTH_MAX_AGE_META`, `HEALTH_MAX_AGE_L10`,
+`HEALTH_MAX_AGE_L10_HISTORY` for one.
+
+**Getting told about it.** `netlify.toml` schedules the function for 13:05 UTC
+daily — 9:05am ET in summer, 8:05am in winter — early enough that a tab which
+stopped being written overnight is reported before the day starts. Netlify's
+scheduler invokes it as a POST, and a POST is what makes it notify; a manual
+`GET /api/health` never sends anything, so checking by hand is free.
+
+To actually receive the message, set **`ALERT_WEBHOOK_URL`** to anything that
+accepts `{"text": "..."}` — a Slack or Discord incoming webhook, a Zapier or
+Make catch hook. Unset, the function is report-only and the verdict still lands
+in the Netlify function log every run, so the log is a usable history either
+way.
+
+Adding a tab means adding it to `DEFAULT_TABS` **and** `CONTRACT` in
+`netlify/lib/tabs.js`; a test fails if the two disagree, because a tab with no
+contract entry is a tab the watchdog cannot check.
+
+---
+
+## 11. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|

@@ -2,7 +2,8 @@
    Anything null becomes an em dash, never a 0. */
 
 import { CONFIG } from './config.js';
-import { kpiFor, periodLabel } from './sheet.js';
+import { kpiFor, periodLabel, trendFor } from './sheet.js';
+import { sparkline, sparkSummary } from './chart.js';
 import {
   EMPTY, fmtByUnit, fmtPct, fmtRest, fmtEtStamp, normalizeUnit, clamp,
 } from './format.js';
@@ -53,7 +54,25 @@ export function buildTiles() {
     note.textContent = tile.note || '';
 
     foot.append(target, note);
-    node.append(label, value, foot);
+    node.append(label, value);
+
+    /* Only the tiles with a weekly series get a sparkline slot. The others get
+       no empty box either - a reserved gap reads as a chart that failed. */
+    if (tile.trend) {
+      const trend = document.createElement('div');
+      trend.className = 'tile__trend';
+
+      const span = document.createElement('span');
+      span.className = 'tile__trend-label';
+      /* Says what the line covers, because the big number above it may be
+         showing the MONTH while the line is always weekly. */
+      span.textContent = `${CONFIG.tileTrendWeeks}-WK`;
+
+      trend.append(span);
+      node.append(trend);
+    }
+
+    node.append(foot);
     host.append(node);
   }
 }
@@ -207,7 +226,37 @@ function renderTiles(model, period) {
       target.hidden = false;
       target.textContent = `target ${fmtByUnit(targetNumber, unit)}`;
     }
+
+    renderTileTrend(node, spec, model, unit);
   }
+}
+
+/* The weekly shape behind the number. Redrawn each refresh rather than diffed:
+   an SVG this small is cheaper to rebuild than to reconcile, and the tile keeps
+   its label so nothing flashes. */
+function renderTileTrend(node, spec, model, unit) {
+  const host = node.querySelector('.tile__trend');
+  if (!host || !spec.trend) return;
+
+  const series = trendFor(model, spec.trend);
+  const points = series.map((row) => ({ label: row.label, value: row.value }));
+  const format = (n) => fmtByUnit(n, unit);
+  const label = spec.metric;
+
+  host.querySelector('svg')?.remove();
+
+  const real = points.filter((p) => p.value !== null && p.value !== undefined);
+  /* One point is not a trend and no points is not a chart. Either way the tile
+     shows its number alone rather than a line implying history that isn't
+     there. */
+  if (real.length < 2) {
+    host.hidden = true;
+    return;
+  }
+
+  host.hidden = false;
+  host.append(sparkline({ points, format, label }));
+  host.title = sparkSummary({ points, format, label });
 }
 
 function renderChrome(model, state) {

@@ -226,3 +226,74 @@ export function trendSummary({ measurable, points, goal, goalOp, format }) {
   parts.push(`${real.length} of ${points.length} weeks have data`);
   return `${measurable}: ${parts.join(' · ')}`;
 }
+
+/* --- tile sparkline ---------------------------------------------------- */
+
+/* A sparkline is not a small chart, it is a shape. No axes, no grid, no goal
+ * line, no numbers: the tile already shows the current figure in 54px type, so
+ * all this has to add is the direction it came from. Anything more competes
+ * with the number for attention across a room.
+ *
+ * It reuses segments(), so the no-bridging rule holds here too - a week with no
+ * data breaks the line rather than drawing a slope nobody measured.
+ */
+export function sparkline({ points, format = String, label = 'Trend' }) {
+  const W = 120;
+  const H = 34;
+  const PAD = 3;
+
+  const svg = el('svg', {
+    viewBox: `0 0 ${W} ${H}`,
+    class: 'spark',
+    role: 'img',
+    preserveAspectRatio: 'none',
+    'aria-label': sparkSummary({ points, format, label }),
+  });
+
+  const real = points.filter((p) => p.value !== null && p.value !== undefined);
+  if (real.length < 2) return svg;   // one point is not a trend; draw nothing
+
+  const values = real.map((p) => p.value);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) { min -= 1; max += 1; }
+
+  const x = (i) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const y = (v) => PAD + (H - PAD * 2) - ((v - min) / (max - min)) * (H - PAD * 2);
+
+  for (const run of segments(points)) {
+    if (run.length === 1) {
+      svg.append(el('circle', { cx: x(run[0].index), cy: y(run[0].value), r: 1.6, class: 'spark__lone' }));
+      continue;
+    }
+    svg.append(el('polyline', {
+      points: run.map((p) => `${x(p.index)},${y(p.value)}`).join(' '),
+      class: 'spark__line',
+    }));
+  }
+
+  /* The latest week gets a dot, so the eye knows which end is now. */
+  const lastIndex = points.reduce((acc, p, i) => (
+    p.value === null || p.value === undefined ? acc : i
+  ), -1);
+  if (lastIndex >= 0) {
+    svg.append(el('circle', {
+      cx: x(lastIndex), cy: y(points[lastIndex].value), r: 2.2, class: 'spark__now',
+    }));
+  }
+
+  return svg;
+}
+
+/* The sparkline's whole meaning in words, for the accessible name: a wall
+   display has no hover, so the shape must also be readable as a sentence. */
+export function sparkSummary({ points, format = String, label = 'Trend' }) {
+  const real = points.filter((p) => p.value !== null && p.value !== undefined);
+  if (!real.length) return `${label}: no weekly history`;
+  if (real.length === 1) return `${label}: one week only, ${format(real[0].value)}`;
+  const first = real[0];
+  const last = real[real.length - 1];
+  const direction = last.value > first.value ? 'up from' : last.value < first.value ? 'down from' : 'level with';
+  return `${label}: ${real.length} of ${points.length} weeks, ` +
+    `${direction} ${format(first.value)} (${first.label}) to ${format(last.value)} (${last.label})`;
+}

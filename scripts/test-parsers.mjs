@@ -2,6 +2,7 @@
    Run: npm test */
 
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { CONFIG } from '../assets/js/config.js';
@@ -382,7 +383,9 @@ await (async function missingRestTabStillRenders() {
     assert.equal(model.rest.index, null);
     assert.equal(model.sources.top5, 'ok');
     assert.equal(model.sources.rest, 'unavailable');
-    assert.equal(model.sourceErrors.length, 2); // Rest Index + Meta
+    // Rest Index + Meta + L10 History (the sparkline source), all tolerated.
+    assert.equal(model.sourceErrors.length, 3);
+    assert.equal(model.trends.size, 0, 'no history tab means no sparklines, not a broken board');
   });
 })();
 
@@ -609,6 +612,83 @@ test('a null in a trend series breaks the line instead of bridging it', () => {
 test('a series with no values at all yields no runs to draw', () => {
   assert.deepEqual(segments([{ value: null }, { value: undefined }]), []);
 });
+
+/* --- Sheet watchdog contract ------------------------------------------- */
+
+(function watchdogContract() {
+  const require_ = createRequire(import.meta.url);
+  const tabs = require_('../netlify/lib/tabs.js');
+
+  /* The headers the live Sheet actually serves today. If one of these starts
+     failing, either the Sheet changed or the contract drifted - and finding out
+     here beats finding out from a blank zone on the wall. */
+  const LIVE = {
+    KPI: 'Metric,Period,Value,Target,Unit,Source,Owner,Notes,Updated ET',
+    TOP5: 'Person,Today %,~5-day avg,Updated ET',
+    REST: 'Person,Days at rest avg,Project count,Updated ET',
+    META: 'Key,Value',
+    L10: 'Period,Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,WeekLabel,Source,Notes,Updated ET',
+    L10_HISTORY: 'WeekStart,WeekEnd,WeekLabel,Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit,Source,SourceDetail,Updated ET',
+  };
+
+  test('every live tab header satisfies the contract with no drift', () => {
+    for (const [slot, header] of Object.entries(LIVE)) {
+      const drift = tabs.driftFor(slot, `${header}\nx`);
+      assert.deepEqual(drift.missing, [], `${slot} reports a missing column`);
+      assert.deepEqual(drift.added, [], `${slot} reports undocumented columns`);
+    }
+  });
+
+  test('a required column is satisfied by any spelling the board accepts', () => {
+    assert.deepEqual(tabs.driftFor('TOP5', 'Person,Today %,Avg\nx').missing, []);
+    assert.deepEqual(tabs.driftFor('TOP5', 'Name,Today Pct,Avg\nx').missing, []);
+    assert.deepEqual(tabs.driftFor('TOP5', 'Crew,Today Percent\nx').missing, []);
+    assert.deepEqual(tabs.driftFor('TOP5', 'Person,Avg\nx').missing, ['todaypct']);
+  });
+
+  test('a new column is reported as drift, which is how the Period column got missed', () => {
+    const before = tabs.driftFor('L10', 'Sort,Group,Measurable,Owner,GoalOp,Goal,Value,Unit\nx');
+    assert.deepEqual(before.added, [], 'the documented shape is quiet');
+    const after = tabs.driftFor('L10', `${LIVE.L10},Confidence\nx`);
+    assert.deepEqual(after.added, ['confidence']);
+  });
+
+  test('quoted commas in a header do not split a column', () => {
+    assert.deepEqual(tabs.headerCells('Metric,"Value, net",Unit'), ['Metric', 'Value, net', 'Unit']);
+  });
+
+  test('staleness is measured only from stamps that carry a zone', () => {
+    const now = Date.parse('2026-09-22T12:00:00Z');
+    const withZone = 'Metric,Value,Updated ET\nCash,5,2026-09-18T21:51:00-04:00\n';
+    const age = tabs.stampAgeHours(withZone, now);
+    assert.ok(age, 'an ISO stamp with an offset is comparable');
+    assert.equal(Math.round(age.ageHours), 82, "Sep 18 21:51 -04:00 is Sep 19 01:51 UTC");
+
+    const humanOnly = 'Metric,Value,Updated ET\nCash,5,Mon Sep 21 - 9:01 PM ET\n';
+    assert.equal(tabs.stampAgeHours(humanOnly, now), null,
+      'a stamp with no zone is skipped, not guessed at');
+  });
+
+  test('the Meta tab stamp is read from its key/value row', () => {
+    const now = Date.parse('2026-09-22T12:00:00Z');
+    const meta = 'Key,Value\nlast_updated_et,2026-09-22T08:00:00-04:00\nrefresh_seconds,180\n';
+    assert.equal(Math.round(tabs.stampAgeHours(meta, now).ageHours), 0);
+  });
+
+  test('staleness limits are per tab and overridable by env', () => {
+    assert.equal(tabs.maxAgeFor('TOP5'), 30, 'a daily tab tolerates a day and a bit');
+    assert.equal(tabs.maxAgeFor('L10'), 192, 'a weekly tab tolerates a week and a day');
+    process.env.HEALTH_MAX_AGE_TOP5 = '6';
+    assert.equal(tabs.maxAgeFor('TOP5'), 6);
+    delete process.env.HEALTH_MAX_AGE_TOP5;
+  });
+
+  test('the watchdog knows about every tab the proxy serves', () => {
+    const served = tabs.slots().map((s) => s.slot).sort();
+    assert.deepEqual(served, Object.keys(tabs.CONTRACT).sort(),
+      'a tab with no contract entry is a tab the watchdog cannot check');
+  });
+})();
 
 test('config keeps Talon\'s locked scoring set', () => {
   assert.deepEqual(CONFIG.top5ValidToday, [0, 20, 40, 60, 80, 100]);

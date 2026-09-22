@@ -186,6 +186,14 @@ WeekStart | WeekEnd | WeekLabel | Sort | Group | Measurable | Owner | GoalOp | G
 - Rows whose `Measurable` matches no card are ignored; a measurable with no rows
   at all gets an honest "No weekly history yet" back face.
 
+This tab also feeds the **sparklines on the eight TV tiles**, which is why the
+`Measurable` strings matter beyond the L10 page. `assets/js/config.js` maps each
+tile to the measurable that draws its line — the names differ because the two
+tabs were written by different hands (`Cost per Appt` on `KPI` is
+`Cost per Appointment Set` here). Two tiles have no line and get none rather
+than an invented one: `Close Rates` has no company-wide series, only the three
+per-closer measurables, and `Sent CoC cash sitting` is not in this tab at all.
+
 ---
 
 ## Tab: `Meta` (optional, recommended)
@@ -238,6 +246,20 @@ ET; a human stamp with no zone is shown exactly as written, because guessing its
 zone would invent precision. The amber **feed stale** badge means the fetch
 failed — not that the numbers are old, so Friday's scores sitting there all
 weekend is correct and shows no badge.
+
+## Changing a tab's shape
+
+Adding a column is safe for the board — unknown columns are ignored — but it is
+not silent any more. `/api/health` compares every tab's headers against the
+contract in `netlify/lib/tabs.js` and reports an undocumented column as drift,
+because a `Period` column appearing on `L10 Scorecard` unannounced is what made
+the L10 page render eighteen cards instead of nine. So: add the column, then add
+it to that file's `known` list for the tab. Removing a column the board reads is
+reported as an error.
+
+The same endpoint reports a tab whose newest `Updated ET` has fallen behind its
+limit, which is the case the amber **feed stale** badge cannot cover — that badge
+means the fetch failed, not that the numbers are old. See README §10.
 
 The full board ↔ Talon contract, including sample JSON and the write-path
 recommendations, is in [`docs/TALON_CONTRACT.md`](docs/TALON_CONTRACT.md).

@@ -509,6 +509,9 @@ export function normalizeModel(raw) {
     kpi,
     top5,
     rest: { index, computed, people },
+    /* Weekly series per measurable for the tile sparklines. Always a Map, so a
+       caller never has to guard - an absent history tab is an empty one. */
+    trends: raw.trends instanceof Map ? raw.trends : new Map(),
     updated,
     sources: raw.sources || {},
     sourceErrors: raw.sourceErrors || [],
@@ -518,13 +521,31 @@ export function normalizeModel(raw) {
 
 /* CSV text (all four tabs) -> board model. Exported so it can be exercised
    without a network: see scripts/test-parsers.mjs. */
-export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', sources, sourceErrors }) {
+export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l10History = '', sources, sourceErrors }) {
   const parsed = {
     kpi: parseKpi(kpi),
     top5: parseTop5(top5),
     rest: parseRest(rest),
     meta: parseMeta(meta),
   };
+
+  /* Weekly series per measurable, for the tile sparklines. Keyed the same way
+     the L10 page keys them, so one parser serves both, and ordered by WeekStart
+     rather than sheet order. A blank Value stays null - it is a gap in the
+     line, never a zero. */
+  const trends = new Map();
+  for (const row of parseL10History(l10History)) {
+    const key = norm(row.measurable);
+    if (!trends.has(key)) trends.set(key, []);
+    trends.get(key).push({
+      weekStart: row.weekStart,
+      label: row.weekLabel || row.weekStart,
+      value: parseValue(row.value),
+    });
+  }
+  for (const series of trends.values()) {
+    series.sort((a, b) => String(a.weekStart).localeCompare(String(b.weekStart)));
+  }
 
   /* A tab that fetched fine but yielded nothing usable is a parse failure, not
      an empty tab, and it must not read as healthy. This is how the mangled
@@ -539,6 +560,8 @@ export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', s
     meta: Object.keys(parsed.meta).length,
   };
 
+  /* l10History is deliberately absent here: it is decoration, so an empty or
+     missing history tab is not a fault to badge. */
   for (const [key, csv] of Object.entries({ kpi, top5, rest, meta })) {
     const hasContent = String(csv).trim().split('\n').length > 1;
     if (hasContent && rowCount[key] === 0) {
@@ -551,6 +574,7 @@ export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', s
   return normalizeModel({
     mode: 'live',
     ...parsed,
+    trends,
     sources: marks,
     sourceErrors: errors,
   });
@@ -570,6 +594,10 @@ export async function loadLive() {
     ['top5', tabs.top5],
     ['rest', tabs.rest],
     ['meta', tabs.meta],
+    /* Weekly history for the tile sparklines. Decoration, like Meta: if this
+       tab is missing the tiles simply show no line, which is the honest
+       outcome - a board with eight numbers and no trends still works. */
+    ['l10History', tabs.l10History],
   ];
 
   const settled = await Promise.all(wanted.map(async ([key, tab]) => {
@@ -580,7 +608,7 @@ export async function loadLive() {
     }
   }));
 
-  const csv = { kpi: '', top5: '', rest: '', meta: '' };
+  const csv = { kpi: '', top5: '', rest: '', meta: '', l10History: '' };
   const sources = {};
   const sourceErrors = [];
   let noSource = 0;
@@ -636,4 +664,11 @@ export function periodLabel(model, period) {
     return model.meta.periodLabel;
   }
   return want === 'weekly' ? 'Weekly' : 'Monthly';
+}
+
+/* The weekly series behind a tile's sparkline, newest last and trimmed to the
+   number of weeks a tile can legibly show. Unknown measurable -> empty. */
+export function trendFor(model, measurable, weeks = CONFIG.tileTrendWeeks) {
+  const series = (model.trends instanceof Map ? model.trends : new Map()).get(norm(measurable)) || [];
+  return series.slice(-Math.max(1, weeks));
 }
