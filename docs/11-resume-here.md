@@ -199,7 +199,7 @@ stopped on something that is not ours to fix.
 | **Label filter** | ✅ `isOurs: true` for Website Showcase, `false` for Pipedrive Deal, on live data |
 | **Plugin on production** | ✅ Installed, active; `projects` and `service-areas` routes both answer |
 
-## Blocked — raised with WP Engine, ticket not yet open
+## Blocked — WP Engine ticket #8642797 (escalated, reply by email)
 
 Every WordPress write fails because Application Passwords never authenticate.
 The `Authorization` header is not reaching PHP. Both production and the

@@ -836,7 +836,14 @@ support questions:
    Basic Auth returns `You are not currently logged in.`, and the password's
    **Last Used** column stays empty — so the credential is never evaluated.
 
-**Raised with WP Engine 2026-09-22; not yet an open technical ticket.** Their
+**WP Engine ticket `#8642797`, escalated 2026-09-22.** Updates go to
+skybirdroof@gmail.com. Quote that number to pick up the chat where it left off.
+The evidence sent is §13.1's wrong-password test. First-line's initial position
+was that the platform forwards `Authorization` by default — true as a
+description of the default, not an inspection of this environment, which is
+what §13.1 asks them to do.
+
+**Originally raised 2026-09-22; escalated after two rounds.** Their
 first-line assistant escalated rather than answering, confirming this needs
 environment-level inspection. Support's first reply was an account-visibility
 question — `skybirdroofing.net` does not appear under Jacob's User Portal
