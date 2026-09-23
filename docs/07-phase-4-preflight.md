@@ -937,3 +937,21 @@ It was wrong — the `www` test failed identically. But **`wpBase` should carry
 the `www` regardless.** Hitting the canonical host directly avoids a redirect
 on every one of the four WordPress calls, and removes a real failure mode from
 the pipeline whatever else is going on.
+
+### 13.5 Follow-up sent 2026-09-23
+
+No substantive reply in ~30 hours. The only mail from WP Engine was an
+automated chat transcript at 2026-09-22 05:44 UTC; no engineer has written.
+
+Chased on the ticket, restating §13.1's wrong-password result so whoever picks
+it up does not have to read the transcript, and asking for a status and ETA.
+
+**If this stalls**, the options in order of preference:
+
+1. Escalate through Euan — the WP Engine account is Pitch Peak's, and an
+   account owner's chase carries more weight than a delegated user's.
+2. Ask WP Engine directly whether an environment-level change is available,
+   or whether this needs the account owner to request it.
+3. Only then reconsider §12.5's warning about a custom-header auth shim — and
+   record the decision here first. It has not become a better idea for having
+   waited.
