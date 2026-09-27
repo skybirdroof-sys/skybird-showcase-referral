@@ -955,3 +955,20 @@ it up does not have to read the transcript, and asking for a status and ETA.
 3. Only then reconsider §12.5's warning about a custom-header auth shim — and
    record the decision here first. It has not become a better idea for having
    waited.
+
+### 13.6 Automated follow-up, from 2026-09-27
+
+Still no human reply on #8642797. WP Engine's last contact was the chat on
+2026-09-22; Jacob chased on 09-23; a second chase went out 09-27.
+
+An 8-hourly Routine (`trig_01BiAjtzayK78C5XeHbfRGVE`) now reads the ticket
+thread and, while there is no human reply, sends a follow-up stating elapsed
+time since their last contact and since the previous chase. On a real reply it
+notifies Jacob, summarises what it means, records the outcome here, and
+disables itself. After three unanswered follow-ups it recommends escalating
+through Euan (§13.5) but does not act on it.
+
+Cadence was Jacob's call. The risk flagged at the time: repeated replies to a
+Zendesk ticket can reset queue position or be merged as duplicates, so daily
+would apply similar pressure with less downside. Noted here so the trade-off
+is on the record rather than rediscovered.
