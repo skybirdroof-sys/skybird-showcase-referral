@@ -1181,3 +1181,101 @@ itself with a red node. This one reported success. A workflow that does nothing
 and calls it success is worse than one that errors, and the 23-node structural
 validation in this repo could never have caught it — it checks reachability and
 syntax, not what a node does with an empty array at runtime.
+
+### 15.5 The same bug twice more, in `Curate` and `Build Payload`
+
+With `Is New?` fixed, the run got as far as `Curate` and stopped there:
+
+```
+Cannot assign to read only property 'name' of object
+  'Error: Node 'Get Cover Photo' hasn't been executed'
+```
+
+The outer sentence is an n8n quirk — it fails while wrapping the real error —
+and the real error is the quoted one. Two faults produced it, and a third was
+waiting behind them.
+
+**Fault 1 — two branches, one input.** `Get Project` fanned out to both
+`Get Showcase Photos` and `Get Cover Photo`, and both connected to `Curate`'s
+single input. That is not a join. n8n runs a node as soon as **any** incoming
+branch delivers, so `Curate` fired the moment the showcase fetch returned,
+while the cover fetch had not run yet — hence "hasn't been executed". Had the
+timing gone the other way it would have run `Curate` *twice*, and the second
+pass would have created a duplicate draft.
+
+Fixed by running the two fetches in series:
+`Get Project → Get Cover Photo → Get Showcase Photos → Curate`. Cover first,
+deliberately: it returns exactly one item, so the showcase fetch runs once. The
+other order would fire the cover fetch once per showcase photo.
+
+**Fault 2 — `.first().json` on a list.** Underneath Fault 1, `Curate` opened:
+
+```js
+const showcaseRes = $('Get Showcase Photos').first().json;
+const showcase = showcaseRes.data || showcaseRes || [];
+```
+
+This is §15.4's rule again. The CompanyCam photo endpoints return a JSON
+**array**, n8n splits it into one item per photo, and `.first().json` is
+therefore the first **photo object** — not the list. `showcase.filter` would
+have thrown `showcase.filter is not a function` the instant Fault 1 was fixed.
+Now `.all().map((i) => i.json)`, filtered on `.id` to drop the empty sentinel
+that Always Output Data emits.
+
+**Fault 3 — `Build Payload`, not yet reached.** Identical mistake:
+`/wp/v2/service-areas?slug=…` returns an array, and `Array.isArray(areaRes)`
+was being asked of a single term object. It would have thrown
+*"No service_area term for slug 'youngsville'"* — a message pointing at
+CompanyCam data or a missing taxonomy term, when nothing was wrong with either.
+Found by reading forward rather than by running into it.
+
+`Get Cover Photo`, `Get Showcase Photos` and `Get Area Term` all now have
+**Always Output Data** on, for the §15.4 reason: without it, an empty response
+skips the rest of the branch and the run reports success having built nothing.
+With it, the empty item reaches the Code node and the intended loud error
+fires — *"no photo tagged Showcase Cover"* instead of silence.
+
+#### One rule, four bugs
+
+`Already Drafted?`, `Curate`'s cover reference, `Curate`'s showcase list and
+`Build Payload`'s term lookup are four expressions of a single fact about n8n:
+
+> **An HTTP Request node splits a JSON array response into one item per
+> element.** A four-element array is four items, `.first().json` is the first
+> *element*, and an empty array is **zero items** — which n8n treats as "this
+> node produced nothing", skipping the rest of the branch while the execution
+> still reports success.
+
+Every node in this workflow that calls an endpoint returning a list is subject
+to it. Structural validation cannot see it: the JSON is well-formed, every node
+is reachable, and the expressions are valid JavaScript.
+
+#### What now catches it: `tests/test-workflow.js`
+
+Thirty assertions, `node tests/test-workflow.js`, no n8n and no network. It
+reads the workflow JSON, pulls the `jsCode` out of each Code node and runs it
+against fixtures shaped like the real responses, through a ~20-line emulator
+whose only real job is to model the array-splitting rule above.
+
+It checks the **wiring** as well as the code — that exactly one node feeds
+`Curate`, that the two fetches are in series, and that every node whose
+response can be an empty array has Always Output Data set. Those four
+assertions alone would have caught Fault 1 by reading the file.
+
+And it pins the rules the docs require, which until now nothing verified
+outside a live run:
+
+- no homeowner name, address, email or phone reaches `Curate`'s output, the
+  generated filenames, or the draft payload — asserted against a fixture that
+  *does* carry all four, so the absence means something;
+- the true coordinates are never passed onward, and the offset pin lands in the
+  0.2–0.3 mi annulus on **2,000** consecutive draws, in all four quadrants
+  (one draw proves nothing about a random offset);
+- `internal: true` and still-processing photos are excluded;
+- `status` is always `draft`;
+- every curation problem throws — no cover, two covers, a cover-only set, an
+  empty set, missing coordinates, a failed upload, an unmatched service area.
+
+Each of the three fixes was verified by reinstating the bug and watching the
+suite fail: Fault 1 fails 3 assertions, the missing Always Output Data fails 1,
+and `.first().json` fails 23.

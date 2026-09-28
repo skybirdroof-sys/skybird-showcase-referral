@@ -10,10 +10,42 @@
 | Structure | ✅ 23 nodes, all reachable from the Webhook, every IF wired on both branches, every `$('Node')` reference resolves |
 | Embedded JS syntax | ✅ `node --check` clean on all 7 Code nodes |
 | Variable scope | ✅ no `$json` in a Run-Once-for-All-Items node |
-| **Imported into n8n** | ❌ never |
-| **Executed** | ❌ never |
+| Behaviour | ✅ `node tests/test-workflow.js` — 30 assertions against the Code nodes and the wiring |
+| **Imported into n8n** | ✅ n8n Cloud, 2026-09-18 |
+| **Executed** | ✅ first real delivery 2026-09-28 |
 
-`app.n8n.cloud` is blocked from the build environment and there is no n8n connector in this session, so this has not been round-tripped through n8n. **Expect to fix small things on import** — node `typeVersion`s move between n8n releases, and if yours is older or newer than what this targets (Webhook v2, Code v2, IF v2.2, HTTP Request v4.2) a node may import with a warning and need re-picking from the panel. The logic and the Code node bodies are the part worth having; the wiring is a convenience.
+**Import into an empty workflow, not an existing canvas.** Importing on top of
+nodes that are already there creates duplicates named `Config1`, `Curate1` and
+so on, and every `$('Node')` reference silently keeps pointing at the original.
+Nothing errors; the run just uses stale data.
+
+Node `typeVersion`s move between n8n releases. This targets Webhook v2, Code
+v2, IF v2.2, HTTP Request v4.2 — on an older or newer n8n a node may import
+with a warning and need re-picking from the panel.
+
+### Two n8n behaviours this workflow depends on
+
+Both cost days to find, and neither is visible in the JSON:
+
+1. **An HTTP Request node splits a JSON array response into one item per
+   element.** `.first().json` is the first *element*, not the list, and an
+   empty array is **zero items** — which n8n treats as "produced nothing",
+   skipping the rest of the branch while the execution still reports success.
+   Hence **Always Output Data** on `Already Drafted?`, `Get Cover Photo`,
+   `Get Showcase Photos` and `Get Area Term`, and `.all()` in the Code nodes
+   that read them. Leave those settings alone.
+2. **Two branches into one input is not a join.** n8n runs the node as soon as
+   *either* arrives. That is why the two CompanyCam photo fetches run in series
+   (`Get Project → Get Cover Photo → Get Showcase Photos → Curate`) rather than
+   in parallel. Re-wiring them side by side brings back
+   `Node 'Get Cover Photo' hasn't been executed`.
+
+`tests/test-workflow.js` asserts both, so a change that undoes either fails
+before it reaches n8n. Full account in `docs/07-phase-4-preflight.md` §15.4–15.5.
+
+**Retrying a failed execution replays the upstream nodes' stored output.** A
+change to `Config` or to a credential is not picked up by a retry — remove the
+`Website Showcase` label, re-add it, and let CompanyCam deliver afresh.
 
 ## Import
 

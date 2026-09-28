@@ -301,15 +301,16 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        -60
+        1480,
+        40
       ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_ME_CCAM",
           "name": "CompanyCam API"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -323,27 +324,28 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1300,
-        140
+        1280,
+        40
       ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_ME_CCAM",
           "name": "CompanyCam API"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const project = $('Get Project').first().json.data || $('Get Project').first().json;\nconst showcaseRes = $('Get Showcase Photos').first().json;\nconst coverRes = $('Get Cover Photo').first().json;\n\nconst showcase = showcaseRes.data || showcaseRes || [];\nconst covers = coverRes.data || coverRes || [];\n\n// Hard filters: docs/01-api-audit.md sections 1.5 and 6.\nconst usable = showcase.filter(\n  (p) => p.internal !== true && p.processing_status === 'processed'\n);\n\n// Oldest first: before -> during -> after, the order the page reads in.\nusable.sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at));\nconst capped = usable.slice(0, 20);\n\nconst cover = covers[0] || null;\n\n// Fail loudly rather than guess. docs/06-trigger-design.md section 3 requires\n// a human to confirm the cover is a genuine hero shot - they cannot confirm a\n// cover the automation picked at random. The fix for all three of these is in\n// CompanyCam (pull the label, fix the curation), not in a draft that papers\n// over it.\nif (!cover) {\n  throw new Error(`Project ${project.id}: no photo tagged \"Showcase Cover\".`);\n}\nif (covers.length > 1) {\n  throw new Error(\n    `Project ${project.id}: ${covers.length} photos tagged \"Showcase Cover\" - expected exactly 1.`\n  );\n}\n\n// The cover is also tagged Showcase, so it is in both lists. Decided\n// 2026-09-17: cover becomes featured_media, gallery is the set MINUS the\n// cover, so no photo appears twice on the page.\nconst gallery = capped.filter((p) => p.id !== cover.id);\n\nif (gallery.length === 0) {\n  throw new Error(`Project ${project.id}: no gallery photos left after filtering.`);\n}\n\n// --- Pin offset ---------------------------------------------------------\n// Generated HERE, once, and only the offset travels onward. The true\n// coordinates are never written to WordPress at all - docs/05-data-model.md\n// section 1. The plugin has no field for them and its tests assert none is\n// ever added.\nconst lat = project.coordinates && project.coordinates.lat;\nconst lon = project.coordinates && project.coordinates.lon;\n\nif (typeof lat !== 'number' || typeof lon !== 'number') {\n  throw new Error(`Project ${project.id}: no coordinates to offset.`);\n}\n\nconst R = 3958.8; // Earth radius, miles\nconst bearing = Math.random() * 2 * Math.PI;\n\n// An annulus, not a disc: at least 0.2 mi, at most 0.3 mi\n// (docs/04-pin-precision-research.md section 4). A uniform draw over a disc\n// would sometimes land the pin almost on the house, defeating the offset.\nconst miles = 0.2 + Math.random() * 0.1;\n\nconst d = miles / R;\nconst la = (lat * Math.PI) / 180;\nconst lo = (lon * Math.PI) / 180;\n\nconst la2 = Math.asin(\n  Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(bearing)\n);\nconst lo2 =\n  lo +\n  Math.atan2(\n    Math.sin(bearing) * Math.sin(d) * Math.cos(la),\n    Math.cos(d) - Math.sin(la) * Math.sin(la2)\n  );\n\nconst city = (project.address && project.address.city) || '';\nconst areaSlug = city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');\n\nconst pick = (p) => {\n  const uris = p.uris || [];\n  const original = uris.find((u) => u.type === 'original');\n  const web = uris.find((u) => u.type === 'web');\n  return (original || web || {}).uri;\n};\n\nreturn [{\n  json: {\n    companycamProjectId: String(project.id),\n    city,\n    areaSlug,\n    zip: (project.address && project.address.postal_code) || '',\n    approxLat: Number(((la2 * 180) / Math.PI).toFixed(6)),\n    approxLng: Number(((lo2 * 180) / Math.PI).toFixed(6)),\n    completionDate: String(cover.captured_at || '').slice(0, 10),\n    coverUrl: pick(cover),\n    galleryUrls: gallery.map(pick),\n  },\n}];"
+        "jsCode": "// Both CompanyCam photo calls return a JSON *array*, and n8n splits an array\n// response into one item per element. So $('Get Cover Photo').first().json is\n// the first PHOTO, not the list -- read as a list it gives\n// \"showcase.filter is not a function\". Use .all() and rebuild the array.\n//\n// Those two nodes also run with \"Always Output Data\" on, so a zero-photo\n// response still emits a single empty item rather than nothing. Without it\n// n8n counts the node as having produced no data, skips everything\n// downstream, and the execution reports SUCCESS having created nothing --\n// the silent-success bug from docs/07-phase-4-preflight.md section 15.4.\n// Filtering on .id drops that empty sentinel so the throws below still fire.\nconst photosFrom = (node) =>\n  $(node)\n    .all()\n    .map((item) => item.json)\n    .filter((p) => p && p.id);\n\nconst projectRaw = $('Get Project').first().json;\nconst project = projectRaw.data || projectRaw;\n\nconst showcase = photosFrom('Get Showcase Photos');\nconst covers = photosFrom('Get Cover Photo');\n\n// Hard filters: docs/01-api-audit.md sections 1.5 and 6.\nconst usable = showcase.filter(\n  (p) => p.internal !== true && p.processing_status === 'processed'\n);\n\n// Oldest first: before -> during -> after, the order the page reads in.\nusable.sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at));\nconst capped = usable.slice(0, 20);\n\nconst cover = covers[0] || null;\n\n// Fail loudly rather than guess. docs/06-trigger-design.md section 3 requires\n// a human to confirm the cover is a genuine hero shot - they cannot confirm a\n// cover the automation picked at random. The fix for all three of these is in\n// CompanyCam (pull the label, fix the curation), not in a draft that papers\n// over it.\nif (!cover) {\n  throw new Error(`Project ${project.id}: no photo tagged \"Showcase Cover\".`);\n}\nif (covers.length > 1) {\n  throw new Error(\n    `Project ${project.id}: ${covers.length} photos tagged \"Showcase Cover\" - expected exactly 1.`\n  );\n}\n\n// The cover is also tagged Showcase, so it is in both lists. Decided\n// 2026-09-17: cover becomes featured_media, gallery is the set MINUS the\n// cover, so no photo appears twice on the page.\nconst gallery = capped.filter((p) => p.id !== cover.id);\n\nif (gallery.length === 0) {\n  throw new Error(`Project ${project.id}: no gallery photos left after filtering.`);\n}\n\n// --- Pin offset ---------------------------------------------------------\n// Generated HERE, once, and only the offset travels onward. The true\n// coordinates are never written to WordPress at all - docs/05-data-model.md\n// section 1. The plugin has no field for them and its tests assert none is\n// ever added.\nconst lat = project.coordinates && project.coordinates.lat;\nconst lon = project.coordinates && project.coordinates.lon;\n\nif (typeof lat !== 'number' || typeof lon !== 'number') {\n  throw new Error(`Project ${project.id}: no coordinates to offset.`);\n}\n\nconst R = 3958.8; // Earth radius, miles\nconst bearing = Math.random() * 2 * Math.PI;\n\n// An annulus, not a disc: at least 0.2 mi, at most 0.3 mi\n// (docs/04-pin-precision-research.md section 4). A uniform draw over a disc\n// would sometimes land the pin almost on the house, defeating the offset.\nconst miles = 0.2 + Math.random() * 0.1;\n\nconst d = miles / R;\nconst la = (lat * Math.PI) / 180;\nconst lo = (lon * Math.PI) / 180;\n\nconst la2 = Math.asin(\n  Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(bearing)\n);\nconst lo2 =\n  lo +\n  Math.atan2(\n    Math.sin(bearing) * Math.sin(d) * Math.cos(la),\n    Math.cos(d) - Math.sin(la) * Math.sin(la2)\n  );\n\nconst city = (project.address && project.address.city) || '';\nconst areaSlug = city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');\n\nconst pick = (p) => {\n  const uris = p.uris || [];\n  const original = uris.find((u) => u.type === 'original');\n  const web = uris.find((u) => u.type === 'web');\n  return (original || web || {}).uri;\n};\n\nreturn [{\n  json: {\n    companycamProjectId: String(project.id),\n    city,\n    areaSlug,\n    zip: (project.address && project.address.postal_code) || '',\n    approxLat: Number(((la2 * 180) / Math.PI).toFixed(6)),\n    approxLng: Number(((lo2 * 180) / Math.PI).toFixed(6)),\n    completionDate: String(cover.captured_at || '').slice(0, 10),\n    coverUrl: pick(cover),\n    galleryUrls: gallery.map(pick),\n  },\n}];"
       },
       "id": "ca6fa3d6-ca65-4c34-ba9b-d4f53cf65ced",
       "name": "Curate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1520,
+        1680,
         40
       ]
     },
@@ -453,12 +455,13 @@
           "name": "WordPress skybird-sync"
         }
       },
-      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
+      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md.",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const c = $('Curate').first().json;\nconst media = $('Collect Media').first().json;\nconst areaRes = $('Get Area Term').first().json;\nconst terms = Array.isArray(areaRes) ? areaRes : (areaRes.data || []);\n\n// A project whose city is not one of the eight service areas would otherwise\n// be filed nowhere and drop out of every map widget. Throw instead.\nif (!terms.length) {\n  throw new Error(\n    `No service_area term for slug \"${c.areaSlug}\" (city \"${c.city}\"). Expected one of the eight seeded areas.`\n  );\n}\n\nconst areaName = terms[0].name;\n\n// Title and copy are deliberately minimal.\n//\n// docs/06-trigger-design.md section 3 locks the SEO title as one job, one\n// town, roof replacement - e.g. \"GAF Timberline HDZ Roof Replacement in Wake\n// Forest, NC\". That needs manufacturer and product line, and NOTHING\n// populates those: there is no CompanyCam->ProLine bridge\n// (docs/07-phase-4-preflight.md section 2.4.2). So write the town-only form\n// and let the reviewer upgrade it after filling the product fields.\n//\n// The body is one factual sentence for the same reason. The locked copy rules\n// forbid invented prices, \"free roof\", city-stuffing and storm claims, and an\n// automation with no product data and no job notes has nothing true to say\n// beyond the town and the service. Writing the 2-4 sentence description is the\n// reviewer's job at the gate. A thin draft a human finishes beats a fluent one\n// that invents specifics.\nconst title = `Roof Replacement in ${areaName}, NC`;\nconst content = `<p>Skybird Roofing completed a full roof replacement in ${areaName}, North Carolina.</p>`;\n\nreturn [{\n  json: {\n    status: 'draft',\n    title,\n    content,\n    excerpt: `Roof replacement in ${areaName}, NC.`,\n    featured_media: media.coverId,\n    'service-areas': [terms[0].id],\n    meta: {\n      companycam_project_id: c.companycamProjectId,\n      approx_lat: c.approxLat,\n      approx_lng: c.approxLng,\n      gallery: media.galleryIds,\n      city: c.city,\n      zip: c.zip,\n      completion_date: c.completionDate,\n    },\n  },\n}];"
+        "jsCode": "const c = $('Curate').first().json;\nconst media = $('Collect Media').first().json;\n// Same array-splitting rule as Curate: /wp/v2/service-areas returns a JSON\n// array, so n8n hands us one item per term and .first().json is a single\n// term. Get Area Term runs with \"Always Output Data\" on, so a no-match\n// lookup arrives as one empty item; the .id filter drops it and the throw\n// below fires instead of the branch ending quietly.\nconst terms = $('Get Area Term')\n  .all()\n  .map((item) => item.json)\n  .filter((t) => t && t.id);\n\n// A project whose city is not one of the eight service areas would otherwise\n// be filed nowhere and drop out of every map widget. Throw instead.\nif (!terms.length) {\n  throw new Error(\n    `No service_area term for slug \"${c.areaSlug}\" (city \"${c.city}\"). Expected one of the eight seeded areas.`\n  );\n}\n\nconst areaName = terms[0].name;\n\n// Title and copy are deliberately minimal.\n//\n// docs/06-trigger-design.md section 3 locks the SEO title as one job, one\n// town, roof replacement - e.g. \"GAF Timberline HDZ Roof Replacement in Wake\n// Forest, NC\". That needs manufacturer and product line, and NOTHING\n// populates those: there is no CompanyCam->ProLine bridge\n// (docs/07-phase-4-preflight.md section 2.4.2). So write the town-only form\n// and let the reviewer upgrade it after filling the product fields.\n//\n// The body is one factual sentence for the same reason. The locked copy rules\n// forbid invented prices, \"free roof\", city-stuffing and storm claims, and an\n// automation with no product data and no job notes has nothing true to say\n// beyond the town and the service. Writing the 2-4 sentence description is the\n// reviewer's job at the gate. A thin draft a human finishes beats a fluent one\n// that invents specifics.\nconst title = `Roof Replacement in ${areaName}, NC`;\nconst content = `<p>Skybird Roofing completed a full roof replacement in ${areaName}, North Carolina.</p>`;\n\nreturn [{\n  json: {\n    status: 'draft',\n    title,\n    content,\n    excerpt: `Roof replacement in ${areaName}, NC.`,\n    featured_media: media.coverId,\n    'service-areas': [terms[0].id],\n    meta: {\n      companycam_project_id: c.companycamProjectId,\n      approx_lat: c.approxLat,\n      approx_lng: c.approxLng,\n      gallery: media.galleryIds,\n      city: c.city,\n      zip: c.zip,\n      completion_date: c.completionDate,\n    },\n  },\n}];"
       },
       "id": "3a3bdfd0-3029-49f2-945d-5886c7564e96",
       "name": "Build Payload",
@@ -611,11 +614,6 @@
       "main": [
         [
           {
-            "node": "Get Showcase Photos",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Get Cover Photo",
             "type": "main",
             "index": 0
@@ -638,7 +636,7 @@
       "main": [
         [
           {
-            "node": "Curate",
+            "node": "Get Showcase Photos",
             "type": "main",
             "index": 0
           }

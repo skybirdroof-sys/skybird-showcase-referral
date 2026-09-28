@@ -1,7 +1,11 @@
 # 11 — Resume Here
 
 Skybird Project Showcase + Referral System · Phase 4
-Last worked 2026-09-18. Written as a pickup point, because the next session may be a fresh one with none of this in context.
+Last worked 2026-09-28. Written as a pickup point, because the next session may be a fresh one with none of this in context.
+
+**Read the last section first** — *Where it stands, 2026-09-28* — it supersedes
+the dated sections above it. Those are kept because the traps they record still
+bite.
 
 ---
 
@@ -15,9 +19,11 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | WordPress plugin | ✅ Built, 127 assertions, **installs and activates on real WordPress** |
 | Plugin REST write | ✅ **27/27 on the fourth run, 2026-09-17.** Three bugs found and fixed along the way |
 | Project page rendering | ✅ **Verified on a real render, 2026-09-18** — desktop and phone width, top and bottom (`11` §Rendering) |
-| n8n workflow | ✅ Imported into n8n Cloud 2026-09-18, 23 nodes, no import errors. **Never executed** |
-| `project.label_added` webhook | ❌ Not created. The delivery leg has never been proven |
-| End-to-end run | ❌ Not attempted |
+| n8n workflow | ✅ Imported into n8n Cloud 2026-09-18, 23 nodes, active, executing |
+| Workflow Code nodes | ✅ 30 assertions, `node tests/test-workflow.js` (added 2026-09-28) |
+| `project.label_added` webhook | ✅ Webhook `282006`, delivering, authenticating, 200 |
+| WordPress auth from n8n | ✅ Resolved 2026-09-28 — it was a missing `www` (`07` §15.1) |
+| End-to-end run | ⏳ Four bugs found and fixed on real deliveries. Next run is the one that should produce the draft |
 
 **Nothing is blocked on a decision.** Every open item is an action.
 
@@ -248,3 +254,81 @@ plugin are already configured and saved:
 - **Read the resolved URL under an HTTP node's URL field.** It shows what was
   actually requested. A double slash from an empty expression looks exactly
   like a dead API host.
+
+
+---
+
+# Where it stands, 2026-09-28
+
+The auth block is gone, and so are the two bugs behind it. What is left is a
+short list of n8n runtime behaviours that each cost one delivery to find.
+**All four are fixed in this repo and covered by tests. The workflow in n8n
+Cloud has only the first two.**
+
+## Fixed and already applied in n8n
+
+| | |
+|---|---|
+| `wpBase` missing the `www` | `https://skybirdroofing.net` 301s to **`http://www.…`** — a scheme downgrade, and every HTTP client drops `Authorization` across one. Six days of "the header never arrives" was this. (`07` §15.1) |
+| `Is New?` reading `[]` wrong | An empty array is *zero items*, so the run reported success and built nothing. `Always Output Data` + `{{ !$json.id }}`. (`07` §15.4) |
+
+## Fixed in this repo — **must be re-imported into n8n**
+
+| | |
+|---|---|
+| `Curate` fired before the cover fetch ran | Two branches into one input is not a join. The fetches now run in series: `Get Project → Get Cover Photo → Get Showcase Photos → Curate`. (`07` §15.5) |
+| `Curate` and `Build Payload` read a list with `.first().json` | An array response is *N items*; `.first().json` is the first element. Now `.all()`. Would have thrown `showcase.filter is not a function` the moment the wiring was fixed. |
+
+`Get Cover Photo`, `Get Showcase Photos` and `Get Area Term` also gained
+**Always Output Data**, so an empty response produces the intended loud error
+instead of a silent success.
+
+## Pick up exactly here
+
+1. **Re-import the workflow.** n8n → Workflows → Import from File →
+   `n8n/companycam-showcase-to-wordpress.json`. **Into an empty workflow**, not
+   on top of the existing canvas — importing over live nodes creates `Curate1`,
+   `Config1` and friends while every `$('Node')` reference keeps pointing at the
+   originals. Nothing errors; the run just quietly uses the old ones.
+2. **Re-attach the credentials** — the JSON carries placeholder IDs. Webhook →
+   `CompanyCam Webhook Auth`; `Fetch Project Labels` / `Get Project` /
+   `Get Showcase Photos` / `Get Cover Photo` → `CompanyCam API`;
+   `Already Drafted?` / `Upload Media` / `Get Area Term` / `Create Draft` →
+   `WordPress skybird-sync`.
+3. **Set `Config.wpBase` to `https://www.skybirdroofing.net`** — with the `www`.
+   This is the one that cost six days.
+4. **Activate**, and point webhook `282006` at the production URL if the import
+   changed it.
+5. **Fire it:** remove `Website Showcase` from Bill Najdecki (`110848078`),
+   confirm the label list is actually clear, add it back. Do **not** retry the
+   old execution — a retry replays stored upstream output and will not see any
+   of this.
+
+## Then verify the draft before anything else
+
+`https://www.skybirdroofing.net/wp-admin/edit.php?post_type=project`
+
+Expected: title *Roof Replacement in Youngsville, NC*, status **draft**,
+featured image set, 4 media items, `Youngsville` service area,
+`companycam_project_id` `110848078`, `completion_date` `2026-09-10`.
+
+**The one that stops everything if it is wrong:** `approx_lat` / `approx_lng`
+must be **0.2–0.3 mi** from the real coordinates `36.07117, -78.55830`. Equal
+values mean the true location was published. The test suite proves the maths
+over 2,000 draws; this confirms it survived the trip through WordPress.
+
+Also confirm no PII anywhere: not the homeowner's name, street address,
+phone or email, and nothing of the sort in any image filename or alt text.
+
+## Still open after the draft lands
+
+- Swap `CompanyCam API` to the **read-only** `Skybird Website Sync` key and
+  delete the `webhook-setup` key (read+write) — `01` §1.6 specifies read-only.
+- Revoke the `auth test` admin Application Password — it went through two
+  support chats in plain text.
+- Render `[skybird_project_map area="youngsville"]` — the shortcode has never
+  been on a page.
+- Tell Euan that non-`www` redirects to **`http://`**, not `https://`. That is
+  a live misconfiguration on the real site, not just an n8n inconvenience.
+- ProLine read path (`01` §4.2 Q2) — until it exists, titles stay town-only and
+  the specs table stays empty.

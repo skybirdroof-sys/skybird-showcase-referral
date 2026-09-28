@@ -3,7 +3,7 @@
 Skybird Project Showcase + Referral System · Phase 4
 Written 2026-09-17. The automation half of Phase 4: `project.label_added` → WordPress draft.
 
-**Status: built as an importable workflow — [`n8n/companycam-showcase-to-wordpress.json`](../n8n/companycam-showcase-to-wordpress.json) (24 nodes). This document is the reasoning behind it; [`n8n/README.md`](../n8n/README.md) has the import steps.**
+**Status: built, imported and running — [`n8n/companycam-showcase-to-wordpress.json`](../n8n/companycam-showcase-to-wordpress.json) (23 nodes). This document is the reasoning behind it; [`n8n/README.md`](../n8n/README.md) has the import steps, and [`tests/test-workflow.js`](../tests/test-workflow.js) exercises its Code nodes.**
 
 > **Correction, 2026-09-17.** An earlier version of this document said "Jacob builds and activates this in his own n8n account," and shipped only a spec on that basis. That misread him. Asked whether the workflow could be built in his own account or needed Pitch Peak, he answered *"I can build the workflow myself — I've built plenty in n8n before. That resolves whether this gets built independently"* — an answer about **permission and capability**, not a request to hand-build the nodes.
 >
@@ -175,6 +175,15 @@ Node [7] is an **IF** on the result being empty. If a project already exists, st
 
 Auth: `Authorization: Bearer {Application Key}`, Read-only key, stored as an n8n credential.
 
+> **Correction, 2026-09-28.** These three were originally drawn as node [8]
+> fanning out to [9] and [10] in parallel, both feeding Curate. **That does not
+> work.** Two branches into one input is not a join: n8n runs the node as soon
+> as *either* arrives, so Curate fired before the cover fetch had run and threw
+> `Node 'Get Cover Photo' hasn't been executed`. They now run in series —
+> **[8] project → [10] cover → [9] showcase set → [11] Curate** — with the
+> cover first because it returns exactly one item, so the showcase fetch runs
+> once rather than once per photo. See `docs/07-phase-4-preflight.md` §15.5.
+
 **[8] The project** — `GET https://api.companycam.com/v2/projects/{{ $json.projectId }}`
 
 Needed for `coordinates` (input to the offset), and `address.city` / `state` / `postal_code` for the display location. **Never** use `address.street_address_1`, `name`, or `primary_contact` — those are PII (`docs/06-trigger-design.md` §3). The project `name` is usually the customer's name.
@@ -194,10 +203,23 @@ Prefer resolving the IDs at runtime via `GET /v2/tags` matched on `value` if you
 ## 6. Node [11] — Curate and compute the pin
 
 ```js
-// Code node. Inputs: project (node 8), showcasePhotos (9), coverPhotos (10).
-const project  = $('Get project').first().json;
-const showcase = $('Get Showcase photos').first().json.data || [];
-const covers   = $('Get Cover photo').first().json.data || [];
+// Code node. Reads nodes [8], [9] and [10], which now run in series ahead of
+// it (see the correction in section 5).
+//
+// .all(), NOT .first().json: an HTTP Request node splits a JSON array response
+// into one item per element, so .first().json is the first PHOTO, not the
+// list. Reading it as a list gives "showcase.filter is not a function".
+// The .id filter drops the empty sentinel item that "Always Output Data"
+// emits when a fetch comes back with nothing — which is what makes the throws
+// below fire instead of the branch ending quietly
+// (docs/07-phase-4-preflight.md sections 15.4 and 15.5).
+const photosFrom = (node) =>
+  $(node).all().map((item) => item.json).filter((p) => p && p.id);
+
+const projectRaw = $('Get Project').first().json;
+const project  = projectRaw.data || projectRaw;
+const showcase = photosFrom('Get Showcase Photos');
+const covers   = photosFrom('Get Cover Photo');
 
 // Hard filters from docs/01-api-audit.md §1.5 and §6.
 const usable = showcase.filter(
@@ -313,6 +335,16 @@ GET {WP}/wp-json/wp/v2/service-areas?slug={{ $json.areaSlug }}
 ```
 
 Take `[0].id`. If empty, the project's city isn't one of the eight service areas — a real condition worth throwing on rather than filing the project into the wrong area or leaving it unfiled, which would drop it out of every map widget.
+
+> **Correction, 2026-09-28.** "Take `[0].id`" hides the same trap as §6. This
+> endpoint returns an **array**, so n8n hands the next node one item per term
+> and `.first().json` is a single term, not the list — `Array.isArray()` on it
+> is false and the code silently concludes there is no term. Read it with
+> `$('Get Area Term').all().map((i) => i.json).filter((t) => t && t.id)`.
+> The node also needs **Always Output Data**: without it the no-match case is
+> zero items, the rest of the branch is skipped, and the run reports success
+> having created nothing rather than throwing the error described above
+> (`docs/07-phase-4-preflight.md` §15.5).
 
 The eight slugs are seeded by the plugin on activation: `franklinton`, `goldsboro`, `greenville`, `knightdale`, `raleigh`, `rolesville`, `wake-forest`, `youngsville`.
 
