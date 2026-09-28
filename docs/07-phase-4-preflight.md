@@ -972,3 +972,36 @@ Cadence was Jacob's call. The risk flagged at the time: repeated replies to a
 Zendesk ticket can reset queue position or be merged as duplicates, so daily
 would apply similar pressure with less downside. Noted here so the trade-off
 is on the record rather than rediscovered.
+
+### 13.7 Email is not a support channel for WP Engine — 2026-09-28
+
+The 09-27 follow-up did not reach anyone. It did not even land on #8642797.
+
+Replying to WP Engine's Zendesk mail **auto-created a new ticket, #8651413**,
+and returned a canned auto-reply:
+
+> Emails received via "support@wpengine.com" do not go into Zendesk, so we need
+> to ask you to please login to the User Portal and initiate a Live Chat.
+> ... we only provide support through our User Portal, at https://my.wpengine.com
+
+So both follow-ups — 09-23 and 09-27 — were almost certainly never read by a
+person. **Support is Live Chat only**, from inside the portal.
+
+This is the likeliest reason #8642797 has sat untouched: the original ticket
+was created by chat and escalated, but every chase since went into a channel
+that discards them.
+
+**Correcting the plan.** The 8-hourly Routine no longer sends email. It now
+only reads the thread and notifies Jacob if a human ever replies, ignoring the
+autoresponders. Chasing means Jacob opening a Live Chat and quoting #8642797,
+or Euan pushing it as account owner (§13.5).
+
+**Where this came from.** The follow-up mechanism was mine, and I built it on
+the assumption that replying to a Zendesk notification threads back onto the
+ticket — normally true, and not true here. The 09-23 chase failed the same way
+and nobody noticed for four days, which is exactly the failure mode worth
+recording: a channel that silently discards messages looks identical to a
+support team that is ignoring you.
+
+**Cleanup:** #8651413 is a junk ticket created by this. Worth mentioning in the
+Live Chat so it can be merged or closed rather than left open.
