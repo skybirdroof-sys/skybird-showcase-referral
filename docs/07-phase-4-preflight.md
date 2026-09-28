@@ -1098,3 +1098,57 @@ trigger on Bill Najdecki (110848078).
 n8n's own failure was never tested against a credential known to be good — the
 only verification available at the time was the browser test, which could not
 have passed whatever the credential. It may already work.
+
+---
+
+## 15. First successful end-to-end run — 2026-09-28
+
+A `Website Showcase` label on project `110848078` produced a WordPress draft.
+All 23 nodes green. Draft contents verification follows separately.
+
+### 15.1 The real cause of the n8n failure: an HTTPS→HTTP redirect
+
+`Config.wpBase` was `https://skybirdroofing.net` — no `www`. That host 301s:
+
+```
+HTTP/1.1 301 Moved Permanently
+Location: http://www.skybirdroofing.net/wp-json/wp/v2/users/me
+```
+
+Note the scheme: **`http://`**, not `https://`. Every HTTP client — curl,
+axios, n8n, browsers — refuses to forward an `Authorization` header across an
+HTTPS→HTTP downgrade. So the credential was stripped at the first hop on every
+request n8n ever made, and WordPress genuinely never saw it.
+
+Fixed by setting `wpBase` to `https://www.skybirdroofing.net`, the canonical
+host, which takes no redirect at all.
+
+### 15.2 Two independent faults, each masking the other
+
+This is why it took six days.
+
+| | |
+|---|---|
+| **Fault A** | `wpBase` lacked the `www`, so n8n's requests took an HTTPS→HTTP redirect that stripped the credential |
+| **Fault B** | Every manual test was `fetch()` in a browser logged into wp-admin, where the auth cookie pre-empts the Application Password and then fails the nonce check (§14) |
+
+The `www` theory was raised on 2026-09-22 and **discarded because a browser
+test against `www` also failed** — a failure caused entirely by Fault B. A
+correct hypothesis was rejected on evidence from an unrelated bug.
+
+Had either fault existed alone it would have been found in an hour. Together,
+each one produced the symptom that appeared to rule the other out, and the
+combination survived six days, three support agents and an escalated ticket.
+
+### 15.3 What would have caught it
+
+**curl, from the first test.** It sends no cookies (kills Fault B) and shows
+the redirect chain (kills Fault A). Every genuinely informative test in this
+whole episode was a curl; every misleading one was a browser console.
+
+The `?probe=` marker, the access-log correlation, the `$_SERVER` probe file —
+all elaborate instrumentation for a question one plain `curl -i` answers.
+
+**Rule earned:** to test an HTTP request, reproduce it with the simplest client
+that can make it. A browser is not that client — it carries sessions, cookies,
+and its own redirect and header policies. Reach for curl first, not fourth.
