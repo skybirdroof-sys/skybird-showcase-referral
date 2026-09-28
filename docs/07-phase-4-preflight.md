@@ -1005,3 +1005,96 @@ support team that is ignoring you.
 
 **Cleanup:** #8651413 is a junk ticket created by this. Worth mentioning in the
 Live Chat so it can be merged or closed rather than left open.
+
+---
+
+## 14. §12 and §13 were wrong. The header was always arriving — 2026-09-28
+
+WP Engine support ran the request from their side and got **200**. Then the
+same request ran from Jacob's own machine, own network, with curl:
+
+```
+curl.exe -i -u "SkybirdRoofing:<app password>" \
+  "https://www.skybirdroofing.net/wp-json/wp/v2/users/me"
+
+HTTP/1.1 200 OK
+X-Pass-Why: auth
+cf-cache-status: BYPASS
+{"id":3,"slug":"skybirdroofing",...}
+```
+
+`X-Pass-Why: auth` is WP Engine's cache bypassing *because it saw the
+Authorization header*. Application Passwords work on this site and always did.
+Nothing was ever stripped.
+
+### 14.1 What actually happened
+
+Every failing test was `fetch()` in a browser console **while logged into
+wp-admin on the same origin**. That sends WordPress's auth cookies, and:
+
+1. `determine_current_user` runs `wp_validate_auth_cookie` at priority 10,
+   which identifies the user from the cookie.
+2. `wp_validate_application_password()` runs at priority 20 and opens with
+   *"Don't authenticate twice"* — `if ( ! empty( $input_user ) ) return
+   $input_user;`. **The Application Password is never evaluated.**
+3. `rest_cookie_check_errors` then requires an `X-WP-Nonce` for a
+   cookie-authenticated REST request. `fetch` sent none, so authentication is
+   discarded and the response is `rest_not_logged_in`.
+
+curl sends no cookies, so step 1 finds nobody, the Application Password is
+evaluated normally, and it works.
+
+### 14.2 The reasoning error, precisely
+
+§13.1's whole argument was: a correct password and a deliberately wrong one
+return byte-identical `rest_not_logged_in`, therefore WordPress never read the
+header, therefore the header never arrived.
+
+The first two steps were right. **The third did not follow.** "WordPress never
+read the header" has two possible causes, and only one was considered:
+
+- the header never arrived — assumed; and
+- something authenticated the request *before* the Application Password check
+  could run — the actual cause, and not considered at all.
+
+The test was genuinely decisive about *where* the failure was — before the
+password comparison — and I read that as proof of *why*.
+
+### 14.3 The near-miss
+
+On 2026-09-22 the instruction given with that test was: *"confirm the returned
+user is `skybird-sync`. If it comes back as you, that's your admin session
+answering and the test is void — rerun it in incognito."*
+
+So the cookie interfering was anticipated. What was missed is that a cookie
+does not have to succeed to invalidate the test — it pre-empts the Application
+Password and *then* fails the nonce check, producing an error that looks
+exactly like the one being investigated. The guard was written for the wrong
+failure shape, and the test was never rerun in incognito.
+
+### 14.4 Rules this earns
+
+**Never test an Application Password from a browser on a site you are logged
+into.** Use curl, or a private window with no session. The cookie wins before
+the credential is read.
+
+**A test that isolates *where* something fails does not thereby explain *why*.**
+§13.1 correctly located the failure before the password comparison and then
+treated a single explanation for that as established.
+
+**Six days of a support ticket rested on it.** WP Engine's first-line answer —
+that the platform forwards `Authorization` by default — was correct, and was
+argued against with confident, wrong evidence. The escalation was polite and
+well-documented and should not have happened.
+
+### 14.5 Where this leaves the build
+
+Nothing to fix in the plugin, the workflow, WordPress, Cloudflare or WP Engine.
+Next step is `docs/11-resume-here.md`: a fresh Application Password for
+`skybird-sync`, **verified with curl**, into the n8n credential; `wpBase` to
+`https://www.skybirdroofing.net`; restore `Already Drafted?`'s URL; fire the
+trigger on Bill Najdecki (110848078).
+
+n8n's own failure was never tested against a credential known to be good — the
+only verification available at the time was the browser test, which could not
+have passed whatever the credential. It may already work.
