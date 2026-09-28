@@ -1152,3 +1152,32 @@ all elaborate instrumentation for a question one plain `curl -i` answers.
 **Rule earned:** to test an HTTP request, reproduce it with the simplest client
 that can make it. A browser is not that client — it carries sessions, cookies,
 and its own redirect and header policies. Reach for curl first, not fourth.
+
+### 15.4 The run "succeeded" and created nothing
+
+Immediately after §15.1's fix the workflow reported **success** — and produced
+no draft. `GET /wp/v2/projects?status=any` returned zero projects.
+
+`Already Drafted?` asks WordPress whether a project already exists for this
+CompanyCam ID. WordPress answers with a JSON **array**. n8n's HTTP Request node
+splits an array response into one item per element, so the normal case — no
+existing draft, `[]` — yields **zero items**, and every node downstream is
+skipped. n8n then marks the execution successful, because nothing failed.
+
+The condition on `Is New?` was `$json.length === 0`, written assuming the array
+would arrive as a single item to inspect. It never does. So the check only let
+the workflow continue when a draft *already existed* — precisely inverted, and
+the inversion was invisible because the failing case produced no error.
+
+**Fixed:**
+
+- `Already Drafted?` has **Always Output Data** enabled, so an empty response
+  still emits one (empty) item.
+- `Is New?` now tests `{{ !$json.id }}` — true for that empty item (no draft,
+  proceed), false when a real project object came back (drop).
+
+**Worth noting as a class of bug.** Every failure before this one announced
+itself with a red node. This one reported success. A workflow that does nothing
+and calls it success is worse than one that errors, and the 23-node structural
+validation in this repo could never have caught it — it checks reachability and
+syntax, not what a node does with an empty array at runtime.

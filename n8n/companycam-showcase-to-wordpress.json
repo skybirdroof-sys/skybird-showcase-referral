@@ -217,7 +217,8 @@
           "name": "WordPress skybird-sync"
         }
       },
-      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
+      "notes": "Always Output Data is ON deliberately. An empty [] response would otherwise produce zero items and silently skip the rest of the workflow. See Is New?.",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -231,7 +232,7 @@
           "conditions": [
             {
               "id": "86d785a5-13fe-4958-a42a-d5036f66e45b",
-              "leftValue": "={{ $json.length === 0 || ($json.data && $json.data.length === 0) }}",
+              "leftValue": "={{ !$json.id }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -252,7 +253,8 @@
       "position": [
         860,
         140
-      ]
+      ],
+      "notes": "True when the lookup found no project -- the empty item from Already Drafted?'s Always Output Data has no id. False when a real project object came back, which routes to Drop."
     },
     {
       "parameters": {},
