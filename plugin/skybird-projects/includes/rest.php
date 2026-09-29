@@ -69,3 +69,53 @@ function skybird_projects_rest_query( $args, $request ) {
 	return $args;
 }
 add_filter( 'rest_project_query', 'skybird_projects_rest_query', 10, 2 );
+
+/**
+ * Keep private meta out of the REST response for anyone who can't edit.
+ *
+ * `field_notes` mirrors CompanyCam's Project Description — the project
+ * manager's own words about the job — and it is the one field in this plugin
+ * that deliberately holds homeowner PII. It exists so the reviewer has real
+ * specifics while writing the copy (docs/12-project-notes-path.md §4).
+ *
+ * Every field in includes/meta.php is registered `show_in_rest`, because n8n
+ * has to write them. Read access rides along with the post: the moment a
+ * project is **published**, `GET /wp-json/wp/v2/projects/{id}` hands its whole
+ * `meta` object to anybody who asks. No template printing the notes does not
+ * make them unreachable — and this project has already been bitten once by
+ * exactly that distinction, when a photo nobody had looked at was public from
+ * the instant it uploaded (docs/07-phase-4-preflight.md §16.3).
+ *
+ * So: written over REST by the automation, readable over REST only by someone
+ * who could open the post in wp-admin anyway.
+ *
+ * Capability, not role. `edit_post` on this specific post is the same check
+ * wp-admin makes, so a contributor who cannot edit a published project cannot
+ * read its notes either.
+ *
+ * @param WP_REST_Response $response The response.
+ * @param WP_Post          $post     The post.
+ * @return WP_REST_Response
+ */
+function skybird_projects_hide_private_meta( $response, $post ) {
+	if ( current_user_can( 'edit_post', $post->ID ) ) {
+		return $response;
+	}
+
+	$data = $response->get_data();
+
+	if ( ! isset( $data['meta'] ) || ! is_array( $data['meta'] ) ) {
+		return $response;
+	}
+
+	foreach ( skybird_projects_meta_fields() as $key => $field ) {
+		if ( ! empty( $field['private'] ) ) {
+			unset( $data['meta'][ $key ] );
+		}
+	}
+
+	$response->set_data( $data );
+
+	return $response;
+}
+add_filter( 'rest_prepare_' . SKYBIRD_PROJECTS_POST_TYPE, 'skybird_projects_hide_private_meta', 10, 2 );

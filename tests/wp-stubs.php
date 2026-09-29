@@ -135,6 +135,17 @@ function sanitize_text_field( $str ) {
 	return trim( strip_tags( (string) $str ) );
 }
 
+function sanitize_textarea_field( $str ) {
+	// Core strips tags and control characters and trims. Close enough for the
+	// assertions that matter: no markup survives.
+	return trim( wp_strip_all_tags_stub( (string) $str ) );
+}
+
+function wp_strip_all_tags_stub( $str ) {
+	$str = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $str );
+	return strip_tags( $str );
+}
+
 function sanitize_title( $str ) {
 	$str = strtolower( trim( (string) $str ) );
 	$str = preg_replace( '/[^a-z0-9_-]+/', '-', $str );
@@ -190,6 +201,22 @@ function current_user_can( $cap, $object_id = null ) {
 
 function is_wp_error( $thing ) {
 	return $thing instanceof WP_Error;
+}
+
+class WP_REST_Response {
+	private $data;
+
+	public function __construct( $data = null ) {
+		$this->data = $data;
+	}
+
+	public function get_data() {
+		return $this->data;
+	}
+
+	public function set_data( $data ) {
+		$this->data = $data;
+	}
 }
 
 class WP_Error {

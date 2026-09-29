@@ -1,7 +1,8 @@
 # 12 — Project notes: where the unique detail comes from
 
 Skybird Project Showcase + Referral System · Phase 4/5 boundary
-Raised by Jacob, 2026-09-28. **Decision doc — proposed, not built.**
+Raised by Jacob, 2026-09-28. **Built 2026-09-29** — §4 is live; §7's open
+questions stand.
 
 ---
 
@@ -192,5 +193,67 @@ Same PII rule: describe the roof, not the household.
 **Decided:** notes will not be generated into published copy without a human
 rewriting them, and the capture field is CompanyCam's Project Description.
 
-**Not decided:** everything in §7, and whether this gets built now or after the
-upload gate (`07` §16.4), which is the more urgent of the two.
+**Not decided:** everything in §7.
+
+---
+
+## 9. Built, 2026-09-29
+
+`Curate` reads `project.description`, `Build Payload` writes it to
+`meta.field_notes`, and the reviewer reads it in a read-only textarea on the
+ACF **Job** tab, labelled *"Field notes from CompanyCam (not published)"*.
+
+### The part that needed care
+
+Every meta field in this plugin is registered `show_in_rest`, because n8n has
+to write them. **Read access rides along with the post.** The moment a project
+is published, `GET /wp-json/wp/v2/projects/{id}` hands its entire `meta` object
+to anyone who asks — so a `field_notes` reading *"Bill made the crew sweet
+tea"* would be world-readable while appearing nowhere on the page.
+
+That is §16.3's lesson arriving a second time. *Invisible* is not
+*unreachable*, and this project has already published a homeowner's address by
+assuming otherwise.
+
+So `field_notes` carries a `private` flag, and `includes/rest.php` strips every
+private field from the REST response for anyone who cannot `edit_post` on that
+specific post. Written over REST by the automation; readable over REST only by
+someone who could open it in wp-admin anyway. Capability, not role — a
+contributor who cannot edit a published project cannot read its notes either.
+
+The field is also read-only in the form. It is a snapshot of CompanyCam at the
+moment the draft was built, and editing it in WordPress would change nothing at
+the other end.
+
+### What the tests hold down
+
+Thirteen new assertions, and every one is containment rather than feature:
+
+| | |
+|---|---|
+| `field_notes` is marked private | and is the **only** private field, so a second one cannot be added without its own tests |
+| A visitor cannot read it over REST | and no trace of it survives anywhere in the public response |
+| An editor can | capability check, on that post |
+| No template prints it | matched against comment-stripped source |
+| Markup is stripped, length capped at 10,000 | CompanyCam accepts basic HTML |
+| The notes never reach title, body or excerpt | see below |
+
+Verified by breaking each one: removing the REST strip fails 2, dropping the
+`private` flag fails 4, printing the notes in the template fails 1.
+
+### Two fixture traps, both caught
+
+**The fixture didn't name anyone.** The notes fixture said *"Alan kept the crew
+in sweet tea"* while the PII list checked for *"Wexler"* — so the containment
+assertion passed without exercising anything. Same failure as the ISO-vs-epoch
+fixture in `07` §16.7. There is now an explicit assertion that **the fixture's
+notes contain PII**, so the test above cannot pass by accident.
+
+**A PII check was not enough.** Leaking the notes into a 120-character excerpt
+passed cleanly, because the clip ended before the homeowner's name. It still
+published *"more rotten decking than the quote allowed for"* — internal
+information, no name required. The check is now that **no 24-character run of
+the notes may appear in the title, body or excerpt**, name or no name.
+
+Both were found by reintroducing the bug on purpose. Neither would have been
+found by reading the code.

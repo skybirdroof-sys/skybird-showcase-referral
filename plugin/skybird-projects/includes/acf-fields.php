@@ -91,6 +91,23 @@ function skybird_projects_register_acf_fields() {
 		'first_day'     => 0,
 	);
 
+	// The project manager's notes, mirrored from CompanyCam. Read-only on
+	// purpose: this is a snapshot of what was in CompanyCam when the draft was
+	// built, and editing it here would change nothing at the other end. The
+	// reviewer's job is to read it and write the copy, not to curate it.
+	$fields[] = array(
+		'key'          => 'field_skybird_field_notes',
+		'label'        => __( 'Field notes from CompanyCam (not published)', 'skybird-projects' ),
+		'name'         => 'field_notes',
+		'type'         => 'textarea',
+		'rows'         => 8,
+		'readonly'     => 1,
+		'instructions' => __(
+			'What the project manager wrote in CompanyCam\'s Project Description. Use it to write the two to four sentences above — do not paste it in. It is never shown to visitors and is hidden from the public API, because job notes usually name the homeowner.',
+			'skybird-projects'
+		),
+	);
+
 	acf_add_local_field_group(
 		array(
 			'key'                   => 'group_skybird_project',

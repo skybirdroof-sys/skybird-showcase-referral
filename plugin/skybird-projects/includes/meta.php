@@ -130,6 +130,28 @@ function skybird_projects_meta_fields() {
 			'reviewer' => true,
 			'label'    => 'Completion date',
 		),
+		// The project manager's own notes, mirrored from CompanyCam's Project
+		// Description so the reviewer has the specifics in front of them while
+		// writing the copy (docs/12-project-notes-path.md).
+		//
+		// `private` is the important flag. Free-text job notes reliably carry
+		// the homeowner's name — "Bill made us sweet tea" is how a person
+		// writes that sentence — so this field is the one place PII is
+		// deliberately stored. It must never reach a visitor:
+		//
+		// - No template prints it, and the suite asserts none does.
+		// - includes/rest.php strips it from the REST response for anyone who
+		//   cannot edit the post. WITHOUT THAT it would be world-readable the
+		//   moment the project is published, because every field here is
+		//   show_in_rest and a published post's meta is public. Invisible on
+		//   the page is not the same as unreachable (docs/07 §16.3).
+		'field_notes'               => array(
+			'type'     => 'string',
+			'sanitize' => 'skybird_projects_sanitize_notes',
+			'private'  => true,
+			'reviewer' => true,
+			'label'    => 'Field notes from CompanyCam (not published)',
+		),
 	);
 }
 
@@ -333,6 +355,30 @@ function skybird_projects_sanitize_zip( $value ) {
  * @param mixed $value Incoming value.
  * @return string
  */
+/**
+ * Field notes: plain text, no markup, length-capped.
+ *
+ * CompanyCam's Project Description accepts basic formatting HTML and caps at
+ * 10,000 characters. Tags are stripped rather than escaped — this is reference
+ * material for a human reading it in a textarea, not content, and markup in it
+ * would only ever be noise or a vector.
+ *
+ * The cap is re-applied here rather than trusted from the other end, because
+ * "the API limits it" is a statement about today's API.
+ *
+ * @param mixed $value Incoming value.
+ * @return string
+ */
+function skybird_projects_sanitize_notes( $value ) {
+	$notes = sanitize_textarea_field( (string) $value );
+
+	if ( strlen( $notes ) > 10000 ) {
+		$notes = substr( $notes, 0, 10000 );
+	}
+
+	return $notes;
+}
+
 function skybird_projects_sanitize_date( $value ) {
 	$date = trim( (string) $value );
 

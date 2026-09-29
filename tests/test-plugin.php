@@ -178,6 +178,7 @@ $expected_meta = array(
 	'color',
 	'warranty',
 	'completion_date',
+	'field_notes',
 );
 
 foreach ( $expected_meta as $key ) {
@@ -590,6 +591,109 @@ it(
 );
 
 $GLOBALS['wp_fixture']['post_meta'] = array();
+
+// --- Field notes (private meta) --------------------------------------------
+//
+// field_notes mirrors CompanyCam's Project Description -- the project
+// manager's own words -- so the reviewer has real specifics to write from
+// (docs/12-project-notes-path.md). It is the one field in this plugin that
+// deliberately holds homeowner PII, which makes every assertion below a
+// containment check rather than a feature check.
+
+it(
+	'field_notes is marked private',
+	! empty( skybird_projects_meta_fields()['field_notes']['private'] )
+);
+
+it(
+	'field_notes is the only private field',
+	array( 'field_notes' ) === array_keys(
+		array_filter(
+			skybird_projects_meta_fields(),
+			function ( $f ) {
+				return ! empty( $f['private'] );
+			}
+		)
+	),
+	'a new private field needs its own containment tests'
+);
+
+// Sanitiser.
+it(
+	'notes keep their text',
+	"Wasps in the soffit.\nHomeowner made sweet tea." === skybird_projects_sanitize_notes( "Wasps in the soffit.\nHomeowner made sweet tea." )
+);
+
+it(
+	'notes strip markup',
+	false === strpos( skybird_projects_sanitize_notes( 'Found <b>rot</b> under the <script>alert(1)</script>decking' ), '<' ),
+	'CompanyCam accepts basic HTML in the description'
+);
+
+it(
+	'notes are capped at 10000 characters',
+	10000 === strlen( skybird_projects_sanitize_notes( str_repeat( 'a', 12000 ) ) )
+);
+
+// REST containment. Every field here is show_in_rest so n8n can write, which
+// means a PUBLISHED project's meta is world-readable unless something strips
+// it. "No template prints it" is not the same as "nobody can read it" -- the
+// distinction that put a homeowner's address on a public URL once already
+// (docs/07-phase-4-preflight.md section 16.3).
+$notes_payload = "Wasps in the soffit. Bill made the crew sweet tea.";
+
+$response_for = function ( $can_edit ) use ( $notes_payload ) {
+	$GLOBALS['wp_fixture']['caps'] = $can_edit;
+	$response = new WP_REST_Response(
+		array(
+			'id'   => 1183,
+			'meta' => array(
+				'field_notes'            => $notes_payload,
+				'city'                   => 'Youngsville',
+				'companycam_project_id'  => '110848078',
+			),
+		)
+	);
+	return skybird_projects_hide_private_meta( $response, (object) array( 'ID' => 1183 ) )->get_data();
+};
+
+$anon_data = $response_for( false );
+
+it( 'a visitor cannot read the notes over REST', ! isset( $anon_data['meta']['field_notes'] ) );
+it( 'stripping the notes leaves the public fields alone', 'Youngsville' === $anon_data['meta']['city'] );
+it(
+	'no trace of the notes survives anywhere in the public response',
+	false === strpos( wp_json_encode( $anon_data ), 'sweet tea' )
+);
+
+$editor_data = $response_for( true );
+
+it( 'an editor can read the notes over REST', $notes_payload === $editor_data['meta']['field_notes'] );
+
+$GLOBALS['wp_fixture']['caps'] = true;
+
+it(
+	'the REST filter is attached to the project post type',
+	isset( $GLOBALS['wp_stub']['filters'][ 'rest_prepare_' . SKYBIRD_PROJECTS_POST_TYPE ] )
+);
+
+// And the front end. $code_only is the template with comments stripped -- a
+// bare strpos would otherwise match the word in a comment explaining why the
+// template does NOT print it.
+it(
+	'no template prints the field notes',
+	false === strpos( $code_only, 'field_notes' ),
+	'the notes are reviewer reference, never page content'
+);
+
+it(
+	'the ACF form shows the notes read-only',
+	false !== strpos(
+		file_get_contents( dirname( __DIR__ ) . '/plugin/skybird-projects/includes/acf-fields.php' ),
+		"'readonly'     => 1"
+	),
+	'editing the snapshot here would not write back to CompanyCam'
+);
 
 // --- Stylesheet ------------------------------------------------------------
 //

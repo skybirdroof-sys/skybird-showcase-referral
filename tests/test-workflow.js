@@ -115,6 +115,12 @@ const PROJECT = {
     phone_number: '+19195550147',
   },
   photo_count: 419,
+  // CompanyCam's Project Description. Written by the project manager; the
+  // homeowner's name in it is the point of the containment tests below.
+  description:
+    'Wasps in the soffit on the back elevation, dealt with before tear-off.\n' +
+    'More rotten decking than the quote allowed for - eleven sheets.\n' +
+    'Mr Wexler kept the crew in sweet tea all afternoon.',
 };
 
 // CompanyCam sends Unix epoch SECONDS, as an integer. The first version of
@@ -300,6 +306,21 @@ it('Curate leaves the completion date empty rather than inventing one', () => {
   eq(c.completionDate, '', 'no date rather than 1970-01-01');
 });
 
+it('Curate carries the project description through for the reviewer', () => {
+  const c = run('Curate', curateInputs())[0].json;
+  if (!c.fieldNotes.includes('Wasps in the soffit')) {
+    throw new Error(`notes not carried: ${JSON.stringify(c.fieldNotes)}`);
+  }
+  if (!c.fieldNotes.includes('eleven sheets')) throw new Error('notes truncated');
+});
+
+it('Curate emits empty notes when nobody wrote any', () => {
+  // description is null on every project until someone types in the box.
+  const blank = Object.assign({}, PROJECT, { description: null });
+  const c = run('Curate', curateInputs({ 'Get Project': split(blank, false) }))[0].json;
+  eq(c.fieldNotes, '', 'no notes');
+});
+
 it('Curate orders the gallery oldest first', () => {
   const c = run('Curate', curateInputs())[0].json;
   const expected = SHOWCASE.slice()
@@ -309,10 +330,29 @@ it('Curate orders the gallery oldest first', () => {
   same(c.galleryUrls, expected, 'gallery order (before -> during -> after)');
 });
 
-it('Curate carries no homeowner data out of CompanyCam', () => {
-  const out = JSON.stringify(run('Curate', curateInputs())[0].json);
+it('Curate carries no homeowner data into any public field', () => {
+  // fieldNotes is the single exception, and it is deliberate: it exists so the
+  // reviewer has the project manager's real words, and those name the
+  // homeowner. WordPress marks that field private and strips it from the
+  // public REST response. Every OTHER field must be clean.
+  const out = run('Curate', curateInputs())[0].json;
+  const withoutNotes = Object.assign({}, out);
+  delete withoutNotes.fieldNotes;
+
+  const serialised = JSON.stringify(withoutNotes);
   for (const needle of PII) {
-    if (out.includes(needle)) throw new Error(`PII in Curate output: ${needle}`);
+    if (serialised.includes(needle)) throw new Error(`PII in Curate output: ${needle}`);
+  }
+});
+
+it('the notes fixture actually carries PII, or the test above proves nothing', () => {
+  // Without this, a fixture whose notes happened to name nobody would let the
+  // assertion above pass while the pipeline leaked freely. The epoch fixture
+  // certified a live bug exactly this way (docs/07 section 16.7).
+  const notes = run('Curate', curateInputs())[0].json.fieldNotes;
+  const found = PII.filter((needle) => notes.includes(needle));
+  if (found.length === 0) {
+    throw new Error('fixture notes name nobody — make them realistic');
   }
 });
 
@@ -506,6 +546,7 @@ it('Build Payload reads the term out of a split array response', () => {
   eq(p.meta.companycam_project_id, '110848078', 'meta project id');
   eq(p.meta.completion_date, '2026-09-10', 'meta completion date');
   same(p.meta.gallery, [4012, 4013, 4014], 'meta gallery');
+  eq(p.meta.field_notes, CURATED().fieldNotes, 'meta field notes');
   eq(p.meta.approx_lat, CURATED().approxLat, 'meta approx_lat');
   eq(p.meta.approx_lng, CURATED().approxLng, 'meta approx_lng');
 });
@@ -515,10 +556,48 @@ it('Build Payload never asks WordPress to publish', () => {
   eq(p.status, 'draft', 'nothing publishes automatically');
 });
 
-it('Build Payload writes no homeowner data into the draft', () => {
-  const p = JSON.stringify(run('Build Payload', payloadInputs([AREA_TERM]))[0].json);
+it('Build Payload writes no homeowner data into anything public', () => {
+  // field_notes is excluded deliberately: it is the ONE field allowed to carry
+  // a name, because it exists for the reviewer and WordPress marks it private
+  // and strips it from the public REST response. Everything else must be
+  // clean, and checking the rest with the notes removed is what makes this
+  // assertion mean something rather than pass by accident.
+  const payload = run('Build Payload', payloadInputs([AREA_TERM]))[0].json;
+  const meta = Object.assign({}, payload.meta);
+  delete meta.field_notes;
+  const publicPart = JSON.stringify(Object.assign({}, payload, { meta }));
+
   for (const needle of PII) {
-    if (p.includes(needle)) throw new Error(`PII in the draft payload: ${needle}`);
+    if (publicPart.includes(needle)) throw new Error(`PII in the draft payload: ${needle}`);
+  }
+});
+
+it('Build Payload sends the notes only in field_notes', () => {
+  const p = run('Build Payload', payloadInputs([AREA_TERM]))[0].json;
+  if (!p.meta.field_notes.includes('sweet tea')) throw new Error('notes missing their content');
+
+  // Checking the visible copy for PII is not enough on its own. A leak that
+  // happens to clip the notes before the homeowner's name -- an excerpt built
+  // from the first 120 characters, say -- passes a PII check while publishing
+  // "more rotten decking than the quote allowed for". Caught doing exactly
+  // that while testing these assertions.
+  //
+  // So: no run of the notes may appear in anything a visitor reads, name or
+  // no name. 24 characters is long enough that an ordinary phrase like
+  // "roof replacement in Youngsville" cannot collide by chance.
+  const notes = p.meta.field_notes;
+  const surfaces = { title: p.title, content: p.content, excerpt: p.excerpt };
+
+  for (const [name, text] of Object.entries(surfaces)) {
+    for (const needle of PII) {
+      if (String(text).includes(needle)) throw new Error(`PII in the ${name}: ${needle}`);
+    }
+    for (let i = 0; i + 24 <= notes.length; i += 1) {
+      const window = notes.slice(i, i + 24);
+      if (String(text).includes(window)) {
+        throw new Error(`field notes leaked into the ${name}: "${window}"`);
+      }
+    }
   }
 });
 
