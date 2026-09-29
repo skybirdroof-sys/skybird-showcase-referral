@@ -29,6 +29,7 @@ $GLOBALS['wp_stub'] = array(
 	'post_meta'   => array(),
 	'term_meta'   => array(),
 	'options'     => array(),
+	'meta_boxes'  => array(),
 );
 
 /** Test fixtures the stubs read from. */
@@ -49,6 +50,10 @@ function add_action( $hook, $callback, $priority = 10, $args = 1 ) {
 function add_filter( $hook, $callback, $priority = 10, $args = 1 ) {
 	$GLOBALS['wp_stub']['filters'][ $hook ][] = $callback;
 	return true;
+}
+
+function add_meta_box( $id, $title, $callback, $screen = null, $context = 'advanced', $priority = 'default' ) {
+	$GLOBALS['wp_stub']['meta_boxes'][ $id ] = compact( 'title', 'callback', 'screen', 'context', 'priority' );
 }
 
 function add_shortcode( $tag, $callback ) {

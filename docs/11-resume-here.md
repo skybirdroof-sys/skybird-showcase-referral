@@ -421,10 +421,13 @@ will find 1177 and correctly drop the delivery.
   Description, already in the payload) and is empty. Proposed, not built.
 - **Whatever writes AI alt text onto uploads** (`07` §16.5). Imagify is
   installed and is the likely culprit.
-- `approx_lat` / `approx_lng` have **no admin UI**. ACF suppresses the native
-  Custom Fields box and the field group deliberately omits machine-written
-  fields — so the reviewer is asked by `06` §3 to confirm the pin is offset and
-  has no way to see it. Add them to the Location tab as read-only.
+- ~~`approx_lat` / `approx_lng` have no admin UI~~ — **built.** A read-only
+  **Map pin** box now sits in the sidebar of the project edit screen: the two
+  values, a link to see where the pin lands, and a red warning when there is
+  no pin or when it falls outside North Carolina (a swapped lat/lng or a
+  dropped minus sign). It says plainly that it *cannot* confirm the offset —
+  the true coordinates are never stored, by design, so there is nothing to
+  measure against. **Needs the plugin re-uploading**: `dist/skybird-projects.zip`.
 - Swap `CompanyCam API` to the read-only key; delete `webhook-setup`.
 - Revoke the `auth test` admin Application Password.
 - Render `[skybird_project_map area="youngsville"]`.

@@ -514,6 +514,83 @@ eq( 'no service area -> date only', 'Completed September 2026', skybird_projects
 unset( $GLOBALS['wp_fixture']['title'] );
 $GLOBALS['wp_fixture']['post_meta'] = array();
 
+// --- Map pin readout -------------------------------------------------------
+//
+// docs/06-trigger-design.md section 3 asks the reviewer to confirm the pin was
+// offset and not defaulted to the true location. Until 2026-09-28 there was no
+// screen showing it: the coordinates are machine-written so the ACF group
+// omits them, and that same group hides WordPress's native Custom Fields box.
+// Reading them off the first real draft needed a REST call from a browser
+// console (docs/07-phase-4-preflight.md section 16.7).
+
+skybird_projects_add_pin_meta_box();
+
+it(
+	'the pin meta box is registered on the project screen',
+	isset( $GLOBALS['wp_stub']['meta_boxes']['skybird-projects-pin'] )
+		&& SKYBIRD_PROJECTS_POST_TYPE === $GLOBALS['wp_stub']['meta_boxes']['skybird-projects-pin']['screen']
+);
+
+$GLOBALS['wp_fixture']['post_meta'] = array();
+$pin = skybird_projects_pin_status( 1 );
+
+it( 'an unset pin reads as missing', 'missing' === $pin['status'] );
+it( 'a missing pin says not to publish', false !== stripos( $pin['message'], 'do not publish' ) );
+
+// 0 is the sentinel skybird_projects_sanitize_lat() returns for anything
+// unusable, so a rejected value and an absent one are indistinguishable here.
+// Both mean there is no pin, which is the only thing the reviewer needs.
+$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => 0, 'approx_lng' => 0 );
+it( 'the zero sentinel reads as missing', 'missing' === skybird_projects_pin_status( 1 )['status'] );
+
+$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => 36.069334, 'approx_lng' => 0 );
+it( 'half a pin is no pin', 'missing' === skybird_projects_pin_status( 1 )['status'] );
+
+// The real values from the first draft, 2026-09-28.
+$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => 36.069334, 'approx_lng' => -78.554441 );
+$pin = skybird_projects_pin_status( 1 );
+
+it( 'a real offset pin passes', 'ok' === $pin['status'] );
+it( 'a passing pin does not claim the offset was verified', false === stripos( $pin['message'], 'offset' ) );
+
+// Latitude and longitude swapped -- the mistake this box exists to catch,
+// because the numbers look plausible on their own.
+$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => -78.554441, 'approx_lng' => 36.069334 );
+it( 'swapped lat/lng is caught', 'out_of_bounds' === skybird_projects_pin_status( 1 )['status'] );
+
+// A dropped minus sign puts Youngsville in China.
+$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => 36.069334, 'approx_lng' => 78.554441 );
+it( 'a dropped minus sign is caught', 'out_of_bounds' === skybird_projects_pin_status( 1 )['status'] );
+
+// Every seeded service area must sit inside the bounds, or the check would
+// reject real jobs. Rough centres, good enough for a bounding box.
+$area_centres = array(
+	'franklinton' => array( 36.1024, -78.4583 ),
+	'goldsboro'   => array( 35.3849, -77.9928 ),
+	'greenville'  => array( 35.6127, -77.3664 ),
+	'knightdale'  => array( 35.7877, -78.4803 ),
+	'raleigh'     => array( 35.7796, -78.6382 ),
+	'rolesville'  => array( 35.9232, -78.4578 ),
+	'wake-forest' => array( 35.9799, -78.5097 ),
+	'youngsville' => array( 36.0263, -78.4767 ),
+);
+
+$outside = array();
+foreach ( $area_centres as $slug => $point ) {
+	$GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => $point[0], 'approx_lng' => $point[1] );
+	if ( 'ok' !== skybird_projects_pin_status( 1 )['status'] ) {
+		$outside[] = $slug;
+	}
+}
+
+it(
+	'all eight service areas fall inside the bounds',
+	array() === $outside,
+	implode( ', ', $outside )
+);
+
+$GLOBALS['wp_fixture']['post_meta'] = array();
+
 // --- Report ----------------------------------------------------------------
 
 /**
