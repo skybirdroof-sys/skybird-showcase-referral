@@ -591,6 +591,41 @@ it(
 
 $GLOBALS['wp_fixture']['post_meta'] = array();
 
+// --- Stylesheet ------------------------------------------------------------
+//
+// The front end is not otherwise testable here, but one CSS declaration is
+// load-bearing: skybirdroofing.net sets `h1 { color: #ffff }` site-wide from
+// the theme Customizer, so without an explicit colour the project title
+// renders white on white and the page ships with no visible headline
+// (docs/07-phase-4-preflight.md section 16.8).
+
+$css = file_get_contents( dirname( __DIR__ ) . '/plugin/skybird-projects/assets/skybird-projects.css' );
+
+// Strip comments FIRST. The rule below is documented with a comment quoting
+// the offending `h1 { color: #ffff }`, and a naive match reads that quote as
+// the rule's own declarations -- which made the first version of these
+// assertions pass with the colour deleted. Caught by reintroducing the bug,
+// which is the only reason to bother reintroducing it.
+$declarations = preg_replace( '#/\*.*?\*/#s', '', $css );
+$title_rule   = '';
+
+if ( preg_match( '/\.skybird-project__title\s*\{([^}]*)\}/s', $declarations, $m ) ) {
+	$title_rule = $m[1];
+}
+
+it( 'the stylesheet defines a rule for the project title', '' !== $title_rule );
+
+it(
+	'the project title sets its own colour',
+	(bool) preg_match( '/(^|;)\s*color\s*:/', $title_rule ),
+	'without it the site-wide white h1 wins and the headline is invisible'
+);
+
+it(
+	'the title colour is not white',
+	! preg_match( '/color\s*:\s*(#fff|#ffff|#ffffff|white)\s*;?\s*$/im', $title_rule )
+);
+
 // --- Report ----------------------------------------------------------------
 
 /**

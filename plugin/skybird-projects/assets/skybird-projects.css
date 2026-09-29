@@ -20,6 +20,31 @@
 .skybird-project__title {
 	margin: 0 0 0.25rem;
 	line-height: 1.2;
+
+	/* An explicit colour, because the site sets every h1 to white.
+	 *
+	 * skybirdroofing.net emits this from the theme Customizer, inline in the
+	 * <head>, on every page:
+	 *
+	 *     .h1, h1 { ...; color: #ffff }
+	 *
+	 * That works on Hub's own pages, where an h1 sits inside a dark WPBakery
+	 * hero row. A project page has no hero — the title sits on the plain white
+	 * content area, so it rendered invisible. Verified on the first real draft,
+	 * 2026-09-29: the text was there and selectable, just white on white
+	 * (docs/07-phase-4-preflight.md section 16.8).
+	 *
+	 * Specificity, not !important: the rule above applies to this element
+	 * through its bare `h1` selector (0,0,1), so a single class (0,1,0) wins
+	 * regardless of load order. !important here would be unnecessary and would
+	 * take the override away from anyone styling this later.
+	 *
+	 * The value is Hub's own default heading colour, which is what the
+	 * Customizer replaced. If Skybird re-themes, this line is the one to
+	 * revisit — and the better fix is to correct the Customizer setting, which
+	 * would make every other light-background h1 on the site visible too.
+	 */
+	color: #181b31;
 }
 
 .skybird-project__meta {

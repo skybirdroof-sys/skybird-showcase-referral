@@ -23,7 +23,7 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | Workflow Code nodes | ✅ 30 assertions, `node tests/test-workflow.js` (added 2026-09-28) |
 | `project.label_added` webhook | ✅ Webhook `282006`, delivering, authenticating, 200 |
 | WordPress auth from n8n | ✅ Resolved 2026-09-28 — it was a missing `www` (`07` §15.1) |
-| End-to-end run | ✅ **Ran 2026-09-28 01:19.** Four photos uploaded, draft created |
+| **End-to-end run** | ✅ **Phase 4 goal met, 2026-09-29 02:22.** One real project → one real correct draft, verified field by field and on the rendered page (`07` §16.8) |
 | **PII review** | 🔴 **Failed, then contained.** One curated photo was a signed checklist carrying the homeowner's name and address. Public for ~2 hours; deleted and cache-purged, verified gone (`07` §16) |
 | **Pin offset** | ✅ **0.2500 mi, bearing 121°** on the real draft (`07` §16.7) |
 | Draft fields | ⚠️ All correct except `completion_date`, which landed empty — CompanyCam sends epoch integers, not ISO (`07` §16.7). Fixed in the repo, **not yet in n8n** |
@@ -433,3 +433,40 @@ will find 1177 and correctly drop the delivery.
 - Render `[skybird_project_map area="youngsville"]`.
 - Tell Euan about the non-`www` → `http://` redirect.
 - ProLine read path (`01` §4.2 Q2).
+
+
+---
+
+# 2026-09-29, 02:35 — Phase 4 is done
+
+**One real CompanyCam project → one real WordPress draft, nothing published
+automatically.** Verified on the rendered page and field by field in `07` §16.8.
+
+Pin landed **0.2377 mi at bearing 281°**, against run 1's 0.2500 mi at 121° —
+a fresh draw per run, which is the property that makes the offset
+irreversible.
+
+## One thing needs re-uploading
+
+`dist/skybird-projects.zip` — the project H1 was rendering **white on white**.
+Not our bug: the theme Customizer sets `h1 { color: #ffff }` site-wide, which
+is invisible on any light background. Hub's own pages hide it by putting every
+H1 inside a dark hero row; a project page has none.
+
+**Tell Euan.** A one-character fix in the Customizer makes every
+light-background H1 on skybirdroofing.net visible, not just ours.
+
+## Next session, in order
+
+1. **The upload gate** (`07` §16.4) — the real decision, and the one that
+   stands between this and a workflow that can run unattended. Media is public
+   the moment it uploads; the review gate sits after it.
+2. **Credential hygiene** — swap the n8n `CompanyCam API` credential to the
+   read-only key and delete `webhook-setup`; revoke the `auth test` admin
+   Application Password, which went through two support chats in plain text.
+3. **Media accumulates on every re-run** (`07` §16.8). 1173, 1174 and 1176 are
+   orphans; nothing cleans up, and re-running is not free.
+4. **`docs/12`** — the notes path, for pages that aren't all the same sentence.
+5. Whatever writes AI alt text onto uploads (`07` §16.5).
+6. Render `[skybird_project_map area="youngsville"]` — needs a published
+   project, so it waits on the first real publish.

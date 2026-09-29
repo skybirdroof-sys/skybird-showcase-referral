@@ -1489,3 +1489,95 @@ file that had to be deleted.
 Regenerating is not as simple as re-running: `Already Drafted?` will now find
 post 1177 and correctly drop the delivery. Either edit the two fields by hand,
 or delete the draft first and re-run.
+
+### 16.8 Phase 4 complete — and an invisible headline
+
+Second run, 2026-09-29 02:22. Three photos this time; the checklist was
+untagged in CompanyCam, so it correctly did not come through.
+
+| Check (`docs/06` §3) | |
+|---|---|
+| Title, excerpt, draft status | ✅ *Roof Replacement in Youngsville, NC*, draft |
+| `completion_date` | ✅ **2026-09-10** — the epoch fix holds |
+| Eyebrow on the page | ✅ "Completed September 2026", town not repeated from the H1 |
+| Cover photo | ✅ The aerial, rendering in the real theme |
+| Gallery | ✅ Two photos, oldest first — old shingles, then the tear-off |
+| Service area | ✅ Youngsville, and the "Back to all Youngsville projects" link resolves |
+| Share button | ✅ Absent, as designed — no referral code exists yet |
+| **Pin** | ✅ **0.2377 mi (1,255 ft), bearing 281°** |
+| PII | ✅ None anywhere |
+
+**Phase 4's goal is met: one real CompanyCam project, one real WordPress
+draft, nothing published automatically.**
+
+#### The offset is drawn fresh every time, and that matters
+
+Run 1 landed 0.2500 mi out at 121°. Run 2, same project, 0.2377 mi at 281°.
+
+That is not cosmetic. A *fixed* offset would be reversible: anyone with two
+published projects could solve for the vector and recover every real address on
+the site. `docs/04-pin-precision-research.md` §4 specifies a random bearing and
+a random distance within the annulus per project, and two runs against the same
+project now demonstrate it on real data rather than in a test.
+
+#### The H1 was invisible
+
+The rendered page had no visible headline. Dragging a selection across the
+blank space above the eyebrow revealed it: present, correctly worded, white on
+white.
+
+The cause is not in this plugin. skybirdroofing.net emits this inline in the
+`<head>` of every page, from the theme Customizer:
+
+```css
+.h1, h1 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 60px;
+  color: #ffff
+}
+```
+
+**Every `h1` on the site is white.** It goes unnoticed because Hub's own pages
+put their H1 inside a dark WPBakery hero row. A project page has no hero — the
+title sits on the plain white content area. This is the first page on the site
+to do that.
+
+(`#ffff` is the 4-digit `#RGBA` form, so it is valid and opaque white either
+way. It reads like `#fff` with a slipped keystroke, set once and never looked
+at again.)
+
+**Fixed here** with `color: #181b31` on `.skybird-project__title` — Hub's own
+default heading colour, which is what the Customizer replaced. Specificity
+rather than `!important`: the site rule reaches this element through its bare
+`h1` selector (0,0,1), so one class (0,1,0) wins regardless of load order.
+
+**The better fix is Euan's**, and it is one character: correcting the
+Customizer value would make every light-background H1 on the site visible,
+not just ours.
+
+#### The test for it was wrong, and only the regression check found that
+
+Three assertions now read the stylesheet. The first version passed **with the
+bug reintroduced** — twice.
+
+The rule is documented with a comment quoting the offending
+`h1 { color: #ffff }`, and the naive `\{(.*?)\}` match stopped at the first `}`
+*inside that comment*, so the assertions were reading the quoted bug as if it
+were the rule's own declarations. The "not white" check then passed by
+accident, because `#ffff` fails a `#fff\b` match on the fourth `f`.
+
+Two wrongs cancelling into green. The fix is to strip comments before matching;
+both assertions now fail correctly when the colour is deleted or set to white.
+
+**Worth keeping:** a test is not verified by watching it pass. It is verified
+by breaking the thing it guards and watching it fail. That step has now caught
+a real defect in three consecutive pieces of work — the workflow wiring, the
+epoch fixture, and its own assertions.
+
+#### Left over
+
+- Media accumulates on every re-run. WordPress dodges the filenames still on
+  disk, so the second run produced `…-cover-1.jpeg`. Attachments 1173, 1174 and
+  1176 are orphans now. Re-running is not free, and nothing cleans up.
