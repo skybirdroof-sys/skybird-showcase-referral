@@ -1,28 +1,61 @@
 <!doctype html>
 <!--
-  Skybird logo intro / outro. The whole animation is one function, render(t),
-  so a recorder can step it frame by frame (see render.mjs) and a browser can
-  just play it. Serve this folder (python3 -m http.server) and open
-  logo.html?mode=intro or ?mode=outro to preview live.
+  Skybird logo intro / outro / call-to-action card. The whole animation is one
+  function, render(t), so a recorder can step it frame by frame (see render.mjs)
+  and a browser can just play it. Serve this folder (python3 -m http.server) and
+  open logo.html?mode=intro|outro|cta, adding &theme=dark for the dark version.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <title>Skybird Logo Motion</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #ffffff; overflow: hidden; }
+  @font-face { font-family: "Montserrat"; src: url("../fonts/Montserrat-latin.woff2") format("woff2"); font-weight: 100 900; }
+  :root { --bg: #ffffff; --ink: #0b0f0d; --accent: #2e864c; --line: #66bc74; --muted: rgba(11, 15, 13, 0.55); }
+  :root[data-theme="dark"] { --bg: #0e1a14; --ink: #f6f8f5; --accent: #66bc74; --line: #66bc74; --muted: rgba(246, 248, 245, 0.55); }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 80% 55% at 50% 38%, rgba(102, 188, 116, 0.10), transparent 70%); opacity: 0; }
+  :root[data-theme="dark"] body::before { opacity: 1; }
   #stage { position: relative; width: 100vw; height: 100vh; }
   #logo { position: absolute; left: 50%; top: 50%; transform-origin: 0 0; }
   #logo img, #logo canvas, #hawk { position: absolute; display: block; }
   #hawk img { position: absolute; display: block; }
+
+  /* Call-to-action card. Sizes are in vw so portrait and square share one layout. */
+  #cta { position: absolute; left: 0; right: 0; display: none; flex-direction: column; align-items: center;
+    font-family: "Montserrat", sans-serif; color: var(--ink); text-align: center; }
+  #cta > * { will-change: transform, opacity; white-space: nowrap; }
+  #roofline { width: 56vw; height: 7vw; overflow: visible; margin-bottom: 4.2vw; }
+  #roofline path { fill: none; stroke: var(--line); stroke-width: 0.55vw; stroke-linecap: round; stroke-linejoin: round; }
+  #offer { font-weight: 800; font-size: 5.4vw; letter-spacing: 0.12em; }
+  #phone { font-weight: 700; font-size: 10.4vw; letter-spacing: 0.01em; margin-top: 2.6vw; color: var(--accent);
+    background: linear-gradient(100deg, var(--accent) 40%, #ffffff 50%, var(--accent) 60%) no-repeat;
+    background-size: 300% 100%; background-position: 100% 0; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; }
+  #site { font-weight: 500; font-size: 4.6vw; letter-spacing: 0.04em; margin-top: 1.8vw; }
+  #trust { font-weight: 600; font-size: 2.7vw; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 5.2vw; }
 </style>
 </head>
 <body>
-<div id="stage"><div id="logo"></div></div>
+<div id="stage">
+  <div id="logo"></div>
+  <div id="cta">
+    <svg id="roofline" viewBox="0 0 560 70"><path id="roofL" d="M280 6 L14 64"/><path id="roofR" d="M280 6 L546 64"/></svg>
+    <div id="offer">FREE ROOF INSPECTION</div>
+    <div id="phone">(984) 833-1223</div>
+    <div id="site">skybirdroofing.net</div>
+    <div id="trust">GAF Master Elite&reg; &middot; Wake Forest, NC</div>
+  </div>
+</div>
 <script type="module">
 const params = new URLSearchParams(location.search);
 const MODE = params.get("mode") || "intro";
-const DURATION = { intro: 3.8, outro: 3.0 }[MODE];
+const THEME = params.get("theme") === "dark" ? "dark" : "light";
+const DURATION = { intro: 3.8, outro: 3.0, cta: 7.0 }[MODE];
+document.documentElement.dataset.theme = THEME;
+// The dark theme swaps in recoloured script, letters and hawk body (see split_layers.py).
+const themed = name => THEME === "dark" && /^(script|roofing_\d|hawk_body)$/.test(name) ? `layers/dark/${name}.png` : `layers/${name}.png`;
 
 // Visible ink of the whole logo, used to centre and size it on screen.
 const INK = { x0: 67, x1: 1243, y0: 417, y1: 893 };
@@ -41,7 +74,7 @@ const place = (node, p, parent = logo, ox = 0, oy = 0) => {
 const loadImg = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
 
 // ---- the script, as a canvas we can reveal pixel by pixel in pen order ----
-const [scriptImg, timeImg] = await Promise.all([loadImg("layers/script.png"), loadImg("layers/script-time.png")]);
+const [scriptImg, timeImg] = await Promise.all([loadImg(themed("script")), loadImg("layers/script-time.png")]);
 const S = box.script;
 const scriptCanvas = place(document.createElement("canvas"), S);
 scriptCanvas.width = S.w; scriptCanvas.height = S.h;
@@ -65,19 +98,20 @@ function setWritten(p, fade = 1) {
 
 // ---- ROOFING letters ----
 const letters = parts.filter(p => p.name.startsWith("roofing_")).map(p => {
-  const img = new Image(); img.src = `layers/${p.name}.png`; return place(img, p);
+  const img = new Image(); img.src = themed(p.name); return place(img, p);
 });
 
 // ---- the hawk: far wing behind, body, near wing in front, plus the untouched original for rest ----
 const H = box.hawk;
 const hawk = place(Object.assign(document.createElement("div"), { id: "hawk" }), H);
-const rigImg = (name) => { const img = new Image(); img.src = `layers/${name}.png`; return place(img, box[name], hawk, H.x, H.y); };
+const rigImg = (name) => { const img = new Image(); img.src = themed(name); return place(img, box[name], hawk, H.x, H.y); };
 const farWing = rigImg("hawk_farwing"), body = rigImg("hawk_body"), nearWing = rigImg("hawk_nearwing");
 const hawkRest = rigImg("hawk");
 farWing.style.transformOrigin = `${FAR_SHOULDER.x - box.hawk_farwing.x}px ${FAR_SHOULDER.y - box.hawk_farwing.y}px`;
 nearWing.style.transformOrigin = `${NEAR_SHOULDER.x - box.hawk_nearwing.x}px ${NEAR_SHOULDER.y - box.hawk_nearwing.y}px`;
 hawk.style.transformOrigin = `${(FAR_SHOULDER.x + NEAR_SHOULDER.x) / 2 - H.x}px ${NEAR_SHOULDER.y - H.y}px`;
 await Promise.all([...logo.querySelectorAll("img")].map(i => i.decode()));
+await document.fonts.load('800 40px "Montserrat"');
 
 // ---- timing helpers ----
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -106,7 +140,8 @@ function setHawk({ x = 0, y = 0, pitch = 0, scale = 1, beat = 0, amp = 0, raise 
   farWing.style.transform = `rotate(${-angle * 0.85}deg) scale(${1 - (1 - span) * 1.1}, ${chord})`;
   hawk.style.transform = `translate(${x}px, ${y + lift}px) rotate(${pitch}deg) scale(${scale})`;
   hawk.style.opacity = opacity;
-  const rest = amp === 0 && raise === 0;
+  // At rest the light theme shows the untouched logo art; the dark theme keeps its recoloured rig.
+  const rest = amp === 0 && raise === 0 && THEME === "light";
   hawkRest.style.visibility = rest ? "visible" : "hidden";
   for (const n of [farWing, body, nearWing]) n.style.visibility = rest ? "hidden" : "visible";
 }
@@ -132,7 +167,7 @@ function renderIntro(t) {
     l.style.transform = `translateY(${lerp(46, 0, outBack(k))}px)`;
   });
 
-  return 1 + 0.03 * inOutCubic(span(t, 0, DURATION));
+  return 1 + 0.03 * inOutCubic(span(t, 0, 3.8));
 }
 
 function renderOutro(t) {
@@ -162,15 +197,58 @@ function renderOutro(t) {
   return 1.02 + 0.02 * inOutCubic(span(t, 0, 2.2));
 }
 
+// ---- call-to-action card: the intro plays, the logo lifts, the offer builds in underneath ----
+const cta = document.getElementById("cta");
+const ctaParts = ["offer", "phone", "site", "trust"].map(id => document.getElementById(id));
+const roof = ["roofL", "roofR"].map(id => document.getElementById(id));
+const roofLen = roof.map(p => p.getTotalLength());
+const portrait = innerHeight / innerWidth > 1.3;
+const CTA_LOGO_Y = portrait ? 0.34 : 0.21;   // where the logo's centre ends up, as a share of height
+const CTA_TOP = portrait ? 0.48 : 0.40;      // top of the card, as a share of height
+function rise(node, k, dist = 3) {
+  const e = outCubic(k);
+  node.style.opacity = e;
+  node.style.transform = `translateY(${(1 - e) * dist}vw)`;
+  return e;
+}
+
+function renderCTA(t) {
+  const introZoom = renderIntro(t);
+  // 5.50-6.10  the hawk settles its wings once, so the end card doesn't feel frozen.
+  if (t > 5.5 && t < 6.1) setHawk({ beat: span(t, 5.5, 6.1), amp: 0.35 * Math.sin(Math.PI * span(t, 5.5, 6.1)) });
+
+  // 2.85-3.65  logo shrinks and lifts to make room.
+  const move = inOutCubic(span(t, 2.85, 3.65));
+  cta.style.display = t > 3.2 ? "flex" : "none";
+  cta.style.top = `${CTA_TOP * 100}vh`;
+
+  // 3.35-4.05  a roofline draws out from its peak.
+  const kr = outCubic(span(t, 3.35, 4.05));
+  roof.forEach((p, i) => { p.style.strokeDasharray = roofLen[i]; p.style.strokeDashoffset = roofLen[i] * (1 - kr); });
+  // 3.60-4.90  offer, phone, site and credentials rise in, one after another.
+  const [offer, phone, site, trust] = ctaParts;
+  const ko = rise(offer, span(t, 3.6, 4.2));
+  offer.style.letterSpacing = `${lerp(0.32, 0.12, ko)}em`;
+  const kp = rise(phone, span(t, 3.85, 4.45));
+  phone.style.transform += ` scale(${lerp(0.94, 1, kp)})`;
+  rise(site, span(t, 4.1, 4.6));
+  rise(trust, span(t, 4.35, 4.9), 2);
+  // 5.00-5.80  a glint runs across the phone number.
+  phone.style.backgroundPosition = `${lerp(100, 0, inOutCubic(span(t, 5.0, 5.8)))}% 0`;
+
+  return { zoom: lerp(introZoom, 0.7, move), y: lerp(0.5, CTA_LOGO_Y, move) };
+}
+
 function layout() {
   const s = (innerWidth * 0.82) / (INK.x1 - INK.x0);
   return { s, cx: (INK.x0 + INK.x1) / 2, cy: (INK.y0 + INK.y1) / 2 };
 }
 
 window.render = function (t) {
-  const zoom = MODE === "outro" ? renderOutro(t) : renderIntro(t);
+  const r = MODE === "outro" ? { zoom: renderOutro(t) } : MODE === "cta" ? renderCTA(t) : { zoom: renderIntro(t) };
   const { s, cx, cy } = layout();
-  logo.style.transform = `scale(${s * zoom}) translate(${-cx}px, ${-cy}px)`;
+  logo.style.top = `${(r.y ?? 0.5) * 100}%`;
+  logo.style.transform = `scale(${s * r.zoom}) translate(${-cx}px, ${-cy}px)`;
 };
 window.DURATION = DURATION;
 window.ready = true;

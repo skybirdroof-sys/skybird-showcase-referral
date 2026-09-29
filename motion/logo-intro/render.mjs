@@ -1,5 +1,5 @@
 // Record logo.html to MP4, one exact frame at a time (no screen-capture timing drift).
-// Usage: node render.mjs [intro|outro] [WIDTHxHEIGHT] [fps] [blur subframes]
+// Usage: [THEME=dark] node render.mjs [intro|outro|cta] [WIDTHxHEIGHT] [fps] [blur subframes]
 // Each output frame averages `blur` sub-frames spread across it, for natural motion blur.
 import { createRequire } from "node:module";
 import { execSync, spawn } from "node:child_process";
@@ -18,13 +18,15 @@ const [w, h] = size.split("x").map(Number);
 const fps = Number(fpsArg), blur = Number(blurArg);
 const ffmpeg = process.env.FFMPEG || "ffmpeg";
 mkdirSync(path.join(here, "out"), { recursive: true });
-const out = path.join(here, "out", `skybird-${mode}-${w}x${h}.mp4`);
+const theme = process.env.THEME || "light";
+const out = path.join(here, "out", `skybird-${mode}${theme === "dark" ? "-dark" : ""}-${w}x${h}.mp4`);
 
-// The page reads its layers' pixels, which browsers only allow over http, so serve this folder.
-const types = { ".html": "text/html", ".png": "image/png", ".json": "application/json" };
+const root = path.dirname(here);   // serve motion/ so the page can reach ../fonts
+// The page reads its layers' pixels, which browsers only allow over http, so serve motion/.
+const types = { ".html": "text/html", ".png": "image/png", ".json": "application/json", ".woff2": "font/woff2" };
 const server = createServer((req, res) => {
-  const file = path.join(here, decodeURIComponent(new URL(req.url, "http://x").pathname));
-  if (!file.startsWith(here)) return res.writeHead(403).end();
+  const file = path.join(root, decodeURIComponent(new URL(req.url, "http://x").pathname));
+  if (!file.startsWith(root)) return res.writeHead(403).end();
   readFile(file, (err, data) => err ? res.writeHead(404).end()
     : res.writeHead(200, { "content-type": types[path.extname(file)] || "application/octet-stream" }).end(data));
 }).listen(0, "127.0.0.1");
@@ -33,7 +35,7 @@ await new Promise(r => server.once("listening", r));
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: w, height: h } });
 page.on("pageerror", e => { console.error(e); process.exit(1); });
-await page.goto(`http://127.0.0.1:${server.address().port}/logo.html?mode=${mode}&record=1`);
+await page.goto(`http://127.0.0.1:${server.address().port}/logo-intro/logo.html?mode=${mode}&theme=${theme}&record=1`);
 await page.waitForFunction(() => window.ready === true);
 const duration = await page.evaluate(() => window.DURATION);
 const frames = Math.round(duration * fps);

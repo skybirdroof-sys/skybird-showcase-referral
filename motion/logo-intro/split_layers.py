@@ -85,7 +85,7 @@ body_solid = ndimage.binary_fill_holes(ndimage.binary_closing(body | root, itera
 rim = ndimage.binary_dilation(body | root, iterations=5) & ~(body | root) & (ndimage.distance_transform_edt(~far_wing) < 10)
 paint = body_solid | rim
 
-def save_solid(name, layers, box):
+def save_solid(name, layers, box, folder="layers"):
     x0, y0, x1, y1 = box
     out = np.zeros(src.shape[:2] + (4,), float)
     for mask, a, C in layers:            # painted in order, "over" compositing
@@ -94,7 +94,8 @@ def save_solid(name, layers, box):
         out[..., 3:] = out[..., 3:] * (1 - a) + a
     rgbout = np.where(out[..., 3:] > 0, out[..., :3] / np.maximum(out[..., 3:], 1e-6), 0)
     img = np.dstack([rgbout, out[..., 3] * 255]).clip(0, 255).astype(np.uint8)
-    Image.fromarray(img[y0:y1, x0:x1]).save(HERE / "layers" / f"{name}.png")
+    (HERE / folder).mkdir(exist_ok=True)
+    Image.fromarray(img[y0:y1, x0:x1]).save(HERE / folder / f"{name}.png")
     return {"name": name, "x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}
 
 ones = np.ones(alpha.shape)
@@ -123,3 +124,19 @@ for p in parts:
     region[:] = region * (1 - a) + L[..., :3] * a
 print("parts:", [p["name"] for p in parts])
 print("max diff vs original:", np.abs(out - src).max(), "| ink px in no layer:", int((ink & ~hawk & ~script & ~letters).sum()))
+
+# ---- Dark theme: the same shapes recoloured for a dark background (layers/dark/) ----
+# White script, light-green ROOFING, and the hawk's white rim and eye become the background
+# colour so they read as cut-outs, like a reversed logo. The wings are reused from layers/.
+BG = np.array([14, 26, 20.])            # keep in step with --bg in logo.html's dark theme
+INK_ON_DARK = np.array([246, 248, 245.])
+a_k, _ = coverage(np.array([5, 7, 8.]))
+save_solid("script", [(script, a_k, INK_ON_DARK)], (60, 440, 1150, 900), "layers/dark")
+for p in parts:
+    if p["name"].startswith("roofing_"):
+        box = (p["x"], p["y"], p["x"] + p["w"], p["y"] + p["h"])
+        m = letters & (cols >= box[0]) & (cols < box[2])
+        save_solid(p["name"], [(m, a_d, LIGHT)], box, "layers/dark")
+save_solid("hawk_body", [(paint, ones, BG), (body & light, a_l, LIGHT), (dark & body, a_d, DARK), (root, ones, DARK)],
+           (740, 405, 1250, 640), "layers/dark")
+print("dark theme layers written")
