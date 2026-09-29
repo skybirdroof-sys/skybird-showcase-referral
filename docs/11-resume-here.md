@@ -25,6 +25,8 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | WordPress auth from n8n | ✅ Resolved 2026-09-28 — it was a missing `www` (`07` §15.1) |
 | End-to-end run | ✅ **Ran 2026-09-28 01:19.** Four photos uploaded, draft created |
 | **PII review** | 🔴 **Failed, then contained.** One curated photo was a signed checklist carrying the homeowner's name and address. Public for ~2 hours; deleted and cache-purged, verified gone (`07` §16) |
+| **Pin offset** | ✅ **0.2500 mi, bearing 121°** on the real draft (`07` §16.7) |
+| Draft fields | ⚠️ All correct except `completion_date`, which landed empty — CompanyCam sends epoch integers, not ISO (`07` §16.7). Fixed in the repo, **not yet in n8n** |
 
 **Nothing is blocked on a decision.** Every open item is an action.
 
@@ -350,10 +352,9 @@ signed post-install checklist. Full account: `07` §16.
    held the `-scaled` copy on a one-year TTL and kept serving it. A WP Engine
    *Quick clear all cache* fixed it. Verified 404 from outside.
 3. ~~Untag the photo in CompanyCam~~ — **done 2026-09-28.**
-4. **Read the draft's `approx_lat` / `approx_lng`.** Real coordinates are
-   `36.07117, -78.55830`; the stored pair must be 0.2–0.3 mi away. Still
-   unverified — it needs an authenticated read and nothing in this session has
-   the `skybird-sync` password.
+4. ~~Read the draft's `approx_lat` / `approx_lng`~~ — **done, and it passes.**
+   `36.069334, -78.554441` is **0.2500 mi (1,320 ft)** from the real location,
+   bearing 121°. The offset works.
 
 ## Then decide the thing that actually matters
 
@@ -379,3 +380,49 @@ before adding the `Website Showcase` label.** Not the filenames — the pictures
 - The four filenames, the cover choice, the gallery order and the draft status
   were all correct. The failure was upstream of the code and downstream of the
   gate.
+
+
+---
+
+# 2026-09-28, 02:10 — what is left
+
+The pin passes. That was the one that could have ended the project.
+
+## In the repo, not yet in n8n
+
+**`Curate` mishandled `captured_at`.** CompanyCam sends Unix epoch seconds as
+an integer; the code sliced it as if it were an ISO string and produced
+`"1789049525"`, which the plugin's date sanitiser correctly threw away. That is
+why `completion_date` is empty on post 1177.
+
+Re-paste the `Curate` body from
+`n8n/companycam-showcase-to-wordpress.json` — it now has a `capturedMs()`
+helper at the top of the sort block. Nothing else changed.
+
+## Post 1177 needs two hand edits, or a clean re-run
+
+| | |
+|---|---|
+| `completion_date` | empty → `2026-09-10` |
+| `gallery` | `[1176, 1174, 1175]` → `[1176, 1174]` — 1175 is the deleted checklist |
+
+Neither field is in the ACF panel, so either edit them via the REST API as a
+logged-in admin, or **delete the draft and re-run the trigger** once `Curate`
+is updated. A plain re-run without deleting does nothing: `Already Drafted?`
+will find 1177 and correctly drop the delivery.
+
+## Still open
+
+- **The upload gate** (`07` §16.4) — the real decision. Media is public the
+  moment it uploads; the review gate sits after it.
+- **Whatever writes AI alt text onto uploads** (`07` §16.5). Imagify is
+  installed and is the likely culprit.
+- `approx_lat` / `approx_lng` have **no admin UI**. ACF suppresses the native
+  Custom Fields box and the field group deliberately omits machine-written
+  fields — so the reviewer is asked by `06` §3 to confirm the pin is offset and
+  has no way to see it. Add them to the Location tab as read-only.
+- Swap `CompanyCam API` to the read-only key; delete `webhook-setup`.
+- Revoke the `auth test` admin Application Password.
+- Render `[skybird_project_map area="youngsville"]`.
+- Tell Euan about the non-`www` → `http://` redirect.
+- ProLine read path (`01` §4.2 Q2).

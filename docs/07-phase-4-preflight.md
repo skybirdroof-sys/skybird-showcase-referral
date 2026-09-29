@@ -1412,3 +1412,80 @@ project and a stranger. The fix is a workflow split, not a rebuild.
 visible.* Draft status, `noindex`, an unlinked URL and an unpublished post are
 all visibility controls. None of them is an access control, and uploaded files
 answer to none of them.
+
+### 16.7 The draft, field by field — and an empty `completion_date`
+
+Read out of post **1177** via the REST API as a logged-in admin:
+
+| Field | Value | |
+|---|---|---|
+| `approx_lat` / `approx_lng` | `36.069334`, `-78.554441` | ✅ **0.2500 mi / 1,320 ft** from the real coordinates, bearing 121°. Dead centre of the annulus |
+| `companycam_project_id` | `110848078` | ✅ |
+| `city` / `zip` | `Youngsville` / `27596` | ✅ |
+| `gallery` | `[1176, 1174, 1175]` | ⚠️ Correct order, oldest first — but `1175` is the deleted checklist, now a dangling ID |
+| `completion_date` | `""` | 🔴 **Empty. Should be `2026-09-10`** |
+| Title / status / excerpt / term | *Roof Replacement in Youngsville, NC*, draft, Youngsville | ✅ |
+| `proline_project_id`, product fields, referral code | empty | ✅ Expected — nothing populates these yet |
+
+The pin was the one that could have stopped the project, and it is right.
+
+#### Why the date was empty
+
+**CompanyCam returns timestamps as Unix epoch seconds, as an integer.** Not an
+ISO string. Every `*_at` field in the webhook payload saved under
+`docs/vendor/companycam/` is one — `created_at: 1790047740` — and `captured_at`
+is no different.
+
+`Curate` did this:
+
+```js
+completionDate: String(cover.captured_at || '').slice(0, 10),
+```
+
+which produced `"1789049525"` — the first ten digits of an epoch integer. The
+plugin's `skybird_projects_sanitize_date()` checked it against
+`^\d{4}-\d{2}-\d{2}$`, correctly rejected it, and stored `''`.
+
+**Nothing errored, at any layer.** n8n was happy, the REST write returned 201,
+and the plugin did exactly what it was built to do — *"a malformed date from
+the import is a bug to leave blank, not to publish as 1969"*. The sanitiser
+worked. It was the only thing standing between this and a project page reading
+*"Completed January 1970"*.
+
+The sort escaped by luck. `new Date(1789049525)` reads the value as
+milliseconds and lands on 1970-01-21, but the mapping is monotonic, so the
+oldest-first ordering came out correct anyway. It was wrong and right at the
+same time.
+
+`docs/01` §1 listed `captured_at` and what it was for, but never its **type**.
+That is the third time in this phase an API's shape was recorded one level too
+shallow — after the `project.label_added` payload nesting (§11) and the array
+splitting (§15.4–15.5).
+
+#### The fixture certified the bug
+
+`tests/test-workflow.js` passed throughout. Its photo fixture used ISO strings,
+because it was built from an MCP tool that normalises timestamps on the way
+out — so the suite asserted `completionDate === '2026-09-10'` against input
+that never occurs in production.
+
+**A fixture in the wrong shape is worse than no fixture: it certifies the bug
+and reports green.** The fixture now uses epoch integers, and with the old code
+restored the suite fails three assertions with the exact live symptom,
+`"1789049525"`.
+
+Fixed in `Curate` with a `capturedMs()` helper that multiplies an integer by
+1000, still parses an ISO string if the endpoint ever returns one, and emits
+`''` rather than `1970-01-01` when there is no usable timestamp. Tests cover
+all three.
+
+#### The dangling gallery ID
+
+`gallery` still lists `1175`, which no longer exists. `wp_get_attachment_image()`
+returns an empty string for a missing attachment, so the page renders a short
+gallery rather than breaking — but the draft is carrying a reference to the
+file that had to be deleted.
+
+Regenerating is not as simple as re-running: `Already Drafted?` will now find
+post 1177 and correctly drop the delivery. Either edit the two fields by hand,
+or delete the draft first and re-run.

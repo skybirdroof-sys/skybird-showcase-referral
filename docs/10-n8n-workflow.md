@@ -295,7 +295,9 @@ return [{
     galleryUrls: gallery.map(
       (p) => (p.uris || []).find((u) => u.type === 'original')?.uri
     ),
-    completionDate: (cover.captured_at || '').slice(0, 10),
+    // captured_at is Unix epoch SECONDS, not ISO. Slicing it gives
+    // "1789035125". See the correction in section 5 and docs/07 section 16.7.
+    completionDate: new Date(cover.captured_at * 1000).toISOString().slice(0, 10),
   },
 }];
 ```

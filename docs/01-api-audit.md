@@ -75,7 +75,7 @@ Source: https://companycam.readme.io/reference/listprojectphotos.md
 | `uris[]` | `original` / `web` / `thumbnail` URLs on static.companycam.com |
 | `internal` (bool) | "for internal use only and should not be used in marketing" — **hard filter: skip if true** |
 | `description` | Photo caption; usable as alt text / caption seed |
-| `captured_at` | Sort before/during/after |
+| `captured_at` | Sort before/during/after. **Unix epoch seconds, as an integer — not an ISO string** (corrected 2026-09-28; every `*_at` field in this API is one). `new Date()` on it reads the value as milliseconds and lands in 1970, and slicing it gives ten digits rather than a date. See `docs/07-phase-4-preflight.md` §16.7 |
 | `processing_status` | Only use `processed` |
 | `hash` | MD5 — dedupe |
 | `?tag_ids=` | **Filter to photos with a given tag.** This is the photo-selection mechanism |

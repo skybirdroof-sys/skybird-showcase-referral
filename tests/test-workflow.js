@@ -117,6 +117,12 @@ const PROJECT = {
   photo_count: 419,
 };
 
+// CompanyCam sends Unix epoch SECONDS, as an integer. The first version of
+// this fixture used ISO strings -- taken from an MCP tool that normalises them
+// -- and the suite passed while the live run wrote an empty completion_date.
+// A fixture in the wrong shape is worse than no fixture: it certifies the bug.
+const epoch = (iso) => Math.floor(Date.parse(iso) / 1000);
+
 const photo = (id, capturedAt) => ({
   id,
   company_id: '798255',
@@ -125,7 +131,7 @@ const photo = (id, capturedAt) => ({
   description: null,
   internal: false,
   processing_status: 'processed',
-  captured_at: capturedAt,
+  captured_at: epoch(capturedAt),
   coordinates: { lat: 0, lon: 0 },
   uris: [
     { type: 'original', uri: `https://static.companycam.com/p/${id}.jpeg?d=4032x4032` },
@@ -262,10 +268,42 @@ it('Curate reads a split array response', () => {
   eq(c.coverUrl, COVER.uris[0].uri, 'cover url is the original');
 });
 
+it('Curate turns an epoch timestamp into a YYYY-MM-DD completion date', () => {
+  // String(1789035125).slice(0, 10) is "1789035125", which the plugin's date
+  // sanitiser correctly rejects -- so the draft stored nothing and nothing
+  // errored. docs/07-phase-4-preflight.md section 16.7.
+  const c = run('Curate', curateInputs())[0].json;
+  eq(c.completionDate, '2026-09-10', 'completion date');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(c.completionDate)) {
+    throw new Error(`not a date the plugin will accept: ${c.completionDate}`);
+  }
+});
+
+it('Curate still reads an ISO captured_at, if CompanyCam ever sends one', () => {
+  const iso = (p) => Object.assign({}, p, {
+    captured_at: new Date(p.captured_at * 1000).toISOString(),
+  });
+  const c = run('Curate', curateInputs({
+    'Get Cover Photo': split([iso(COVER)], true),
+    'Get Showcase Photos': split(SHOWCASE.map(iso), true),
+  }))[0].json;
+  eq(c.completionDate, '2026-09-10', 'completion date from ISO');
+  eq(c.galleryUrls.length, 3, 'gallery still built');
+});
+
+it('Curate leaves the completion date empty rather than inventing one', () => {
+  const undated = Object.assign({}, COVER, { captured_at: null });
+  const c = run('Curate', curateInputs({
+    'Get Cover Photo': split([undated], true),
+    'Get Showcase Photos': split([undated].concat(SHOWCASE.slice(0, 1), SHOWCASE.slice(2)), true),
+  }))[0].json;
+  eq(c.completionDate, '', 'no date rather than 1970-01-01');
+});
+
 it('Curate orders the gallery oldest first', () => {
   const c = run('Curate', curateInputs())[0].json;
   const expected = SHOWCASE.slice()
-    .sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at))
+    .sort((a, b) => a.captured_at - b.captured_at)
     .filter((p) => p.id !== COVER.id)
     .map((p) => p.uris[0].uri);
   same(c.galleryUrls, expected, 'gallery order (before -> during -> after)');
