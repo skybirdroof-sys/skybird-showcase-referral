@@ -1581,3 +1581,77 @@ epoch fixture, and its own assertions.
 - Media accumulates on every re-run. WordPress dodges the filenames still on
   disk, so the second run produced `…-cover-1.jpeg`. Attachments 1173, 1174 and
   1176 are orphans now. Re-running is not free, and nothing cleans up.
+
+### 16.9 The photos carried the coordinates — 2026-09-29
+
+A second opinion on the checklist design (Grok, via Jacob) raised something
+neither of us had checked:
+
+> Strip photo GPS. CompanyCam photos carry the exact location inside the image
+> file, so strip it before upload. Otherwise the quarter-mile pin offset is
+> pointless.
+
+It was right, and it was live.
+
+`Skybird-roof-youngsville-110848078-1.jpeg`, published on the site, carried a
+GPS IFD reading **36.071200, -78.558250** — **17.6 feet** from the homeowner's
+front door. The offset pin sat 1,267 ft away. Right-click, save image, read the
+header, and the offset is worth nothing.
+
+Everything in this system exists to protect that number. The pin is offset
+0.2–0.3 mi and redrawn per project so the vector cannot be solved for
+(§16.8). The street address is never stored. The plugin has no field for true
+coordinates and `tests/test-plugin.php` asserts none is ever added. And the
+photo carried the answer in its own header the whole time.
+
+#### Why a spot check would have missed it
+
+Three of the four photos were clean. The drone shots had **no GPS block at
+all**; the one that did was a phone close-up of the old shingles, taken by a
+crew member with location services on.
+
+So the failure mode is invisible to sampling. Check three photos, find nothing,
+conclude the pipeline is safe. The distribution is roughly the opposite of
+where attention goes — the hero shots are clean, the incidental ones are not.
+
+#### Fixed: `includes/exif.php`
+
+Hooked on `wp_generate_attachment_metadata`, applied to the full-size file, the
+pre-scaled original and every generated size.
+
+**Not `wp_handle_upload`,** which was the obvious place. WordPress reads EXIF
+*orientation* during `wp_create_image_subsizes()` and rotates the image to
+match. Strip EXIF before that and every portrait photo lands sideways with
+nothing left to say it should not be. Stripping afterwards means the rotation
+has already been baked into the pixels.
+
+**APP1 only, and only its two location-bearing flavours:**
+
+- **Exif** — the GPS IFD.
+- **XMP** — an Adobe/XML block carrying its own copy of the coordinates. Drones
+  write both, so removing Exif alone would leave the location in the very next
+  segment.
+
+ICC colour profiles (APP2) and JFIF (APP0) survive, so nothing shifts. The
+segments are cut out of the byte stream rather than re-encoded, so there is no
+generation loss — verified on the real file: 492 bytes removed, GPS gone, the
+entropy-coded scan data **byte-identical**.
+
+Default is every image uploaded to the site, not only the automation's. On a
+roofing company's site every photo is of somebody's house, and the manual
+path — dragging a phone photo into the media library — is the likeliest to
+carry coordinates. A `skybird_projects_strip_exif` filter narrows it.
+
+#### What it cost to find
+
+Nothing, this time. The file was deleted and the cache purged within minutes
+and the remaining two were verified clean from outside the network.
+
+What it cost to *miss*: the photo was public from 01:19 on 2026-09-28 until
+03:0x on 2026-09-29 — around 26 hours, across both runs.
+
+**Rule earned, and it is §16.3's again in a third costume:** *a control is only
+as good as the channel you checked.* The pin offset was verified twice, to six
+decimal places, on the field it governs. Nobody asked what else in the payload
+knew the same fact. Invisible on the page, stripped from the API, and sitting
+in the file.

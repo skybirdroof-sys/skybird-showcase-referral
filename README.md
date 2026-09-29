@@ -33,7 +33,7 @@ Built in-house on Skybird-owned infrastructure. See
 |---|---|
 | [`plugin/skybird-selftest/`](plugin/skybird-selftest/) | Sandbox-only plugin: adds Tools → Skybird Self Test, which exercises the real REST controller in-process and prints PASS/FAIL. Replaces an earlier shell script that assumed a terminal |
 | [`plugin/skybird-projects/`](plugin/skybird-projects/) | WordPress plugin — `project` CPT, service-area taxonomy, meta, page template, map shortcode. [Its README](plugin/skybird-projects/README.md) carries the REST contract for the n8n side |
-| [`tests/test-plugin.php`](tests/test-plugin.php) | 153 registration/validation assertions against stubbed WordPress. `php tests/test-plugin.php` |
+| [`tests/test-plugin.php`](tests/test-plugin.php) | 168 registration/validation assertions against stubbed WordPress. `php tests/test-plugin.php` |
 | [`n8n/`](n8n/) | Importable workflow JSON — 23 nodes, `project.label_added` → WordPress draft. Live in n8n Cloud since 2026-09-18; [its README](n8n/README.md) has the steps and the caveats |
 | [`tests/test-workflow.js`](tests/test-workflow.js) | 37 assertions against the workflow's Code nodes and wiring, with no n8n and no network. `node tests/test-workflow.js` |
 
@@ -58,6 +58,9 @@ pre-publish review checklist.
   photo must be eyeballed in CompanyCam before the `Website Showcase` label
   goes on.
 - Map pins use stored offset coordinates. True CompanyCam coordinates are never
-  written to WordPress.
+  written to WordPress. **And photos carry GPS in the file** — a published
+  photo was once 17.6 ft from the front door while the pin was a quarter mile
+  away (`docs/07-phase-4-preflight.md` §16.9). The plugin strips Exif and XMP
+  from every upload; don't disable it.
 - Photos with `internal: true` are never included, even if tagged `Showcase`.
 - Credentials live in the n8n credential store. Never in this repo.

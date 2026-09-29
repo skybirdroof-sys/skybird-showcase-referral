@@ -695,6 +695,130 @@ it(
 	'editing the snapshot here would not write back to CompanyCam'
 );
 
+// --- Location metadata in uploads ------------------------------------------
+//
+// A published project photo carried GPS inside the JPEG, 17.6 ft from the
+// homeowner's front door (docs/07-phase-4-preflight.md section 16.9). The
+// quarter-mile pin offset, the withheld street address and the meta field the
+// plugin refuses to register were all defeated by the image header.
+//
+// The fixture below is synthetic on purpose: a real photo with real
+// coordinates does not belong in this repository either.
+
+/**
+ * A 1x1 JPEG (SOI + APP0/JFIF + the rest) with an APP1 segment spliced in.
+ *
+ * @param string $payload APP1 payload, starting with its identifier.
+ * @return string JPEG bytes.
+ */
+function skybird_test_jpeg_with_app1( $payload ) {
+	$jpeg = base64_decode(
+		'/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof'
+		. 'Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAAB'
+		. 'AAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=='
+	);
+
+	$segment = "\xFF\xE1" . pack( 'n', strlen( $payload ) + 2 ) . $payload;
+
+	// After SOI, before APP0 -- so a surviving APP0 proves only APP1 was cut.
+	return substr( $jpeg, 0, 2 ) . $segment . substr( $jpeg, 2 );
+}
+
+/**
+ * An Exif APP1 payload carrying a GPS IFD. Coordinates are invented.
+ *
+ * @return string
+ */
+function skybird_test_exif_with_gps() {
+	$gps_ifd_offset = 26;
+	$lat_offset     = 80;
+	$lng_offset     = 104;
+
+	$tiff  = 'II' . pack( 'v', 42 ) . pack( 'V', 8 );
+	// IFD0: one entry, the pointer to the GPS IFD.
+	$tiff .= pack( 'v', 1 );
+	$tiff .= pack( 'v', 0x8825 ) . pack( 'v', 4 ) . pack( 'V', 1 ) . pack( 'V', $gps_ifd_offset );
+	$tiff .= pack( 'V', 0 );
+	// GPS IFD: ref + value for each of latitude and longitude.
+	$tiff .= pack( 'v', 4 );
+	$tiff .= pack( 'v', 0x0001 ) . pack( 'v', 2 ) . pack( 'V', 2 ) . "N\x00\x00\x00";
+	$tiff .= pack( 'v', 0x0002 ) . pack( 'v', 5 ) . pack( 'V', 3 ) . pack( 'V', $lat_offset );
+	$tiff .= pack( 'v', 0x0003 ) . pack( 'v', 2 ) . pack( 'V', 2 ) . "W\x00\x00\x00";
+	$tiff .= pack( 'v', 0x0004 ) . pack( 'v', 5 ) . pack( 'V', 3 ) . pack( 'V', $lng_offset );
+	$tiff .= pack( 'V', 0 );
+	// 35 deg 00' 00" N, 79 deg 00' 00" W -- open country, nobody's house.
+	$tiff .= pack( 'VVVVVV', 35, 1, 0, 1, 0, 1 );
+	$tiff .= pack( 'VVVVVV', 79, 1, 0, 1, 0, 1 );
+
+	return "Exif\x00\x00" . $tiff;
+}
+
+$tmp_dir  = sys_get_temp_dir();
+$gps_file = $tmp_dir . '/skybird-test-gps.jpeg';
+
+file_put_contents( $gps_file, skybird_test_jpeg_with_app1( skybird_test_exif_with_gps() ) );
+
+it( 'the fixture really does carry location metadata', skybird_projects_jpeg_has_location( $gps_file ), 'otherwise the strip test proves nothing' );
+
+$before_bytes = file_get_contents( $gps_file );
+$stripped     = skybird_projects_strip_jpeg_location( $gps_file );
+$after_bytes  = file_get_contents( $gps_file );
+
+it( 'stripping reports that it changed the file', true === $stripped );
+it( 'the GPS is gone', ! skybird_projects_jpeg_has_location( $gps_file ) );
+it( 'no trace of the coordinates survives', false === strpos( $after_bytes, "Exif\x00\x00" ) );
+it( 'the result is still a JPEG', "\xFF\xD8" === substr( $after_bytes, 0, 2 ) );
+it( 'the result still decodes', false !== @getimagesize( $gps_file ) );
+it( 'the JFIF header is left alone', false !== strpos( $after_bytes, 'JFIF' ), 'only APP1 should be cut' );
+it( 'the image data is untouched', substr( $before_bytes, strpos( $before_bytes, "\xFF\xDA" ) ) === substr( $after_bytes, strpos( $after_bytes, "\xFF\xDA" ) ), 'segments are cut out, pixels are never re-encoded' );
+
+// XMP carries its own copy of the coordinates. Drones write both, so removing
+// Exif alone would leave the location in the very next segment.
+$xmp_file = $tmp_dir . '/skybird-test-xmp.jpeg';
+file_put_contents(
+	$xmp_file,
+	skybird_test_jpeg_with_app1( "http://ns.adobe.com/xap/1.0/\x00<x:xmpmeta><rdf:Description drone-dji:GpsLatitude=\"35.0\"/></x:xmpmeta>" )
+);
+
+it( 'XMP counts as location metadata', skybird_projects_jpeg_has_location( $xmp_file ) );
+it( 'XMP is stripped too', skybird_projects_strip_jpeg_location( $xmp_file ) && ! skybird_projects_jpeg_has_location( $xmp_file ) );
+
+// An ICC colour profile is APP2 and must survive, or colours shift.
+$icc_file = $tmp_dir . '/skybird-test-icc.jpeg';
+$icc      = "\xFF\xE2" . pack( 'n', 2 + strlen( "ICC_PROFILE\x00" ) + 4 ) . "ICC_PROFILE\x00" . 'ABCD';
+$with_gps = skybird_test_jpeg_with_app1( skybird_test_exif_with_gps() );
+file_put_contents( $icc_file, substr( $with_gps, 0, 2 ) . $icc . substr( $with_gps, 2 ) );
+
+skybird_projects_strip_jpeg_location( $icc_file );
+$icc_after = file_get_contents( $icc_file );
+
+it( 'an ICC profile survives the strip', false !== strpos( $icc_after, 'ICC_PROFILE' ), 'cutting APP2 would shift the colours' );
+it( 'and the GPS still went', ! skybird_projects_jpeg_has_location( $icc_file ) );
+
+// A file with nothing to remove must be left exactly as it was, not rewritten.
+$clean_file = $tmp_dir . '/skybird-test-clean.jpeg';
+file_put_contents( $clean_file, skybird_test_jpeg_with_app1( "Exif\x00\x00" ) );
+skybird_projects_strip_jpeg_location( $clean_file );
+$clean_once = file_get_contents( $clean_file );
+
+it( 'stripping twice changes nothing the second time', false === skybird_projects_strip_jpeg_location( $clean_file ) && $clean_once === file_get_contents( $clean_file ) );
+
+// Anything not understood is left alone rather than half-written.
+$not_jpeg = $tmp_dir . '/skybird-test-not.jpeg';
+file_put_contents( $not_jpeg, 'PK' . str_repeat( 'x', 64 ) );
+
+it( 'a non-JPEG is refused, not mangled', false === skybird_projects_strip_jpeg_location( $not_jpeg ) && 'PK' === substr( file_get_contents( $not_jpeg ), 0, 2 ) );
+
+it(
+	'the strip runs on every upload, after WordPress has applied EXIF rotation',
+	isset( $GLOBALS['wp_stub']['filters']['wp_generate_attachment_metadata'] ),
+	'hooking earlier would strip the orientation tag and land portrait photos sideways'
+);
+
+foreach ( array( $gps_file, $xmp_file, $icc_file, $clean_file, $not_jpeg ) as $f ) {
+	@unlink( $f );
+}
+
 // --- Stylesheet ------------------------------------------------------------
 //
 // The front end is not otherwise testable here, but one CSS declaration is
