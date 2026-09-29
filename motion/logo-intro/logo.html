@@ -2,7 +2,8 @@
 <!--
   Skybird logo intro / outro. The whole animation is one function, render(t),
   so a recorder can step it frame by frame (see render.mjs) and a browser can
-  just play it. Open logo.html?mode=intro or ?mode=outro to preview live.
+  just play it. Serve this folder (python3 -m http.server) and open
+  logo.html?mode=intro or ?mode=outro to preview live.
 -->
 <html>
 <head>
@@ -12,130 +13,158 @@
   html, body { margin: 0; height: 100%; background: #ffffff; overflow: hidden; }
   #stage { position: relative; width: 100vw; height: 100vh; }
   #logo { position: absolute; left: 50%; top: 50%; transform-origin: 0 0; }
-  #logo img { position: absolute; display: block; will-change: transform, opacity; }
+  #logo img, #logo canvas, #hawk { position: absolute; display: block; }
+  #hawk img { position: absolute; display: block; }
 </style>
 </head>
 <body>
 <div id="stage"><div id="logo"></div></div>
-<script>
-// Layer boxes in the 1310x1309 source, written by split_layers.py.
-const PARTS = [
-  { name: "hawk", x: 740, y: 405, w: 510, h: 235 },
-  { name: "script", x: 60, y: 440, w: 1090, h: 460 },
-  { name: "roofing_0", x: 585, y: 820, w: 68, h: 80 },
-  { name: "roofing_1", x: 657, y: 820, w: 75, h: 80 },
-  { name: "roofing_2", x: 738, y: 820, w: 75, h: 80 },
-  { name: "roofing_3", x: 822, y: 820, w: 62, h: 80 },
-  { name: "roofing_4", x: 892, y: 820, w: 19, h: 80 },
-  { name: "roofing_5", x: 923, y: 820, w: 66, h: 80 },
-  { name: "roofing_6", x: 998, y: 820, w: 69, h: 80 },
-];
-// Visible ink of the whole logo, used to centre and size it on screen.
-const INK = { x0: 67, x1: 1243, y0: 417, y1: 893 };
-
+<script type="module">
 const params = new URLSearchParams(location.search);
 const MODE = params.get("mode") || "intro";
-const DURATION = { intro: 3.6, outro: 3.2 }[MODE];
+const DURATION = { intro: 3.8, outro: 3.0 }[MODE];
 
+// Visible ink of the whole logo, used to centre and size it on screen.
+const INK = { x0: 67, x1: 1243, y0: 417, y1: 893 };
+// Shoulder pivots in source-image coordinates; wings turn about these.
+const FAR_SHOULDER = { x: 947, y: 505 };
+const NEAR_SHOULDER = { x: 1030, y: 512 };
+
+const { parts, rig } = await (await fetch("layers/layers.json")).json();
+const box = Object.fromEntries([...parts, ...rig].map(p => [p.name, p]));
 const logo = document.getElementById("logo");
-const el = {};
-for (const p of PARTS) {
-  const img = document.createElement("img");
-  img.src = `layers/${p.name}.png`;
-  Object.assign(img.style, { left: p.x + "px", top: p.y + "px", width: p.w + "px", height: p.h + "px" });
-  logo.appendChild(img);
-  el[p.name] = img;
+const place = (node, p, parent = logo, ox = 0, oy = 0) => {
+  Object.assign(node.style, { left: p.x - ox + "px", top: p.y - oy + "px", width: p.w + "px", height: p.h + "px" });
+  parent.appendChild(node);
+  return node;
+};
+const loadImg = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+
+// ---- the script, as a canvas we can reveal pixel by pixel in pen order ----
+const [scriptImg, timeImg] = await Promise.all([loadImg("layers/script.png"), loadImg("layers/script-time.png")]);
+const S = box.script;
+const scriptCanvas = place(document.createElement("canvas"), S);
+scriptCanvas.width = S.w; scriptCanvas.height = S.h;
+const sctx = scriptCanvas.getContext("2d");
+const pixels = (img) => { const c = new OffscreenCanvas(S.w, S.h).getContext("2d"); c.drawImage(img, 0, 0); return c.getImageData(0, 0, S.w, S.h).data; };
+const inkRGBA = pixels(scriptImg);
+const penTime = pixels(timeImg);          // red channel: 0 = no ink, 1..255 = when the pen gets there
+const frameBuf = sctx.createImageData(S.w, S.h);
+const inkIdx = [];
+for (let i = 0; i < penTime.length; i += 4) if (penTime[i] > 0) inkIdx.push(i);
+function setWritten(p, fade = 1) {
+  // p: 0..1 through the writing. A pixel fades in over ~1.5% of the writing as the pen passes.
+  const soft = 4, front = 1 + p * (254 + soft), d = frameBuf.data;
+  for (const i of inkIdx) {
+    const k = Math.min(1, Math.max(0, (front - penTime[i]) / soft));
+    d[i] = inkRGBA[i]; d[i + 1] = inkRGBA[i + 1]; d[i + 2] = inkRGBA[i + 2];
+    d[i + 3] = inkRGBA[i + 3] * k * fade;
+  }
+  sctx.putImageData(frameBuf, 0, 0);
 }
-const letters = PARTS.filter(p => p.name.startsWith("roofing_")).map(p => el[p.name]);
+
+// ---- ROOFING letters ----
+const letters = parts.filter(p => p.name.startsWith("roofing_")).map(p => {
+  const img = new Image(); img.src = `layers/${p.name}.png`; return place(img, p);
+});
+
+// ---- the hawk: far wing behind, body, near wing in front, plus the untouched original for rest ----
+const H = box.hawk;
+const hawk = place(Object.assign(document.createElement("div"), { id: "hawk" }), H);
+const rigImg = (name) => { const img = new Image(); img.src = `layers/${name}.png`; return place(img, box[name], hawk, H.x, H.y); };
+const farWing = rigImg("hawk_farwing"), body = rigImg("hawk_body"), nearWing = rigImg("hawk_nearwing");
+const hawkRest = rigImg("hawk");
+farWing.style.transformOrigin = `${FAR_SHOULDER.x - box.hawk_farwing.x}px ${FAR_SHOULDER.y - box.hawk_farwing.y}px`;
+nearWing.style.transformOrigin = `${NEAR_SHOULDER.x - box.hawk_nearwing.x}px ${NEAR_SHOULDER.y - box.hawk_nearwing.y}px`;
+hawk.style.transformOrigin = `${(FAR_SHOULDER.x + NEAR_SHOULDER.x) / 2 - H.x}px ${NEAR_SHOULDER.y - H.y}px`;
+await Promise.all([...logo.querySelectorAll("img")].map(i => i.decode()));
 
 // ---- timing helpers ----
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const span = (t, t0, t1) => clamp((t - t0) / (t1 - t0));      // 0..1 progress of t within [t0, t1]
+const span = (t, t0, t1) => clamp((t - t0) / (t1 - t0));
 const lerp = (a, b, k) => a + (b - a) * k;
+const smooth = k => k * k * (3 - 2 * k);
 const outCubic = k => 1 - Math.pow(1 - k, 3);
 const inCubic = k => k * k * k;
 const inOutCubic = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 const outBack = k => { const c = 1.25; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
 
-function layout() {
-  const W = innerWidth, H = innerHeight;
-  const inkW = INK.x1 - INK.x0;
-  const s = (W * 0.82) / inkW;
-  const cx = (INK.x0 + INK.x1) / 2, cy = (INK.y0 + INK.y1) / 2;
-  return { s, cx, cy };
+/*
+  Pose the hawk. `beat` is the wing-beat phase in cycles, `amp` 0..1 how hard it is flapping
+  (0 = the logo pose). Wings sweep from above the back down past the body; on the upstroke they
+  partly fold (shorter span), and the body lifts a little on each downstroke.
+*/
+function setHawk({ x = 0, y = 0, pitch = 0, scale = 1, beat = 0, amp = 0, raise = 0, opacity = 1 }) {
+  const phi = 2 * Math.PI * beat;
+  const w = -Math.cos(phi);                       // -1 top of upstroke .. +1 bottom of downstroke
+  const up = Math.max(0, -Math.sin(phi));         // how much it is on the upstroke
+  const angle = amp * (12 + 42 * w) - raise;      // degrees, + = wing tips down
+  const span = 1 - amp * (0.08 * w * w + 0.22 * up);
+  const chord = 1 - amp * 0.1 * Math.max(0, w);   // wing tilts away from us at the bottom
+  const lift = -amp * 7 * Math.sin(phi);
+  nearWing.style.transform = `rotate(${angle}deg) scale(${span}, ${chord})`;
+  farWing.style.transform = `rotate(${-angle * 0.85}deg) scale(${1 - (1 - span) * 1.1}, ${chord})`;
+  hawk.style.transform = `translate(${x}px, ${y + lift}px) rotate(${pitch}deg) scale(${scale})`;
+  hawk.style.opacity = opacity;
+  const rest = amp === 0 && raise === 0;
+  hawkRest.style.visibility = rest ? "visible" : "hidden";
+  for (const n of [farWing, body, nearWing]) n.style.visibility = rest ? "hidden" : "visible";
 }
-
-// Hawk pivot (its body) in source coords: flaps squash around this point.
-const HAWK_PIVOT = { x: 935 - 740, y: 540 - 405 };
-
-function setHawk({ dx = 0, dy = 0, rot = 0, scale = 1, flap = 1, opacity = 1 }) {
-  const h = el.hawk;
-  h.style.transformOrigin = `${HAWK_PIVOT.x}px ${HAWK_PIVOT.y}px`;
-  h.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${scale}, ${scale * flap})`;
-  h.style.opacity = opacity;
-}
-
-// Soft-edged left-to-right wipe. `from`/`to` are 0..1 across the script's width.
-function setScriptWipe(from, to) {
-  const f = 6; // feather, % of width
-  const a = from * (100 + 2 * f) - f, b = to * (100 + 2 * f) - f;
-  const g = `linear-gradient(90deg, transparent ${a - f}%, #000 ${a}%, #000 ${b}%, transparent ${b + f}%)`;
-  el.script.style.webkitMaskImage = g;
-  el.script.style.maskImage = g;
-}
-
-// Wing beats: squash the hawk vertically `beats` times over the progress k, fading out as it lands.
-const flapAt = (k, beats, depth) => 1 - depth * (1 - k) * Math.abs(Math.sin(Math.PI * beats * k));
 
 function renderIntro(t) {
-  // 0.00-1.05  hawk swoops in from the top right, beating its wings, and lands
-  const kf = span(t, 0.0, 1.05), e = outCubic(kf);
+  // 0.00-1.25  glides down from the top right, beating hard, then sets its wings and flares to land.
+  const k = span(t, 0, 1.25), e = outCubic(k);
+  const amp = 1 - smooth(span(t, 0.55, 1.1));
+  const pitch = lerp(-14, 0, smooth(span(t, 0.2, 0.9))) + 7 * Math.sin(Math.PI * span(t, 0.85, 1.4));
   setHawk({
-    dx: lerp(620, 0, e), dy: lerp(-760, 0, e) + Math.sin(kf * Math.PI) * -40,
-    rot: lerp(-28, 0, e), scale: lerp(1.9, 1, e),
-    flap: flapAt(kf, 3, 0.55), opacity: clamp(kf * 6),
+    x: lerp(700, 0, e), y: lerp(-820, 0, e) - 50 * Math.sin(Math.PI * k) * (1 - k),
+    pitch, scale: lerp(1.55, 1, e),
+    beat: 3.3 * t, amp: t < 1.4 ? amp : 0, opacity: clamp(t * 8),
   });
-  // Tiny settle as it lands.
-  const land = span(t, 1.05, 1.35);
-  if (land > 0) setHawk({ flap: 1 - 0.08 * Math.sin(Math.PI * land), dy: 6 * Math.sin(Math.PI * land) });
 
-  // 0.40-1.65  "Skybird" writes on left to right
-  setScriptWipe(0, inOutCubic(span(t, 0.40, 1.65)));
+  // 0.35-2.05  "Skybird" is written on, in pen order, dotting the i last.
+  setWritten(span(t, 0.35, 2.05));
 
-  // 1.45-2.35  ROOFING letters rise in one after another
+  // 1.95-2.85  ROOFING letters rise in one after another.
   letters.forEach((l, i) => {
-    const k = span(t, 1.45 + i * 0.07, 1.45 + i * 0.07 + 0.42);
+    const k = span(t, 1.95 + i * 0.07, 1.95 + i * 0.07 + 0.42);
     l.style.opacity = outCubic(k);
     l.style.transform = `translateY(${lerp(46, 0, outBack(k))}px)`;
   });
 
-  // Whole logo: gentle push-in for the full clip
-  return 1 + 0.035 * inOutCubic(span(t, 0, DURATION));
+  return 1 + 0.03 * inOutCubic(span(t, 0, DURATION));
 }
 
 function renderOutro(t) {
-  // 0.00-1.10  logo rests, slow push-in
-  // 1.00-1.25  hawk crouches, then 1.25-2.20 takes off up and to the right
-  const crouch = span(t, 1.0, 1.25);
-  const kf = span(t, 1.25, 2.2), e = inCubic(kf);
+  // 0.00-0.90  logo rests. 0.90-1.15 hawk crouches and lifts its wings, then takes off up and
+  // to the left, the way it faces, beating hard.
+  const crouch = Math.sin(Math.PI * span(t, 0.9, 1.2));
+  const k = span(t, 1.1, 2.1), e = inCubic(k);
+  const flying = t >= 1.1;
   setHawk({
-    dx: lerp(0, 760, e), dy: lerp(0, -820, e) + 10 * Math.sin(Math.PI * crouch) * (kf === 0 ? 1 : 0),
-    rot: lerp(0, -24, e), scale: lerp(1, 1.8, e),
-    flap: kf > 0 ? 1 - 0.55 * Math.abs(Math.sin(Math.PI * 3.5 * kf)) : 1 - 0.1 * Math.sin(Math.PI * crouch),
-    opacity: 1 - span(kf, 0.8, 1),
+    x: lerp(0, -900, e), y: lerp(0, -760, e) + 8 * crouch,
+    pitch: lerp(0, 10, smooth(k)) - 4 * crouch, scale: lerp(1, 1.5, e),
+    beat: flying ? 3.6 * (t - 1.1) + 0.5 : 0, amp: flying ? smooth(span(t, 1.1, 1.3)) : 0,
+    raise: flying ? 0 : 18 * smooth(span(t, 0.9, 1.1)),
+    opacity: 1 - span(k, 0.85, 1),
   });
 
-  // 1.45-2.30  ROOFING drops away, first letter first
+  // 1.35-2.10  ROOFING settles away, then the script fades up and out.
   letters.forEach((l, i) => {
-    const k = inCubic(span(t, 1.45 + i * 0.05, 1.45 + i * 0.05 + 0.35));
+    const k = inCubic(span(t, 1.35 + i * 0.04, 1.35 + i * 0.04 + 0.35));
     l.style.opacity = 1 - k;
-    l.style.transform = `translateY(${lerp(0, 40, k)}px)`;
+    l.style.transform = `translateY(${lerp(0, 30, k)}px)`;
   });
+  const out = smooth(span(t, 1.5, 2.2));
+  setWritten(1, 1 - out);
+  scriptCanvas.style.transform = `translateY(${-24 * out}px)`;
 
-  // 1.55-2.55  "Skybird" wipes away left to right, following the hawk
-  setScriptWipe(inOutCubic(span(t, 1.55, 2.55)), 1);
+  return 1.02 + 0.02 * inOutCubic(span(t, 0, 2.2));
+}
 
-  return 1.02 + 0.03 * inOutCubic(span(t, 0, 2.6));
+function layout() {
+  const s = (innerWidth * 0.82) / (INK.x1 - INK.x0);
+  return { s, cx: (INK.x0 + INK.x1) / 2, cy: (INK.y0 + INK.y1) / 2 };
 }
 
 window.render = function (t) {
@@ -144,7 +173,7 @@ window.render = function (t) {
   logo.style.transform = `scale(${s * zoom}) translate(${-cx}px, ${-cy}px)`;
 };
 window.DURATION = DURATION;
-window.ready = Promise.all([...logo.querySelectorAll("img")].map(i => i.decode()));
+window.ready = true;
 
 // Live preview when opened directly (the recorder sets ?record=1 and drives time itself).
 if (!params.has("record")) {
