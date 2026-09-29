@@ -48,7 +48,14 @@ pre-publish review checklist.
 ## Hard rules
 
 - Never publish homeowner name, phone, email, or street address — including in
-  image filenames and alt text.
+  image filenames and alt text. **A photo can carry all four in the picture** —
+  a signed checklist, a permit, a form on a clipboard. Filenames being clean is
+  not the same as the photo being clean (`docs/07-phase-4-preflight.md` §16).
+- **Uploaded media is public the moment it uploads.** A draft post hides the
+  page, not its files: WordPress serves `/wp-content/uploads/` directly, and the
+  review gate sits *after* the upload. Until that is fixed (`07` §16.4), every
+  photo must be eyeballed in CompanyCam before the `Website Showcase` label
+  goes on.
 - Map pins use stored offset coordinates. True CompanyCam coordinates are never
   written to WordPress.
 - Photos with `internal: true` are never included, even if tagged `Showcase`.

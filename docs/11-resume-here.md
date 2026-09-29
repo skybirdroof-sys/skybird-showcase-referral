@@ -23,7 +23,8 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | Workflow Code nodes | ✅ 30 assertions, `node tests/test-workflow.js` (added 2026-09-28) |
 | `project.label_added` webhook | ✅ Webhook `282006`, delivering, authenticating, 200 |
 | WordPress auth from n8n | ✅ Resolved 2026-09-28 — it was a missing `www` (`07` §15.1) |
-| End-to-end run | ⏳ Four bugs found and fixed on real deliveries. Next run is the one that should produce the draft |
+| End-to-end run | ✅ **Ran 2026-09-28 01:19.** Four photos uploaded, draft created |
+| **PII review** | 🔴 **Failed.** One curated photo was a signed checklist carrying the homeowner's name and address. Public for ~2 hours (`07` §16) |
 
 **Nothing is blocked on a decision.** Every open item is an action.
 
@@ -332,3 +333,50 @@ phone or email, and nothing of the sort in any image filename or alt text.
   a live misconfiguration on the real site, not just an n8n inconvenience.
 - ProLine read path (`01` §4.2 Q2) — until it exists, titles stay town-only and
   the specs table stays empty.
+
+
+---
+
+# 2026-09-28, 01:19 — it ran, and it leaked
+
+Every node worked. The pipeline published a homeowner's name and street address
+anyway, because one of the four `Showcase`-tagged photos was a photograph of a
+signed post-install checklist. Full account: `07` §16.
+
+## Do these in order
+
+1. **Delete attachment 1175** (`Skybird-roof-youngsville-110848078-3`) in the
+   Media Library — *Delete Permanently*, which also removes the `-scaled` copy
+   and every generated thumbnail. Deleting the file over SFTP does not.
+2. **Purge the Cloudflare cache** for that path.
+3. **Untag the photo in CompanyCam** so a re-run cannot pull it back in.
+   *(Done 2026-09-28.)*
+4. **Read the draft's `approx_lat` / `approx_lng`.** Real coordinates are
+   `36.07117, -78.55830`; the stored pair must be 0.2–0.3 mi away. Still
+   unverified — it needs an authenticated read and nothing in this session has
+   the `skybird-sync` password.
+
+## Then decide the thing that actually matters
+
+**A draft does not protect its attachments.** Media is served straight off disk
+the moment `POST /wp/v2/media` returns — before `Create Draft` runs, before any
+human sees anything. "Nothing publishes automatically" was only ever true of
+the *post*.
+
+`07` §16.4 lays out three options. The only one that closes it is splitting the
+workflow so a human approves the photo set **before** anything uploads. That
+changes the shape of the Phase 4 deliverable, so it is Jacob's call, not a
+change to make quietly.
+
+Until then the control is entirely manual: **look at every photo in CompanyCam
+before adding the `Website Showcase` label.** Not the filenames — the pictures.
+
+## Also open from this run
+
+- **Something on the live site writes AI alt text onto uploads**, describing
+  image contents. The plugin generates alt at render time from product fields
+  and assumed nothing else did (`07` §16.5). Find the plugin; decide whether it
+  should touch `project` media at all.
+- The four filenames, the cover choice, the gallery order and the draft status
+  were all correct. The failure was upstream of the code and downstream of the
+  gate.

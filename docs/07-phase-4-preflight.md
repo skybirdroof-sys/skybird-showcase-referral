@@ -1279,3 +1279,119 @@ outside a live run:
 Each of the three fixes was verified by reinstating the bug and watching the
 suite fail: Fault 1 fails 3 assertions, the missing Always Output Data fails 1,
 and `.first().json` fails 23.
+
+---
+
+## 16. The first real draft, and the PII it published — 2026-09-28
+
+The workflow ran end to end at **01:19:48**. Four photos uploaded, filenames
+correct and PII-free:
+
+```
+Skybird-roof-youngsville-110848078-cover.jpeg   id 1173
+Skybird-roof-youngsville-110848078-1.jpeg       id 1176
+Skybird-roof-youngsville-110848078-2.jpeg       id 1174
+Skybird-roof-youngsville-110848078-3.jpeg       id 1175
+```
+
+Every node behaved as designed. **And the homeowner's name and street address
+went onto a public URL anyway.**
+
+### 16.1 What was published
+
+Attachment **1175** is a photograph of a *Landing* post-installation quality
+checklist on a clipboard, shot on the job. Printed form, handwritten entries:
+homeowner's full name, full street address with town and ZIP, inspector's name,
+signature, dates. All legible at full resolution.
+
+It sat at
+`/wp-content/uploads/2026/09/Skybird-roof-youngsville-110848078-3-scaled.jpeg`
+for roughly two hours before anyone looked. Confirmed fetchable from outside
+the network, unauthenticated.
+
+The other three are clean and were checked image by image, not by filename: the
+cover is an aerial of the finished roof with no house number or plate visible;
+`-1` is a close-up of the old shingles; `-2` is a crew member mid-tear-off.
+
+### 16.2 Why the automation let it through
+
+It did what it was told. The photo carries the `Showcase` tag, `internal` is
+`false`, `processing_status` is `processed`. Every filter in `Curate` passed it
+because every filter was satisfied.
+
+The tag was the mistake, and the tag is a human's. `docs/06-trigger-design.md`
+§3 already anticipates exactly this — *"not warranty/QA documentation"* is in
+the reviewer's checklist in as many words. **But that checklist runs before
+*publish*, and this never needed publishing to leak.**
+
+### 16.3 The actual design fault: a draft does not protect its files
+
+This is the part that is ours, and it is a genuine hole in the guarantee this
+whole phase is built on.
+
+> **"Nothing publishes automatically" was only ever true of the post.**
+
+WordPress attachments are files on disk under `/wp-content/uploads/`, served
+directly by nginx. They have a URL the moment `POST /wp/v2/media` returns, and
+that URL does not care about the status of any post. A draft post is invisible;
+its attachments are not. The media went up at 01:19:48 — **before** `Create
+Draft` ran, **before** any human could have looked at anything, and the review
+gate was never positioned to catch it.
+
+The gate protects the page. The files go up first. Nothing in `docs/05`,
+`docs/06` or `docs/10` noticed the gap, because all three reason about the
+*post* as the unit of publication.
+
+### 16.4 Options, and the one worth taking
+
+| | |
+|---|---|
+| **A. Gate the upload, not the post** | Split the workflow: `Curate` builds a draft with no media and a list of candidate photo URLs; a human approves the set; a second workflow uploads and attaches. The gate moves in front of the only irreversible step |
+| **B. Upload into a protected directory** | Move files on publish. Fights WP Engine's nginx rules and every image-size regeneration in WordPress |
+| **C. Auto-reject document-shaped photos** | A classifier guessing "is there writing in this". It will miss one, and a miss is a leak |
+
+**A is the only one that closes it.** B and C both leave the automation writing
+files nobody has looked at into a public directory; they just make it less
+likely to matter. C is worth having *in addition* — never as the control.
+
+Not implemented yet. It changes the shape of Phase 4's deliverable, so it is a
+decision for Jacob, recorded here rather than taken.
+
+### 16.5 Something is writing AI alt text onto uploads
+
+Found incidentally, and it is how the checklist was caught at all. WordPress's
+stored `_wp_attachment_image_alt` on these four uploads is populated with
+generated descriptions of the image *contents*:
+
+> *"Skybird Roofing logo with 'The Landing' post-installation checklist on a
+> clipboard, handwritten name and address filled in."*
+
+The workflow sets no alt text. `docs/07` §2.4.1 and
+`plugin/skybird-projects/includes/template.php` both assume alt is generated at
+**render** time from ProLine product fields, and that CompanyCam image content
+never reaches it. A plugin on the live site is doing otherwise.
+
+Two consequences:
+
+1. **`skybird_projects_image_alt()` may not be what ships.** If the plugin
+   writes the `alt` attribute at render, the stored value wins wherever the
+   theme or a block renders the image instead.
+2. **It can transcribe PII directly.** This one described a name and address
+   without reproducing them. Nothing guarantees the next one will be so
+   discreet — a legible sign, a form, a vehicle door.
+
+Identify the plugin and decide whether it runs on `project` media at all.
+
+### 16.6 What this cost, and what it bought
+
+A real homeowner's name and address were publicly reachable for about two
+hours. That is the failure, and no amount of correct node behaviour offsets it.
+
+What it bought: the gap was found by a test project belonging to a customer
+Skybird has a relationship with, on the first run, rather than by the fortieth
+project and a stranger. The fix is a workflow split, not a rebuild.
+
+**Rule earned:** *ask what the automation makes reachable, not what it makes
+visible.* Draft status, `noindex`, an unlinked URL and an unpublished post are
+all visibility controls. None of them is an access control, and uploaded files
+answer to none of them.
