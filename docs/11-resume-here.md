@@ -415,6 +415,10 @@ will find 1177 and correctly drop the delivery.
 
 - **The upload gate** (`07` §16.4) — the real decision. Media is public the
   moment it uploads; the review gate sits after it.
+- **Per-project detail** (`docs/12`) — every page is currently the same
+  sentence with the town swapped, which is the shape search engines treat as
+  doorway pages. The capture field already exists (CompanyCam's Project
+  Description, already in the payload) and is empty. Proposed, not built.
 - **Whatever writes AI alt text onto uploads** (`07` §16.5). Imagify is
   installed and is the likely culprit.
 - `approx_lat` / `approx_lng` have **no admin UI**. ACF suppresses the native

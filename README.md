@@ -25,6 +25,7 @@ Built in-house on Skybird-owned infrastructure. See
 | [`docs/09-euan-answers.md`](docs/09-euan-answers.md) | 4 | **Answered** — §2.2 closed bar the security plugin |
 | [`docs/10-n8n-workflow.md`](docs/10-n8n-workflow.md) | 4 | The workflow's reasoning, node by node |
 | [`docs/11-resume-here.md`](docs/11-resume-here.md) | 4 | **Start here** — current state and the exact next action |
+| [`docs/12-project-notes-path.md`](docs/12-project-notes-path.md) | 4/5 | **Proposed** — where per-project detail comes from, so every page isn't the same sentence |
 
 ## Code
 
