@@ -1309,6 +1309,23 @@ It sat at
 for roughly two hours before anyone looked. Confirmed fetchable from outside
 the network, unauthenticated.
 
+**Removed 2026-09-28.** Deleted permanently from the Media Library, then
+verified from outside the network: original, `-scaled`, every generated
+thumbnail, the REST record and the `.webp` variants all 404.
+
+Deleting the attachment was not sufficient on its own. The first check
+afterwards still returned **200** on the `-scaled` copy, with
+`cf-cache-status: HIT`, `age: 649` and `cache-control: max-age=31536000` — a
+one-year TTL, so it would never have expired by itself. The same URL with a
+random query string returned 404, which is what proved the file was off disk
+and the 200 was purely Cloudflare. A *Quick clear all cache* in WP Engine
+cleared it; the URL now answers `404` with `cf-cache-status: BYPASS`.
+
+**Worth keeping:** on a cached site, deleting a file does not unpublish it, and
+the deletion UI gives no sign of that. Always re-fetch the real URL from
+outside the network afterwards, and always with a cache-buster — a plain
+re-fetch will cheerfully serve you the copy you are trying to destroy.
+
 The other three are clean and were checked image by image, not by filename: the
 cover is an aerial of the finished roof with no house number or plate visible;
 `-1` is a close-up of the old shingles; `-2` is a crew member mid-tear-off.

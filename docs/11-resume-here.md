@@ -24,7 +24,7 @@ Phase 4's goal: **one real CompanyCam project → one real WordPress draft, noth
 | `project.label_added` webhook | ✅ Webhook `282006`, delivering, authenticating, 200 |
 | WordPress auth from n8n | ✅ Resolved 2026-09-28 — it was a missing `www` (`07` §15.1) |
 | End-to-end run | ✅ **Ran 2026-09-28 01:19.** Four photos uploaded, draft created |
-| **PII review** | 🔴 **Failed.** One curated photo was a signed checklist carrying the homeowner's name and address. Public for ~2 hours (`07` §16) |
+| **PII review** | 🔴 **Failed, then contained.** One curated photo was a signed checklist carrying the homeowner's name and address. Public for ~2 hours; deleted and cache-purged, verified gone (`07` §16) |
 
 **Nothing is blocked on a decision.** Every open item is an action.
 
@@ -345,12 +345,11 @@ signed post-install checklist. Full account: `07` §16.
 
 ## Do these in order
 
-1. **Delete attachment 1175** (`Skybird-roof-youngsville-110848078-3`) in the
-   Media Library — *Delete Permanently*, which also removes the `-scaled` copy
-   and every generated thumbnail. Deleting the file over SFTP does not.
-2. **Purge the Cloudflare cache** for that path.
-3. **Untag the photo in CompanyCam** so a re-run cannot pull it back in.
-   *(Done 2026-09-28.)*
+1. ~~Delete attachment 1175~~ — **done 2026-09-28.**
+2. ~~Purge the cache~~ — **done.** The delete alone was not enough: Cloudflare
+   held the `-scaled` copy on a one-year TTL and kept serving it. A WP Engine
+   *Quick clear all cache* fixed it. Verified 404 from outside.
+3. ~~Untag the photo in CompanyCam~~ — **done 2026-09-28.**
 4. **Read the draft's `approx_lat` / `approx_lng`.** Real coordinates are
    `36.07117, -78.55830`; the stored pair must be 0.2–0.3 mi away. Still
    unverified — it needs an authenticated read and nothing in this session has
