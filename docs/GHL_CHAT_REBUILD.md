@@ -55,6 +55,38 @@ back.
 
 ---
 
+## 2a. What the HighLevel account shows (read-only API check, 2026-09-30)
+
+A Private Integration token is connected as an environment API credential.
+Only reads were made, and nothing was changed.
+
+- **Inspection calendar (likely F4):** "Skybird Storm & Leak Inspection",
+  id `WUUK3NkRWQKjGdcppqnr`, slug `meta-calendar-bookings`. That's the same
+  booking link the live workflow texts out. It's round robin across John
+  Vollmer, Anas Elakri and Henry Styron: 60-minute slots, 15-minute buffers,
+  bookable from 4 hours out up to 21 days ahead, 9 per day max, reschedule and
+  cancel allowed. Its description says "complimentary inspection" (a hint for
+  F5, but Jacob still needs to confirm the wording). The API showed about 11
+  open slots per weekday next week.
+- **Users who could take handoffs (F7/F8):** Jacob Vollmer, John Vollmer,
+  Margaret Vollmer, Euan Swan (admins); Henry Styron, Anas Elakri, Kayla
+  Rosal (users).
+- **Pipeline:** "Skybird Roofing Pipeline (PPM)" already has the stages
+  "Website Chat Form Submitted" and "Appointment Booked". Workflows A/B
+  should use those, not new stages.
+- **Existing published workflows to reuse, not duplicate:**
+  "Appointment Booked - Henry", "Appointment Booked - John + Anas",
+  "Appointment Booked - Reminder Sequence (2 hours before)",
+  "Skybird Roofing - Chat Widget Leads". Read these in the builder before
+  building Workflow A; it may already exist. "Send to Proline" is a
+  **draft**.
+- **Not visible to the API:** the live workflow
+  `dd528ebe-…` is not in the workflow list (28 returned, including the
+  SANDBOX draft), and the live bot `eCbg9EpJeVzGrb6e3Rad` returns "Agent not
+  found" from the Conversation AI API. Agent search reports 1 agent but
+  returns none. So the current chat bot can't be read or edited through
+  the API, and it has to be checked in the UI.
+
 ## 3. Facts to fill in before building (the bot must not guess these)
 
 The bot will make things up if these are blank. Each one needs a real answer
