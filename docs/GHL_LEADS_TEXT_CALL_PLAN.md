@@ -154,6 +154,42 @@ dials the lead, logged in HighLevel. Do it later if Jacob wants it. An AI
 voice placing outbound calls is *not* recommended: per-minute cost, plus FCC
 written-consent rules for AI-voice calls to cell phones.
 
+## 3a. Spam leads, and Euan's "Jessica calls Meta leads" idea
+
+**Spam.** 5 of the last 27 Meta leads are tagged `spam call` or `bad lead`,
+all in September. Excluding them, the real baseline is **4 of 22 Meta leads
+booked**. Rules for every bot: a contact tagged `spam call` or `bad lead`
+gets no follow-up texts and no calls, and the bot stops. Cheapest fix
+upstream: in Meta Ads Manager, set the Instant Form type to **Higher
+intent** (adds a review step before submit). That's free and cuts junk.
+
+**Euan's idea has two parts:**
+1. *Pick up a call Jacob misses:* **yes.** That's Fix 3 (people first,
+   Voice AI as overflow and after hours). The caller dialed us, so there's
+   no consent issue. Do this first.
+2. *Jessica calls Meta leads:* calling fast is the right instinct. Speed to
+   first contact is the biggest lever on set rate. Doing it with an AI voice
+   needs three things first:
+   - **Consent.** Under the FCC's 2024 ruling, AI-voice calls to a cell
+     phone are "artificial voice" calls under the TCPA and need the lead's
+     prior express consent, written consent for sales calls. The Meta form's
+     disclaimer has to name Skybird and cover calls and texts, including
+     automated or AI. Jacob or Euan to send a screenshot of the form's
+     privacy / custom disclaimer screen.
+   - **Spam screen.** A spam lead often has someone else's real number on it.
+     An AI call to that person had no consent at all, and that's where TCPA
+     exposure is ($500–$1,500 per call). Only call leads that aren't tagged
+     spam, and preferably ones that have replied to the first text.
+   - **Minutes.** Per-minute Voice AI cost on every lead, spam included.
+
+   **Proposed test:** the first 2 weeks after the text bot launches, use the
+   free HighLevel **Call** bridge (rings Jacob, then dials the lead, logged)
+   within a minute on weekdays. Then, if the consent wording checks out, turn
+   on Voice AI outbound for nights and weekends only, for leads that pass
+   the spam screen. Compare booked per real lead against 4/22. Honest
+   caveat: at about 7 real Meta leads a week, a month of data only shows a
+   big difference, not a small one.
+
 ## 4. Decisions needed from Jacob
 
 1. **Calls:** who rings first on weekdays before Voice AI picks up (just
