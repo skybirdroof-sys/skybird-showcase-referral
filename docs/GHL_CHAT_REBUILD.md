@@ -5,7 +5,12 @@ For: whoever builds it in GoHighLevel (Jessica, or Claude once it has GHL access
 Rules carried from the handoff: spend nothing, do not touch ProLine, ProLine stays
 the CRM of record, no HubSpot, and no new chat vendor.
 
-Status: **spec only. Nothing in GoHighLevel has been changed.**
+Status (2026-10-01): **new bot created in HighLevel, switched OFF, no
+channels.** Agent "Skybird Website Chat (new)", id `nUr4lwciitjDcYsL0N2Z`.
+The live workflow and live bot are untouched. The prompt lives in
+`docs/ghl-bot/prompt.md`, and the settings and actions in
+`docs/ghl-bot/agent.config.json`. Push changes with
+`node scripts/ghl-agent.mjs push` and read the bot back with `show`.
 
 ---
 
@@ -104,6 +109,21 @@ Only reads were made, and nothing was changed.
   the API, and it has to be checked in the UI.
 
 ## 3. Facts to fill in before building (the bot must not guess these)
+
+**Answered by Jacob, 2026-10-01:** F4 = Skybird Storm & Leak Inspection
+calendar. F7/F8 = Jacob. F3 = Raleigh and surrounding area, up to about an
+hour from Raleigh, NC only, with homes near Wake Forest reached fastest. F5 =
+same-day or next-day inspections and quotes; the calendar calls the
+inspection complimentary. F9 = (919) 858-2895. F10 = respond fast and tarp
+if needed. F11 = Skybird specializes in insurance claims and tells the
+homeowner when there's an opportunity. F12 = **$1,500** repair minimum,
+explained naturally, never as a yes/no gate. F2 isn't answered, so the bot
+hands off instead of guessing. All of this is in `docs/ghl-bot/prompt.md`.
+
+Open: Grok Bot's tests saw the live bot quote **$850**, not $1,500. Also,
+skybirdroofing.net has a Greenville service-area page, and Greenville is
+more than an hour from Raleigh.
+
 
 The bot will make things up if these are blank. Each one needs a real answer
 from Jacob.

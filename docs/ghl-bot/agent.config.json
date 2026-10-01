@@ -1,0 +1,102 @@
+{
+  "agent": {
+    "name": "Skybird Website Chat (new)",
+    "businessName": "Skybird Roofing",
+    "mode": "off",
+    "isPrimary": false,
+    "waitTime": 5,
+    "waitTimeUnit": "seconds",
+    "sleepEnabled": true,
+    "sleepTime": 24,
+    "sleepTimeUnit": "hours",
+    "sleepOnManualMessage": true,
+    "sleepOnWorkflowMessage": false,
+    "autoPilotMaxMessages": 30,
+    "respondToImages": false,
+    "respondToAudio": false
+  },
+  "actions": [
+    {
+      "type": "appointmentBooking",
+      "name": "Book inspection",
+      "details": {
+        "calendarId": "WUUK3NkRWQKjGdcppqnr",
+        "onlySendLink": false,
+        "triggerWorkflow": false,
+        "sleepAfterBooking": true,
+        "sleepTime": 24,
+        "sleepTimeUnit": "hours",
+        "transferBot": false,
+        "rescheduleEnabled": true,
+        "cancelEnabled": true
+      }
+    },
+    {
+      "type": "humanHandOver",
+      "name": "Handover: asked for a person",
+      "details": {
+        "enabled": true,
+        "handoverType": "contactRequest",
+        "triggerCondition": "The homeowner asks for a call, a person, or a human, or says they want to talk to someone before booking. Only hand over after you have their name and mobile number, or they have refused to give them.",
+        "examples": ["can someone call me", "just a call first", "I want to talk to a real person", "call me", "can I speak to someone"],
+        "assignToUserId": "sIT5Tvb7YDcgWQc9DHZl",
+        "skipAssignToUser": false,
+        "createTask": true,
+        "reactivateEnabled": true,
+        "sleepTime": 1,
+        "sleepTimeUnit": "days",
+        "finalMessage": "Thanks! I've passed this to Jacob on our team. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
+        "tags": ["human_handover", "website_chat"]
+      }
+    },
+    {
+      "type": "humanHandOver",
+      "name": "Handover: bot doesn't know",
+      "details": {
+        "enabled": true,
+        "handoverType": "lackOfInformation",
+        "triggerCondition": "The homeowner asks something the facts in your instructions do not answer, or asks about a service you are not sure Skybird offers. Collect name and mobile first.",
+        "assignToUserId": "sIT5Tvb7YDcgWQc9DHZl",
+        "skipAssignToUser": false,
+        "createTask": true,
+        "reactivateEnabled": true,
+        "sleepTime": 1,
+        "sleepTimeUnit": "days",
+        "finalMessage": "Good question. I've passed it to Jacob on our team so you get the right answer. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
+        "tags": ["human_handover", "website_chat"]
+      }
+    },
+    {
+      "type": "humanHandOver",
+      "name": "Handover: still unclear after two tries",
+      "details": {
+        "enabled": true,
+        "handoverType": "failedToResolveIssue",
+        "triggerCondition": "Two clarifying questions have not made clear what the homeowner wants, or the homeowner is interested but will not pick a time (for example comparing quotes, or the price feels high). Collect name, mobile and the job first.",
+        "assignToUserId": "sIT5Tvb7YDcgWQc9DHZl",
+        "skipAssignToUser": false,
+        "createTask": true,
+        "reactivateEnabled": true,
+        "sleepTime": 1,
+        "sleepTimeUnit": "days",
+        "finalMessage": "No problem. I've passed your details to Jacob on our team. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
+        "tags": ["human_handover", "website_chat"]
+      }
+    },
+    {
+      "type": "stopBot",
+      "name": "Stop: clear no",
+      "details": {
+        "enabled": true,
+        "stopBotDetectionType": "Custom",
+        "stopBotTriggerCondition": "The person clearly says no, asks you to stop, says they are not interested, or is not a homeowner or customer (a vendor, a solicitor, or a wrong number). A price concern, comparing quotes, or 'not right now' is NOT a stop.",
+        "stopBotExamples": ["stop", "not interested", "wrong number", "please stop messaging me", "I'm a vendor, not a customer"],
+        "finalMessage": "Understood, thanks for letting us know. Take care.",
+        "reactivateEnabled": true,
+        "sleepTime": 7,
+        "sleepTimeUnit": "days",
+        "tags": ["website_chat", "chat_stopped"]
+      }
+    }
+  ]
+}
