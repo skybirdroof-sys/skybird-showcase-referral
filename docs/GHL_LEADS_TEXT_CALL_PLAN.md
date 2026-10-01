@@ -214,3 +214,31 @@ Same report, re-run four weeks after launch: Meta-lead reply rate (baseline
   can build them, with Claude writing the exact steps.
 - Optional, to read Voice AI and phone-number settings: add `voice-ai-agents.readonly`
   and `phonenumbers.read` to the token. Not needed for the plan above.
+
+## 7. Voice AI as it is today (read through the API, 2026-10-01)
+
+Two Voice AI agents with the same ~9,800-character prompt:
+- **"Jessica - Number Pool (PPM)"** (`6a8c5417f0c3b90915794cd0`), attached to
+  number pool `YtAEZDkwiwiR8E6a2QuH`.
+- **"Jessica"** (`6a8c59b18fada9eaa6bf8fb0`), attached to inbound numbers
+  +1 984-217-6784 and +1 984-391-2495.
+
+Both are still attached to numbers through the API. Jacob says he disabled
+Jessica on calls, so check where: if it was in phone routing, these
+attachments are harmless.
+
+Findings:
+- The prompt says **"our repairs start at $850 … Does that sound okay to
+  you?"** That's the wrong number, used as a yes/no gate.
+- **Post-call notifications go only to euan@pitchpeakmarketing.com**. Nobody
+  at Skybird got them, which is why callers asking to cancel were never
+  followed up.
+- No working hours are set, so she answers 24/7 when routed. She has no
+  call-end workflows and no spam blocking.
+- Actions: book, fetch, cancel and reschedule appointments, "Transfer to
+  Owner", knowledge base, and a project-summary field. Call summaries are
+  saved as notes, which is good.
+
+The rebuild should reuse the transfer action and the summary note, swap in the
+shared prompt rules, send notifications to Jacob, and run only as overflow
+or after hours.
