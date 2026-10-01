@@ -11,6 +11,22 @@ Status: **spec only. Nothing in GoHighLevel has been changed.**
 
 ## 1. Why the current chat dies
 
+Live tests by Jessica and Grok Bot (Sep 30 – Oct 1) are enough to replace it.
+No more tests on the old bot are needed. What they showed:
+
+- Only one path books: small leak → yes to the $850 minimum → "in the next
+  2 weeks".
+- These all get "All good, thanks for your time…" with no person involved:
+  "No, that's more than I want to spend", and "Full re roof" → "Compare for
+  now but needs to be done sooner than later" (same as Zachary Barnhardt,
+  Sep 29).
+- "I want to book an inspection tomorrow" gets misrouted to repairs and stops
+  at the $850 question.
+- "can someone call me" → "anytime" ends with no handoff.
+- Every chat opens with a booking link and "Give us a minute to assign you
+  the best person", but no step assigns, texts, or tasks anyone.
+- Replies are slow, often 30–90 seconds.
+
 The live chat is the workflow **"Jessica Conversation AI Workflow"**
 (`dd528ebe-d751-4f93-aa69-9f9a92245a1e`). It runs a chain of **Conversation AI
 workflow actions**. Each one is a router: it asks one question and sends the
@@ -105,6 +121,7 @@ from Jacob.
 | F9 | Office phone number the bot may give out | ☐ |
 | F10 | Emergency leak policy (active water coming in tonight: what should the bot say?) | ☐ |
 | F11 | Insurance/storm claims: does Skybird help with them, and what may the bot say? | ☐ |
+| F12 | The **$850 repair minimum** the live bot quotes: keep saying it? Before or after booking? And when someone says it's too much, should the chat end or go to a person? (Recommended: a person, since they may need a replacement or financing.) | ☐ |
 
 Tone rules already set: local family company, fifth generation, GAF Master
 Elite. Never say "free roof". No scare tactics. Never state a number of years
@@ -276,6 +293,10 @@ Rules for testing:
 | T12 | Handover on Saturday | After-hours line; Monday-morning task for {{F8}} |
 | T13 | Handover on a weekday during hours | Assigned user gets a notification and an internal SMS |
 | T14 | Ask "how long have you been in business?" | Family / fifth generation, no years figure |
+| T15 | "small leak" → told the $850 minimum → "No, that's more than I want to spend" | Follows F12; does not end with the old goodbye unless Jacob chose that |
+| T16 | "Full re roof" → "yes, in the next 2 weeks" | Booked |
+| T17 | "Need new gutters" | Booked or handover with the job noted as gutters |
+| T18 | First message at any time | No "assign you the best person" promise unless a person really gets assigned; first reply in under ~15 s |
 
 Record each run (date, contact id, pass/fail, and a screenshot of the
 calendar or task) at the bottom of this file.
