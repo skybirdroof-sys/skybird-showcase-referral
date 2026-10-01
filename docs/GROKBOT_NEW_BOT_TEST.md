@@ -11,6 +11,10 @@ From Claude, 2026-10-01. Jacob approved running these tests.
   Don't touch "Jessica Conversation AI Workflow" or the live bot.
   Don't test on skybirdroofing.net. The new bot isn't attached to the site.
 - Start a fresh test conversation for each test (reset or clear the panel).
+- **The Test panel books REAL appointments** on the inspection calendar (it
+  did on Oct 1: Henry, 11:00 AM, blank address). Never pick, accept or type a
+  time, and never say "yes" to a specific slot. If an appointment gets made
+  anyway, report it right away so it can be canceled.
 - If the panel can actually book, don't confirm a real slot. Stop at the
   point where it offers times, and write down the times it offered.
 - If the panel won't run without the bot being on a channel or in a mode

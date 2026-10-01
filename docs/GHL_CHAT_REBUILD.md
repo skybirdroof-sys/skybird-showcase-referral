@@ -365,3 +365,5 @@ connector here. Options, cheapest first:
 | Date | Test | Contact id | Result | Evidence |
 |---|---|---|---|---|
 | | | | | |
+| 2026-09-30 / 10-01 | Grok Bot, test panel, 12 tests (GROKBOT_NEW_BOT_TEST.md) | test panel identity = office contact `ktqQjwieG48m5891fh3r` | 6 pass, 6 fail | Fails: said "someone" not Jacob (1, 2, 4); 4 times offered (5); 3rd clarifying question (9); no GAF in the years answer (11). 9 and 12 "existing appointment" was **real**: the panel booked `XI655SRD3GzdGuJ5qMqG` (Oct 1 11:00, Henry, no name or address). Prompt fixed and pushed Oct 1. |
+
