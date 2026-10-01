@@ -120,7 +120,7 @@ homeowner when there's an opportunity. F12 = **$1,500** repair minimum,
 explained naturally, never as a yes/no gate. F2 isn't answered, so the bot
 hands off instead of guessing. All of this is in `docs/ghl-bot/prompt.md`.
 
-Open: Grok Bot's tests saw the live bot quote **$850**, not $1,500. Also,
+Confirmed by Jacob: the minimum is $1,500, so the live bot quoting **$850** is wrong. That gets fixed by retiring it, not by editing it. Also,
 skybirdroofing.net has a Greenville service-area page, and Greenville is
 more than an hour from Raleigh.
 
