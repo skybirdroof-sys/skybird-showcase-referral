@@ -38,7 +38,13 @@
         "enabled": true,
         "handoverType": "contactRequest",
         "triggerCondition": "The homeowner asks for a call, a person, or a human, or says they want to talk to someone before booking. Only hand over after you have their name and mobile number, or they have refused to give them.",
-        "examples": ["can someone call me", "just a call first", "I want to talk to a real person", "call me", "can I speak to someone"],
+        "examples": [
+          "can someone call me",
+          "just a call first",
+          "I want to talk to a real person",
+          "call me",
+          "can I speak to someone"
+        ],
         "assignToUserId": "sIT5Tvb7YDcgWQc9DHZl",
         "skipAssignToUser": false,
         "createTask": true,
@@ -46,7 +52,10 @@
         "sleepTime": 1,
         "sleepTimeUnit": "days",
         "finalMessage": "Thanks! I've passed this to Jacob on our team. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
-        "tags": ["human_handover", "website_chat"]
+        "tags": [
+          "human_handover",
+          "website_chat"
+        ]
       }
     },
     {
@@ -62,8 +71,11 @@
         "reactivateEnabled": true,
         "sleepTime": 1,
         "sleepTimeUnit": "days",
-        "finalMessage": "Good question. I've passed it to Jacob on our team so you get the right answer. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
-        "tags": ["human_handover", "website_chat"]
+        "finalMessage": "Good question. I've passed it to Jacob, the owner. If we don't have your number yet, reply with your name and best mobile and he'll call you.",
+        "tags": [
+          "human_handover",
+          "website_chat"
+        ]
       }
     },
     {
@@ -72,15 +84,18 @@
       "details": {
         "enabled": true,
         "handoverType": "failedToResolveIssue",
-        "triggerCondition": "Two clarifying questions have not made clear what the homeowner wants, or the homeowner is interested but will not pick a time (for example comparing quotes, or the price feels high). Collect name, mobile and the job first.",
+        "triggerCondition": "Use ONLY after you have asked for the homeowner's name and mobile number for Jacob. Fire once they give them, or once they have ignored or refused that request. Never fire on the second or third unclear message by itself: first ask for name and mobile for Jacob.",
         "assignToUserId": "sIT5Tvb7YDcgWQc9DHZl",
         "skipAssignToUser": false,
         "createTask": true,
         "reactivateEnabled": true,
         "sleepTime": 1,
         "sleepTimeUnit": "days",
-        "finalMessage": "No problem. I've passed your details to Jacob on our team. During business hours he'll reach out shortly; otherwise he'll call you first thing in the morning.",
-        "tags": ["human_handover", "website_chat"]
+        "finalMessage": "Thanks. I've let Jacob, the owner, know. If we don't have your number yet, reply with your name and best mobile and he'll call you.",
+        "tags": [
+          "human_handover",
+          "website_chat"
+        ]
       }
     },
     {
@@ -90,12 +105,21 @@
         "enabled": true,
         "stopBotDetectionType": "Custom",
         "stopBotTriggerCondition": "The person clearly says no, asks you to stop, says they are not interested, or is not a homeowner or customer (a vendor, a solicitor, or a wrong number). A price concern, comparing quotes, or 'not right now' is NOT a stop.",
-        "stopBotExamples": ["stop", "not interested", "wrong number", "please stop messaging me", "I'm a vendor, not a customer"],
+        "stopBotExamples": [
+          "stop",
+          "not interested",
+          "wrong number",
+          "please stop messaging me",
+          "I'm a vendor, not a customer"
+        ],
         "finalMessage": "Understood, thanks for letting us know. Take care.",
         "reactivateEnabled": true,
         "sleepTime": 7,
         "sleepTimeUnit": "days",
-        "tags": ["website_chat", "chat_stopped"]
+        "tags": [
+          "website_chat",
+          "chat_stopped"
+        ]
       }
     }
   ]
