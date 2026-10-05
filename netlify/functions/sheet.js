@@ -16,7 +16,7 @@
 /* The tab list, the gviz URL shape and the not-CSV guard live in one place so
  * the watchdog in health.js cannot disagree with this proxy about what a Talon
  * tab is. See netlify/lib/tabs.js. */
-const { env, slots, gvizUrl, notCsv, cacheSecondsFor } = require('../lib/tabs');
+const { env, slots, gvizUrl, notCsv, wrongTab, cacheSecondsFor } = require('../lib/tabs');
 
 const text = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -74,7 +74,7 @@ exports.handler = async (event) => {
 
       const body = await res.text();
 
-      const why = notCsv(body);
+      const why = notCsv(body) || wrongTab(match.slot, body);
       if (why) {
         problems.push(`${attempt.by}: ${why}`);
         continue;

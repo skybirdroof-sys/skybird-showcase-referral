@@ -97,9 +97,13 @@ const CONTRACT = {
     maxAgeHours: 30,
   },
   /* The Rest Index tab carries a person block and a key/value block under one
-     header row, so only the person column is load-bearing here. */
+     header row. `owner` is an accepted spelling of the person column but is
+     deliberately NOT in `required`: the KPI tab also has an Owner column, and
+     gviz answers an unknown tab name by serving the first sheet, so a required
+     set that KPI happens to satisfy would let a renamed Rest Index tab pass the
+     verification below while actually returning KPI rows. */
   REST: {
-    required: [['person', 'name', 'owner']],
+    required: [['person', 'name', 'crew'], ['daysatrestavg', 'daysatrest', 'avgdaysatrest', 'restdays', 'days']],
     known: ['person', 'name', 'owner', 'daysatrestavg', 'daysatrest', 'avgdaysatrest', 'restdays', 'days', 'projectcount', 'projects', 'openprojects', 'count', 'key', 'value', 'metric', 'rule', 'updatedet', 'updated'],
     maxAgeHours: 30,
   },
@@ -108,8 +112,11 @@ const CONTRACT = {
     known: ['key', 'name', 'setting', 'value', 'val', 'updatedet', 'updated'],
     maxAgeHours: 48,
   },
+  /* `goalop` rather than `goal`: the KPI tab has both Target and Value, and
+     gviz serves KPI for an unknown tab name, so a required set KPI satisfies
+     would wave the wrong tab through. Nothing but the L10 tabs has a GoalOp. */
   L10: {
-    required: [['measurable', 'metric', 'name'], ['value'], ['goal', 'target']],
+    required: [['measurable', 'metric', 'name'], ['value'], ['goalop', 'op', 'operator']],
     known: ['period', 'view', 'week', 'sort', 'order', 'group', 'measurable', 'metric', 'name', 'owner', 'goalop', 'op', 'operator', 'goal', 'target', 'value', 'unit', 'units', 'weeklabel', 'source', 'notes', 'note', 'updatedet', 'updated'],
     maxAgeHours: 192,
   },
@@ -121,8 +128,10 @@ const CONTRACT = {
   /* Not shipped by the ops bot yet. Listed here so the watchdog reports it as
      unreadable rather than not noticing it is absent, and so the day it
      appears its shape is checked like every other tab. */
+  /* Neither required set may lean on `owner`, `name` or a bare `value`, for
+     the same reason: those are KPI's columns too. */
   SALES_YTD: {
-    required: [['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'], ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value']],
+    required: [['closer', 'salesman', 'salesperson'], ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars']],
     known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value', 'contractscount', 'contractcount', 'count', 'jobs', 'month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'monthcount', 'mtdcount', 'thismonthcount', 'notes', 'note', 'updatedet', 'updated'],
     maxAgeHours: 30,
   },
@@ -132,7 +141,7 @@ const CONTRACT = {
      zero rows" check is the only thing that would flag it, and why the panel
      says "no YTD jobs in Sheet" rather than treating it as a fault. */
   SALES_YTD_DETAIL: {
-    required: [['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'], ['customer', 'project', 'customername', 'homeowner'], ['wondate', 'date', 'signed', 'signeddate']],
+    required: [['closer', 'salesman', 'salesperson'], ['customer', 'project', 'customername', 'homeowner'], ['wondate', 'date', 'signed', 'signeddate']],
     known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'projectnumber', 'projectno', 'project', 'projectid', 'customer', 'customername', 'homeowner', 'wondate', 'date', 'signed', 'signeddate', 'wonmonth', 'month', 'contract', 'contracts', 'contractdollars', 'dollars', 'amount', 'value', 'notes', 'note', 'updatedet', 'updated'],
     maxAgeHours: 30,
   },
@@ -230,8 +239,27 @@ function cacheSecondsFor(slot) {
   return slot === 'TOP5' ? 8 : 30;
 }
 
+/* gviz does not 404 an unknown tab name - it serves the FIRST sheet of the
+ * workbook, with HTTP 200 and perfectly valid CSV. Asking for a tab that does
+ * not exist therefore returns the KPI tab, which parses cleanly and is
+ * completely wrong: the Sales YTD Detail drill-down spent a day reading KPI
+ * rows and reporting "no jobs for this closer" rather than "that tab does not
+ * exist". notCsv() cannot catch this, because the body IS csv.
+ *
+ * So the contract doubles as proof of identity. If the headers that came back
+ * do not carry the columns this tab is required to have, it is not this tab,
+ * whatever gviz says. Returns a reason string, or null when the body checks
+ * out. */
+function wrongTab(slot, body) {
+  const drift = driftFor(slot, body);
+  if (!drift.missing.length) return null;
+  return `did not resolve - the response is missing ${drift.missing.map((c) => `"${c}"`).join(', ')}`
+    + ', so it is a different tab (gviz serves the first sheet when a name does not match)';
+}
+
 module.exports = {
   cacheSecondsFor,
+  wrongTab,
   env, DEFAULT_TABS, slots, gvizUrl, notCsv,
   CONTRACT, norm, headerCells, driftFor, stampAgeHours, maxAgeFor,
 };

@@ -6,12 +6,15 @@
 [functions]
   node_bundler = "esbuild"
 
-# The Sheet watchdog. 13:05 UTC is 9:05am Eastern while the US is on daylight
-# time and 8:05am once it is not - early enough that a tab which stopped being
-# written overnight is reported before the day starts. Netlify's scheduler
-# invokes it as a POST, which is what makes the scheduled run the one that
-# notifies while a manual GET of /api/health stays quiet.
-[functions."health"]
+# The Sheet watchdog's daily run. 13:05 UTC is 9:05am Eastern while the US is on
+# daylight time and 8:05am once it is not - early enough that a tab which
+# stopped being written overnight is reported before the day starts.
+#
+# The schedule is on health-cron, NOT on health: Netlify refuses to serve a
+# scheduled function over HTTP, so putting it on health made GET /api/health
+# answer 403 - the one command anybody was told to run. Reading the report by
+# hand goes to health.js, which has no schedule and never notifies.
+[functions."health-cron"]
   schedule = "5 13 * * *"
 
 [dev]

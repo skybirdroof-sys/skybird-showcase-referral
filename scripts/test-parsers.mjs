@@ -686,6 +686,38 @@ test('a series with no values at all yields no runs to draw', () => {
     delete process.env.HEALTH_MAX_AGE_TOP5;
   });
 
+  /* gviz answers an unknown tab name with the FIRST sheet of the workbook, at
+     HTTP 200 and as perfectly valid CSV. Asking for a tab that does not exist
+     therefore returns KPI, which parses cleanly and is completely wrong - the
+     Sales YTD Detail drill-down read KPI rows for a day and reported "no jobs
+     for this closer" rather than "that tab does not exist". */
+  const KPI_HEADER = 'Metric,Period,Value,Target,Unit,Source,Owner,Notes,Updated ET\nx';
+
+  test('every tab accepts its own header', () => {
+    for (const [slot, header] of Object.entries(LIVE)) {
+      assert.equal(tabs.wrongTab(slot, `${header}\nx`), null, `${slot} rejects its own live header`);
+    }
+  });
+
+  test('no tab can be satisfied by the sheet gviz substitutes for a missing one', () => {
+    for (const slot of Object.keys(LIVE)) {
+      if (slot === 'KPI') continue;      // KPI is the substitute; it is itself
+      assert.ok(tabs.wrongTab(slot, KPI_HEADER),
+        `${slot} would accept KPI's columns - a missing tab would read as present`);
+    }
+  });
+
+  test('the required sets avoid KPI\'s own column names', () => {
+    /* The specific collisions that let three tabs through on the first
+       attempt: KPI has Owner, Value, Metric and Target. */
+    const kpiCols = new Set(['metric', 'period', 'value', 'target', 'unit', 'source', 'owner', 'notes', 'updatedet']);
+    for (const [slot, spec] of Object.entries(tabs.CONTRACT)) {
+      if (slot === 'KPI') continue;
+      const satisfiable = spec.required.every((aliases) => aliases.some((a) => kpiCols.has(a)));
+      assert.ok(!satisfiable, `${slot}'s required columns are all ones KPI also has`);
+    }
+  });
+
   test('the watchdog knows about every tab the proxy serves', () => {
     const served = tabs.slots().map((s) => s.slot).sort();
     assert.deepEqual(served, Object.keys(tabs.CONTRACT).sort(),

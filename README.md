@@ -311,13 +311,13 @@ ops bot fills them. Written up in full as
 
 | Missing | Effect on the board |
 |---|---|
-| **`Sales YTD Detail` tab** | Clicking a closer opens the panel saying *"Detail tab not ready"*. The card keeps its summary numbers; the board never derives job rows from a count. |
+| **`Sales YTD Detail` tab** | Does not exist yet — gviz was quietly serving `KPI` in its place until the identity guard landed. Clicking a closer says *"Detail tab not ready"*. The card keeps its summary numbers; the board never derives job rows from a count. |
 | **`Close Rates` Value** (`KPI`) | Tile 1 shows `—` for the company figure and all three closers. ProLine owns the definition and Talon transcribes it — the board never derives a close rate. Four rows needed: `Close Rates`, `Close Rate - John`, `Close Rate - Anas`, `Close Rate - Henry`, monthly and weekly. See [`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md). |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |
 | **`Target` column** (`KPI`) | Empty on every row, so no tile can show a goal or a hit/miss. |
 
-`Sales YTD` itself landed Oct 5 and the card is live.
+`Sales YTD` landed Oct 5 and the card is live with real numbers.
 
 `/api/health` reports all of this per tab — see §12.
 
@@ -392,9 +392,29 @@ Both ways the Sheet goes wrong are invisible from the board:
   the fetch *failed* — stays dark. The `KPI` tab sat four days old showing
   Friday's numbers as though they were today's.
 
-So `netlify/functions/health.js` checks every tab against the contract in
-`netlify/lib/tabs.js` — the same file the CSV proxy reads, so the two cannot
-disagree about what a tab should look like.
+There is a third, nastier case. **gviz does not 404 an unknown tab name — it
+serves the first sheet of the workbook**, at HTTP 200, as perfectly valid CSV.
+Asking for a tab that does not exist returns `KPI`, which parses cleanly and is
+completely wrong: the Sales YTD drill-down read KPI rows for a day and reported
+*"no jobs for this closer"* rather than *"that tab does not exist"*. The
+not-CSV guard cannot catch it, because the body **is** CSV.
+
+So the contract doubles as proof of identity. Every tab declares columns only it
+has, and the proxy rejects a response that does not carry them — a tab's
+`required` set may never be satisfiable by `KPI`'s own columns (`Metric`,
+`Value`, `Target`, `Owner`), which a test enforces.
+
+The checks live in `netlify/lib/health.js` with two entry points:
+
+| | |
+|---|---|
+| `GET /api/health` (`functions/health.js`) | the report, any time, no side effects, never notifies |
+| `functions/health-cron.js` | the daily run, scheduled in `netlify.toml`, the only one that notifies |
+
+They are separate because **Netlify will not serve a scheduled function over
+HTTP** — it answers 403. The first version put the schedule on `health`, which
+made the one documented verification command the one command that could not
+work.
 
 ```bash
 curl -s https://talon-tv.netlify.app/api/health | jq .status
@@ -413,11 +433,11 @@ for all of them or `HEALTH_MAX_AGE_KPI`, `HEALTH_MAX_AGE_TOP5`,
 `HEALTH_MAX_AGE_REST`, `HEALTH_MAX_AGE_META`, `HEALTH_MAX_AGE_L10`,
 `HEALTH_MAX_AGE_L10_HISTORY` for one.
 
-**Getting told about it.** `netlify.toml` schedules the function for 13:05 UTC
+**Getting told about it.** `netlify.toml` schedules `health-cron` for 13:05 UTC
 daily — 9:05am ET in summer, 8:05am in winter — early enough that a tab which
-stopped being written overnight is reported before the day starts. Netlify's
-scheduler invokes it as a POST, and a POST is what makes it notify; a manual
-`GET /api/health` never sends anything, so checking by hand is free.
+stopped being written overnight is reported before the day starts. Only that
+function notifies; `GET /api/health` never sends anything, so checking by hand
+is free.
 
 To actually receive the message, set **`ALERT_WEBHOOK_URL`** to anything that
 accepts `{"text": "..."}` — a Slack or Discord incoming webhook, a Zapier or
