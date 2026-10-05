@@ -883,6 +883,43 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(henry.agrees, true);
   });
 
+  test('the panel is checked against its OWN period, not always against YTD', () => {
+    const today = new Date(2026, 9, 5);
+    const summary = [
+      'Closer,Contract $$,Contracts Count,Last Month $$,Last Month Count',
+      'Henry,326816.58,3,44828.22,2',
+    ].join('\n');
+    const detail = [
+      'Closer,Customer,Won Date,Won Month,Contract $$',
+      'Henry,Sep One,2026-09-19,2026-09,26236.00',
+      'Henry,Sep Two,2026-09-19,2026-09,18592.22',
+      'Henry,March Job,2026-03-05,2026-03,281988.36',
+    ].join('\n');
+    const m = buildModelFromCsv({ salesYtd: summary, salesDetail: detail });
+
+    const lastMonth = detailFor(m, 'Henry', 'lastmonth', today);
+    assert.equal(lastMonth.total, 44828.22);
+    assert.equal(lastMonth.summaryDollars, 44828.22, 'it compares against Last Month $$');
+    assert.equal(lastMonth.agrees, true,
+      'a narrowed total measured against the YTD figure cried mismatch on every period but YTD');
+
+    const ytd = detailFor(m, 'Henry', 'ytd', today);
+    assert.equal(ytd.summaryDollars, 326816.58, 'and year to date still checks the YTD column');
+    assert.equal(ytd.agrees, true);
+  });
+
+  test('a period the Sheet has no column for cannot be judged either way', () => {
+    const today = new Date(2026, 9, 5);
+    const m = buildModelFromCsv({
+      salesYtd: 'Closer,Contract $$\nHenry,10000\n',
+      salesDetail: 'Closer,Customer,Won Date,Won Month,Contract $$\nHenry,A Job,2026-09-14,2026-09,10000\n',
+    });
+    const v = detailFor(m, 'Henry', 'lastmonth', today);
+    assert.equal(v.total, 10000, 'the rows still total up');
+    assert.equal(v.summaryDollars, null);
+    assert.equal(v.agrees, null, 'nothing to disagree with is not a disagreement');
+  });
+
   test('a summary that disagrees is reported, never reconciled away', () => {
     const wrong = SUMMARY.replace('Henry,71750.50,3', 'Henry,80000.00,4');
     const m = buildModelFromCsv({ salesYtd: wrong, salesDetail: DETAIL });

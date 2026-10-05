@@ -80,7 +80,11 @@ export function createDrilldown() {
     if (!view.months.length) {
       body.append(note(`No jobs in ${label}`,
         `The detail tab has no rows for ${view.closer} in this period.`));
-      foot.append(footLine(EMPTY, 0));
+      /* Zero, not an em dash. We hold the whole job list and none of it falls
+         in this window, so the total is KNOWN to be nothing - and the Sheet's
+         own column agrees, writing a literal 0. An em dash would say we could
+         not tell. */
+      foot.append(footLine(usd(0), 0));
       return;
     }
 

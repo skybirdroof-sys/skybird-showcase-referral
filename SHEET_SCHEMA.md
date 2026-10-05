@@ -234,7 +234,18 @@ Five rows: `John`, `Anas`, `Henry`, `Other`, `Total`.
 | `Closer` | one of the five above. A closer the Sheet omits still gets a row on the card, showing `—` — dropping a person silently is worse than admitting there is nothing for them. |
 | `Contract $$` | plain number, no `$` or commas. The board formats it and drops the cents. |
 | `Contracts Count` | integer. |
-| `Month $$` / `Month Count` | optional, for the card's "This month" view. Absent means that view shows `—`; the board never derives a month from the year or borrows the monthly `Contracts Signed $$` tile. |
+| `This Month $$` / `This Month Count` | the card's **This month** button. |
+| `Last Month $$` / `Last Month Count` | **Last month**. |
+| `This Quarter $$` / `This Quarter Count` | **This quarter**. |
+| `Last Quarter $$` / `Last Quarter Count` | **Last quarter**. |
+
+Each period reads its own pair and nothing else. A pair the Sheet does not carry
+shows `—` on that button — the board never derives one period from another, nor
+borrows the monthly `Contracts Signed $$` tile. A pair the Sheet writes as `0`
+shows `$0`, because zero contracts really is zero dollars.
+
+| | |
+|---|---|
 | `Notes` | optional. On the `Other` row it should list who was folded in, which the card marks with `···` and surfaces on hover. |
 | `Updated ET` | ISO with offset. |
 

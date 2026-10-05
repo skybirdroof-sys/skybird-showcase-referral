@@ -311,7 +311,7 @@ ops bot fills them. Written up in full as
 
 | Missing | Effect on the board |
 |---|---|
-| **Non-YTD period columns** (`Sales YTD`) | This month / Last month / This quarter / Last quarter show `—`. The board reads `Month $$`, `Last Month $$`, `Quarter $$`, `Last Quarter $$` (and their `… Count` partners) when Talon writes them, and never derives a period from another. The **pop-up** already narrows by those windows, because every detail row carries its own Won Date — filtering is not deriving. |
+| *(nothing outstanding on the sales card)* | All five periods landed Oct 5. Each reads its own `… $$` / `… Count` column pair; the board never derives one period from another. The pop-up narrows the job list by the same window from each row's own Won Date, and its footer is checked against that period's summary column. |
 | **`Close Rates` Value** (`KPI`) | Tile 1 shows `—` for the company figure and all three closers. ProLine owns the definition and Talon transcribes it — the board never derives a close rate. Four rows needed: `Close Rates`, `Close Rate - John`, `Close Rate - Anas`, `Close Rate - Henry`, monthly and weekly. See [`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md). |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |

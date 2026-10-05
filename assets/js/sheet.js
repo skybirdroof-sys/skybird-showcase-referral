@@ -392,14 +392,17 @@ export function detailFor(model, closer, period = 'ytd', today = new Date()) {
      Sheet's own column for that period and is never computed from these rows. */
   const found = period === 'ytd' ? all : narrowToPeriod(all, periodRange(period, today));
   const summary = (model.salesYtd?.closers || []).find((c) => norm(c.closer) === norm(closer)) || {};
-  const summaryYtd = (summary.periods || {}).ytd || {};
+  /* Compare like with like: the panel is showing ONE period, so it is that
+     period's summary column it has to agree with. Checking a narrowed total
+     against the YTD figure cried mismatch on every period but year to date. */
+  const summaryPeriod = (summary.periods || {})[period] || {};
 
-  const dollarsAgree = summaryYtd.dollars === null || summaryYtd.dollars === undefined || found.total === null
+  const dollarsAgree = summaryPeriod.dollars === null || summaryPeriod.dollars === undefined || found.total === null
     ? null
-    : Math.abs(found.total - summaryYtd.dollars) < 0.5;
-  const countAgree = summaryYtd.count === null || summaryYtd.count === undefined
+    : Math.abs(found.total - summaryPeriod.dollars) < 0.5;
+  const countAgree = summaryPeriod.count === null || summaryPeriod.count === undefined
     ? null
-    : found.count === summaryYtd.count;
+    : found.count === summaryPeriod.count;
 
   return {
     closer,
@@ -408,8 +411,8 @@ export function detailFor(model, closer, period = 'ytd', today = new Date()) {
     months: found.months,
     total: found.total,
     count: found.count,
-    summaryDollars: summaryYtd.dollars ?? null,
-    summaryCount: summaryYtd.count ?? null,
+    summaryDollars: summaryPeriod.dollars ?? null,
+    summaryCount: summaryPeriod.count ?? null,
     agrees: dollarsAgree === false || countAgree === false ? false
       : dollarsAgree === null && countAgree === null ? null : true,
   };

@@ -135,7 +135,21 @@ const CONTRACT = {
      the same reason: those are KPI's columns too. */
   SALES_YTD: {
     required: [['closer', 'salesman', 'salesperson'], ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars']],
-    known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value', 'contractscount', 'contractcount', 'count', 'jobs', 'month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'monthcount', 'mtdcount', 'thismonthcount', 'notes', 'note', 'updatedet', 'updated'],
+    /* The per-period column pairs the card's five buttons read. Documented here
+       as well as in config.js so the watchdog does not report them as drift -
+       a column the board deliberately reads is not an undocumented one. */
+    known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name',
+      'contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value',
+      'contractscount', 'contractcount', 'count', 'jobs',
+      'month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'thismonthdollars',
+      'monthcount', 'mtdcount', 'thismonthcount',
+      'lastmonth', 'lastmonthdollars', 'priormonth', 'priormonthdollars',
+      'lastmonthcount', 'priormonthcount',
+      'quarter', 'quarterdollars', 'qtd', 'qtddollars', 'thisquarter', 'thisquarterdollars',
+      'quartercount', 'qtdcount', 'thisquartercount',
+      'lastquarter', 'lastquarterdollars', 'priorquarter', 'priorquarterdollars',
+      'lastquartercount', 'priorquartercount',
+      'notes', 'note', 'updatedet', 'updated'],
     maxAgeHours: 30,
   },
   /* The job list behind each closer on the sales card. One row per job, so an
