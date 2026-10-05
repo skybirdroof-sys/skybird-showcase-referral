@@ -672,6 +672,29 @@ test('a series with no values at all yields no runs to draw', () => {
       'a stamp with no zone is skipped, not guessed at');
   });
 
+  test('a partly refreshed tab is visible, not hidden by its newest row', () => {
+    const now = Date.parse('2026-10-05T22:00:00Z');
+    /* The real shape that caused this: eight fresh close-rate rows written
+       beside fourteen cash rows seventeen days old. Reading the newest stamp
+       alone reports a perfectly healthy tab. */
+    const kpi = [
+      'Metric,Period,Value,Updated ET',
+      'Cash Collected,monthly,108367.14,2026-09-18T21:51:00-04:00',
+      'Close Rate - John,monthly,22.22,2026-10-05T17:58:00-04:00',
+    ].join('\n');
+    const age = tabs.stampAgeHours(kpi, now);
+    assert.ok(age.ageHours < 5, 'the newest row is current');
+    assert.ok(age.oldestAgeHours > 400, 'and the oldest is seventeen days behind it');
+  });
+
+  test('an append-only tab keeps old rows without reading as stale', () => {
+    assert.equal(tabs.CONTRACT.L10_HISTORY.appendOnly, true,
+      'a record of past weeks keeps its stamps forever and that is correct');
+    for (const slot of ['KPI', 'TOP5', 'REST', 'META', 'L10', 'SALES_YTD', 'SALES_YTD_DETAIL']) {
+      assert.ok(!tabs.CONTRACT[slot].appendOnly, `${slot} is rewritten each run, so every row counts`);
+    }
+  });
+
   test('the Meta tab stamp is read from its key/value row', () => {
     const now = Date.parse('2026-09-22T12:00:00Z');
     const meta = 'Key,Value\nlast_updated_et,2026-09-22T08:00:00-04:00\nrefresh_seconds,180\n';

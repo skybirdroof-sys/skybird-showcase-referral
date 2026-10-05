@@ -124,6 +124,9 @@ const CONTRACT = {
     required: [['weekstart', 'start'], ['measurable', 'metric', 'name'], ['value']],
     known: ['weekstart', 'start', 'weekend', 'end', 'weeklabel', 'week', 'sort', 'order', 'group', 'measurable', 'metric', 'name', 'owner', 'goalop', 'op', 'goal', 'target', 'value', 'unit', 'units', 'source', 'sourcedetail', 'updatedet', 'updated'],
     maxAgeHours: 192,
+    /* A record of past weeks. Rows written once keep their stamp forever and
+       that is correct, so only the newest row is checked for staleness here. */
+    appendOnly: true,
   },
   /* Not shipped by the ops bot yet. Listed here so the watchdog reports it as
      unreadable rather than not noticing it is absent, and so the day it
@@ -204,6 +207,7 @@ function stampAgeHours(csv, now) {
   header.forEach((h, i) => { if (h === 'updatedet' || h === 'updated' || h === 'lastupdatedet') cols.push(i); });
 
   let newest = null;
+  let oldest = null;
   for (let r = 1; r < lines.length; r += 1) {
     const cells = lines[r].split(',');
     const candidates = cols.length ? cols.map((i) => cells[i]) : [];
@@ -215,10 +219,21 @@ function stampAgeHours(csv, now) {
       const ms = Date.parse(t);
       if (!Number.isFinite(ms)) continue;
       if (newest === null || ms > newest) newest = ms;
+      if (oldest === null || ms < oldest) oldest = ms;
     }
   }
   if (newest === null) return null;
-  return { newestStamp: new Date(newest).toISOString(), ageHours: (now - newest) / 3600000 };
+  return {
+    newestStamp: new Date(newest).toISOString(),
+    ageHours: (now - newest) / 3600000,
+    /* The oldest row matters as much as the newest. A tab that is only PARTLY
+       rewritten reads as perfectly fresh when you look at the newest stamp
+       alone: eight new close-rate rows on the KPI tab made it report "ok" while
+       fourteen cash rows sat seventeen days old underneath them, which is the
+       exact failure this watchdog exists to catch. */
+    oldestStamp: new Date(oldest).toISOString(),
+    oldestAgeHours: (now - oldest) / 3600000,
+  };
 }
 
 function maxAgeFor(slot) {

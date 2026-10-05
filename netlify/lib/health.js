@@ -9,7 +9,7 @@
  */
 
 const {
-  slots, gvizUrl, notCsv, wrongTab, driftFor, stampAgeHours, maxAgeFor, env,
+  slots, gvizUrl, notCsv, wrongTab, driftFor, stampAgeHours, maxAgeFor, env, CONTRACT,
 } = require('./tabs');
 
 /* Rows past the header. Cheap and good enough: a tab that parses to zero rows
@@ -69,6 +69,12 @@ async function checkTab(sheetId, slot, now) {
     for (const col of drift.added) issues.push(`undocumented column "${col}"`);
     if (age && age.ageHours > maxAgeHours) {
       issues.push(`newest stamp is ${age.ageHours.toFixed(1)}h old (limit ${maxAgeHours}h)`);
+    } else if (age && !CONTRACT[slot.slot].appendOnly && age.oldestAgeHours > maxAgeHours) {
+      /* Partly rewritten: the tab is being written, but not all of it. Worth
+         saying separately, because "newest stamp is current" is exactly what
+         hides it. */
+      issues.push(`only partly refreshed - oldest row is ${age.oldestAgeHours.toFixed(1)}h old `
+        + `while the newest is ${age.ageHours.toFixed(1)}h (limit ${maxAgeHours}h)`);
     }
 
     /* A missing required column or an unreadable tab breaks a zone; a new
@@ -85,6 +91,8 @@ async function checkTab(sheetId, slot, now) {
       undocumentedColumns: drift.added,
       newestStamp: age ? age.newestStamp : null,
       ageHours: age ? Number(age.ageHours.toFixed(1)) : null,
+      oldestStamp: age ? age.oldestStamp : null,
+      oldestAgeHours: age ? Number(age.oldestAgeHours.toFixed(1)) : null,
       maxAgeHours,
       issues,
     };

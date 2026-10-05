@@ -423,7 +423,15 @@ curl -s https://talon-tv.netlify.app/api/health | jq .status
 Per tab it reports: whether it resolved (and by gid or by name), how many rows
 and columns came back, any **required column missing** (that breaks a zone →
 `error`), any **undocumented column** (drift → `warn`), and how old the newest
-timestamp is against that tab's limit. A tab is only judged stale on a stamp
+**and oldest** timestamps are against that tab's limit.
+
+Both ends matter. A tab that is only **partly** rewritten reads as perfectly
+fresh if you look at the newest stamp alone — eight new close-rate rows on the
+`KPI` tab made it report `ok` while fourteen cash rows sat seventeen days old
+underneath them, which is the exact failure this thing exists to catch. So a tab
+whose oldest row is past the limit while its newest is not is reported as *"only
+partly refreshed"*. `L10 History` is exempt (`appendOnly`): it is a record of
+past weeks, and rows written once keep their stamp forever. A tab is only judged stale on a stamp
 that carries its own timezone offset; a human stamp like `Mon Sep 21 · 9:01 PM
 ET` is displayable but not comparable, so it is skipped rather than guessed at.
 
