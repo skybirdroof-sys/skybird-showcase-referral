@@ -173,6 +173,80 @@ function parseRest(csv) {
 
 /* --- Level 10 scorecard ------------------------------------------------- */
 
+/* `Sales YTD` — one row per closer plus a Total row.
+   `Month $$` / `Month Count` are optional: the card's "This month" view shows
+   em dashes until the Sheet supplies them, rather than deriving a month from
+   the YTD figure or borrowing the monthly Contracts tile. */
+function parseSalesYtd(csv) {
+  return records(csv)
+    .map((r) => ({
+      closer: String(pick(r, ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'])).trim(),
+      dollars: parseValue(pick(r, ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value'])),
+      count: parseValue(pick(r, ['contractscount', 'contractcount', 'count', 'jobs', 'contracts#'])),
+      monthDollars: parseValue(pick(r, ['month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth'])),
+      monthCount: parseValue(pick(r, ['monthcount', 'mtdcount', 'thismonthcount'])),
+      notes: String(pick(r, ['notes', 'note'])).trim(),
+      updated: String(pick(r, ['updatedet', 'updated'])).trim(),
+    }))
+    .filter((row) => row.closer !== '' && !/^note/i.test(row.closer));
+}
+
+/* Closers in the board's locked order, then the company total. A closer the
+   Sheet does not mention still gets a row, showing em dashes - an absent name
+   is unknown, not zero, and a scoreboard that silently drops a person is worse
+   than one that admits it has nothing for them. */
+export function buildSalesYtd(csv, meta = {}) {
+  const rows = parseSalesYtd(csv);
+  const byName = new Map(rows.map((r) => [norm(r.closer), r]));
+
+  const closers = CONFIG.salesClosers.map((name) => {
+    const row = byName.get(norm(name)) || {};
+    return {
+      closer: name,
+      dollars: row.dollars ?? null,
+      count: row.count ?? null,
+      monthDollars: row.monthDollars ?? null,
+      monthCount: row.monthCount ?? null,
+      notes: row.notes || '',
+    };
+  });
+
+  const totalRow = byName.get(norm(CONFIG.salesTotalRow)) || {};
+
+  /* A label is not a KPI: when Meta has not named the window, the calendar year
+     from the clock is a true description of what the card covers, and naming it
+     beats an unlabelled column of money. The NUMBERS are never derived this
+     way - those stay em dashes until the Sheet supplies them. */
+  const label = meta.ytdlabel || meta.ytdLabel || `${new Date().getFullYear()} YTD`;
+
+  return {
+    label,
+    basis: meta.ytdbasis || meta.ytdBasis || '',
+    closers,
+    total: {
+      dollars: totalRow.dollars ?? null,
+      count: totalRow.count ?? null,
+      monthDollars: totalRow.monthDollars ?? null,
+      monthCount: totalRow.monthCount ?? null,
+      notes: totalRow.notes || '',
+    },
+    /* The Sheet's own Total is what the board shows - never a sum the board
+       computed. But a Total that disagrees with its parts is worth saying out
+       loud rather than hiding, so the card can footnote it. */
+    reconciles: reconcileSales(closers, totalRow.dollars ?? null),
+    updated: freshest(meta.ytdupdatedet || '', rows.map((r) => r.updated)),
+    present: rows.length > 0,
+  };
+}
+
+function reconcileSales(closers, total) {
+  if (total === null) return null;
+  const parts = closers.map((c) => c.dollars).filter((v) => v !== null);
+  if (parts.length !== closers.length) return null;   // can't judge a partial set
+  const sum = parts.reduce((a, b) => a + b, 0);
+  return Math.abs(sum - total) < 0.5;
+}
+
 function parseL10Current(csv) {
   return records(csv)
     .map((r) => ({
@@ -512,6 +586,9 @@ export function normalizeModel(raw) {
     /* Weekly series per measurable for the tile sparklines. Always a Map, so a
        caller never has to guard - an absent history tab is an empty one. */
     trends: raw.trends instanceof Map ? raw.trends : new Map(),
+    /* Always an object, so the card can render its frame whether or not the
+       Sheet has the tab yet. */
+    salesYtd: raw.salesYtd || buildSalesYtd('', raw.meta || {}),
     updated,
     sources: raw.sources || {},
     sourceErrors: raw.sourceErrors || [],
@@ -521,7 +598,7 @@ export function normalizeModel(raw) {
 
 /* CSV text (all four tabs) -> board model. Exported so it can be exercised
    without a network: see scripts/test-parsers.mjs. */
-export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l10History = '', sources, sourceErrors }) {
+export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l10History = '', salesYtd = '', sources, sourceErrors }) {
   const parsed = {
     kpi: parseKpi(kpi),
     top5: parseTop5(top5),
@@ -574,6 +651,7 @@ export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l
   return normalizeModel({
     mode: 'live',
     ...parsed,
+    salesYtd: buildSalesYtd(salesYtd, parsed.meta),
     trends,
     sources: marks,
     sourceErrors: errors,
@@ -598,6 +676,10 @@ export async function loadLive() {
        tab is missing the tiles simply show no line, which is the honest
        outcome - a board with eight numbers and no trends still works. */
     ['l10History', tabs.l10History],
+    /* The YTD scoreboard. The ops bot has not shipped this tab yet, so a
+       failure here is expected and must not touch the rest of the board: the
+       card renders its frame with em dashes. */
+    ['salesYtd', tabs.salesYtd],
   ];
 
   const settled = await Promise.all(wanted.map(async ([key, tab]) => {
@@ -608,7 +690,7 @@ export async function loadLive() {
     }
   }));
 
-  const csv = { kpi: '', top5: '', rest: '', meta: '', l10History: '' };
+  const csv = { kpi: '', top5: '', rest: '', meta: '', l10History: '', salesYtd: '' };
   const sources = {};
   const sourceErrors = [];
   let noSource = 0;

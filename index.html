@@ -53,13 +53,31 @@
     </header>
 
     <section class="zones">
-      <!-- Zone A: Rest Index hero -->
-      <section class="panel panel--rest" aria-labelledby="rest-title">
-        <h2 class="panel__title" id="rest-title">Rest Index</h2>
-        <p class="rest__value" id="rest-value">—</p>
-        <p class="rest__sub">avg days at rest · OS + Jacob</p>
-        <p class="rest__hint">lower is better</p>
-        <ul class="rest__chips" id="rest-chips"></ul>
+      <!-- Zone A: year-to-date signed contracts by closer. The first thing
+           anyone sees walking in, so the company total dominates and the
+           closers read as a scoreboard under it. Rest Index moved to the
+           first small card below. -->
+      <section class="panel panel--sales" aria-labelledby="sales-title">
+        <div class="panel__head">
+          <h2 class="panel__title" id="sales-title">Sales</h2>
+          <span class="sales__chip" id="sales-label"></span>
+        </div>
+
+        <div class="sales__hero">
+          <p class="sales__total is-empty" id="sales-total">—</p>
+          <p class="sales__total-label" id="sales-total-label">company year to date</p>
+        </div>
+
+        <ul class="sales__closers" id="sales-closers"></ul>
+
+        <div class="sales__foot">
+          <div class="sales__views" id="sales-views" role="group" aria-label="Sales view">
+            <button class="sales__view" type="button" data-view="ytd">YTD $$</button>
+            <button class="sales__view" type="button" data-view="count">Contracts</button>
+            <button class="sales__view" type="button" data-view="month">This month</button>
+          </div>
+          <p class="sales__basis" id="sales-basis"></p>
+        </div>
       </section>
 
       <!-- Center focal: Talon HUD instrument cluster.

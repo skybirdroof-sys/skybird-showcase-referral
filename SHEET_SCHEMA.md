@@ -196,6 +196,42 @@ per-closer measurables, and `Sent CoC cash sitting` is not in this tab at all.
 
 ---
 
+## Tab: `Sales YTD`
+
+Feeds the large top-left card on the TV: year-to-date signed contracts by
+closer. **This tab does not exist yet** — the card renders its frame with `—`
+until the ops bot ships it. See
+[`docs/TALON_SALES_YTD_REQUEST.md`](docs/TALON_SALES_YTD_REQUEST.md) for the
+request as sent.
+
+Row 1 headers:
+
+```
+Closer | Contract $$ | Contracts Count | Updated ET
+```
+
+Five rows: `John`, `Anas`, `Henry`, `Other`, `Total`.
+
+| Column | Notes |
+|---|---|
+| `Closer` | one of the five above. A closer the Sheet omits still gets a row on the card, showing `—` — dropping a person silently is worse than admitting there is nothing for them. |
+| `Contract $$` | plain number, no `$` or commas. The board formats it and drops the cents. |
+| `Contracts Count` | integer. |
+| `Month $$` / `Month Count` | optional, for the card's "This month" view. Absent means that view shows `—`; the board never derives a month from the year or borrows the monthly `Contracts Signed $$` tile. |
+| `Notes` | optional. On the `Other` row it should list who was folded in, which the card marks with `···` and surfaces on hover. |
+| `Updated ET` | ISO with offset. |
+
+- **`Total` is the Sheet's own figure, always.** The board never sums the closer
+  rows and substitutes its own. If the total disagrees with the parts, the card
+  footnotes it — *"total differs from the closer rows"* — rather than correcting
+  one of them, because a total that quietly disagrees is worse than one that
+  says so.
+- A closer with no contracts this year is `0`. Blank means "could not read",
+  renders `—`. They are not interchangeable.
+- This card ignores the Monthly/Weekly toggle. It is year-to-date either way.
+
+---
+
 ## Tab: `Meta` (optional, recommended)
 
 Row 1 headers:
@@ -217,6 +253,8 @@ Key | Value
 | `l10_page` | `L10 Scorecard` | Name of the current-week L10 tab, for Talon's own reference. |
 | `l10_history_tab` | `L10 History` | Name of the trend tab, likewise. |
 | `l10_trend_weeks` | `13` | How many week positions the trend charts show. |
+| `ytd_label` | `2026 YTD` | Period chip on the sales card. Falls back to the calendar year — a label is not a KPI, so naming the window from the clock is safe where inventing a figure is not. |
+| `ytd_basis` | `ProLine Won Date, Jan 1 2026 to date` | Printed small under the sales card, so nobody has to ask what the number counts. |
 
 Unknown keys are ignored, so the tab is safe to extend.
 

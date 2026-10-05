@@ -19,6 +19,7 @@ export const CONFIG = {
     meta: 'Meta',
     l10: 'L10 Scorecard',
     l10History: 'L10 History',
+    salesYtd: 'Sales YTD',
   },
 
   /* Level 10 scorecard page. Week count is a display cap; Meta
@@ -58,8 +59,12 @@ export const CONFIG = {
      all of them blank), and Sent CoC cash sitting is not in the history tab at
      all. Neither gets a line invented for it. */
   tiles: [
+    /* Card 1 is not a KPI row. It reads the Rest Index tab directly, which is
+       why it carries `kind` - and why the Monthly/Weekly toggle does not touch
+       it. It used to be the big top-left card; the YTD sales scoreboard has
+       that slot now. */
+    { kind: 'rest', metric: 'Rest Index', unit: 'rest', note: 'avg days at rest · lower is better' },
     { metric: 'Appointments Set', unit: 'count', trend: 'Appointments Set' },
-    { metric: 'Cost per Appt', unit: 'usd', trend: 'Cost per Appointment Set' },
     { metric: 'Contracts Signed $$', unit: 'usd', trend: 'Contracts Signed - $$' },
     { metric: 'Close Rates', unit: 'pct', note: 'Anas · John · Henry' },
     { metric: 'Jobs Completed', unit: 'count', trend: 'Jobs Completed' },
@@ -67,6 +72,21 @@ export const CONFIG = {
     { metric: 'Total AR Over 60 Days', unit: 'usd', alert: true, trend: 'Total AR Over 60 Days' },
     { metric: 'Cash Collected', unit: 'usd', trend: 'Cash Collected' },
   ],
+
+  /* --- year-to-date sales scoreboard ----------------------------------
+     Reads the `Sales YTD` tab, which the ops bot has not shipped yet. Until
+     it does the card renders its frame with em dashes: the board does not
+     derive a YTD figure from the monthly Contracts tile, and it does not
+     carry a stale one forward. See docs/TALON_SALES_YTD_REQUEST.md. */
+  salesClosers: ['John', 'Anas', 'Henry', 'Other'],
+  salesTotalRow: 'Total',
+
+  /* The views the card's buttons offer. A view whose numbers the Sheet does
+     not supply keeps its button and shows em dashes - the button vanishing
+     would be a worse lie than an honest blank. */
+  salesViews: ['ytd', 'count', 'month'],
+  salesDefaultView: 'ytd',
+  salesViewStorageKey: 'talon.salesView',
 
   /* How many weeks a tile sparkline shows. Shorter than the L10 page's 13-25:
      at 120x34 in a corner of a tile, more weeks is just a noisier squiggle. */

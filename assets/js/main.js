@@ -25,6 +25,15 @@ function storedPeriod() {
   }
 }
 
+function storedSalesView() {
+  try {
+    const saved = localStorage.getItem(CONFIG.salesViewStorageKey);
+    return CONFIG.salesViews.includes(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
 /* The celebration engine and the ding. Both are created before the first
    fetch, so the very first set of rows the board sees becomes the baseline and
    nothing is celebrated on boot. */
@@ -51,7 +60,26 @@ const state = {
   pollingTop5: false,
   period: storedPeriod() || CONFIG.defaultPeriod,
   periodPinned: storedPeriod() !== null,
+  salesView: storedSalesView() || CONFIG.salesDefaultView,
 };
+
+/* Which cut of the sales scoreboard is up. Remembered per browser like the
+   period is, so a screen stays where it was left. The data is already in the
+   model, so switching needs no fetch - and a view the Sheet has no numbers for
+   shows em dashes rather than losing its button. */
+function setSalesView(view) {
+  if (!CONFIG.salesViews.includes(view) || view === state.salesView) return;
+  state.salesView = view;
+  try { localStorage.setItem(CONFIG.salesViewStorageKey, view); } catch { /* private mode */ }
+  if (state.lastModel) {
+    renderModel(state.lastModel, {
+      stale: false,
+      lastFetchAt: state.lastFetchAt,
+      period: state.period,
+      salesView: state.salesView,
+    });
+  }
+}
 
 function setPeriod(period, { remember = true } = {}) {
   if (!CONFIG.periods.includes(period) || period === state.period) return;
@@ -68,6 +96,7 @@ function setPeriod(period, { remember = true } = {}) {
       stale: false,
       lastFetchAt: state.lastFetchAt,
       period: state.period,
+      salesView: state.salesView,
     });
   }
 }
@@ -107,7 +136,7 @@ async function tick() {
     if (!state.periodPinned && model.meta.defaultPeriod) {
       state.period = model.meta.defaultPeriod;
     }
-    renderModel(model, { stale: false, lastFetchAt: state.lastFetchAt, period: state.period });
+    renderModel(model, { stale: false, lastFetchAt: state.lastFetchAt, period: state.period, salesView: state.salesView });
     /* The full refresh sees the same rows as the fast poll. Identical values
        are a no-op in the engine, so feeding it from both paths cannot
        double-fire, and whichever arrives first wins the ding. */
@@ -117,9 +146,9 @@ async function tick() {
 
     if (state.lastModel) {
       // Keep the last good numbers on screen — never wipe to fake zeros.
-      renderModel(state.lastModel, { stale: true, lastFetchAt: state.lastFetchAt, period: state.period });
+      renderModel(state.lastModel, { stale: true, lastFetchAt: state.lastFetchAt, period: state.period, salesView: state.salesView });
     } else {
-      renderModel(emptyModel(), { stale: true, lastFetchAt: null, period: state.period });
+      renderModel(emptyModel(), { stale: true, lastFetchAt: null, period: state.period, salesView: state.salesView });
     }
 
     setStale(true, {
@@ -192,7 +221,7 @@ async function start() {
   startHud();
 
   // Paint the empty skeleton immediately so the TV is never a black screen.
-  renderModel(emptyModel(), { stale: false, lastFetchAt: null, period: state.period });
+  renderModel(emptyModel(), { stale: false, lastFetchAt: null, period: state.period, salesView: state.salesView });
 
   await tick();
   scheduleTop5();
@@ -213,6 +242,11 @@ async function start() {
   document.getElementById('period-toggle').addEventListener('click', (event) => {
     const btn = event.target.closest('.period__btn');
     if (btn) setPeriod(btn.dataset.period);
+  });
+
+  document.getElementById('sales-views').addEventListener('click', (event) => {
+    const btn = event.target.closest('.sales__view');
+    if (btn) setSalesView(btn.dataset.view);
   });
 
   document.addEventListener('keydown', (event) => {

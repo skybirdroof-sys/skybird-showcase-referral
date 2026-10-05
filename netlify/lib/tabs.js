@@ -28,6 +28,7 @@ const DEFAULT_TABS = {
   META: 'Meta',
   L10: 'L10 Scorecard',
   L10_HISTORY: 'L10 History',
+  SALES_YTD: 'Sales YTD',
 };
 
 /* Each slot resolves to a tab name (SHEET_TAB_*) and, optionally, a stable gid
@@ -115,6 +116,14 @@ const CONTRACT = {
     required: [['weekstart', 'start'], ['measurable', 'metric', 'name'], ['value']],
     known: ['weekstart', 'start', 'weekend', 'end', 'weeklabel', 'week', 'sort', 'order', 'group', 'measurable', 'metric', 'name', 'owner', 'goalop', 'op', 'goal', 'target', 'value', 'unit', 'units', 'source', 'sourcedetail', 'updatedet', 'updated'],
     maxAgeHours: 192,
+  },
+  /* Not shipped by the ops bot yet. Listed here so the watchdog reports it as
+     unreadable rather than not noticing it is absent, and so the day it
+     appears its shape is checked like every other tab. */
+  SALES_YTD: {
+    required: [['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'], ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value']],
+    known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value', 'contractscount', 'contractcount', 'count', 'jobs', 'month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'monthcount', 'mtdcount', 'thismonthcount', 'notes', 'note', 'updatedet', 'updated'],
+    maxAgeHours: 30,
   },
 };
 

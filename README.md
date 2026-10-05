@@ -3,9 +3,13 @@
 A single-page, read-only wall display for the Skybird Roofing office TV. It shows
 three things at a glance, in giant type, on a dark HUD:
 
-- **Rest Index** — average open-project days at rest across Jacob / John / Henry / Anas (lower is better)
+- **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Buttons switch between YTD dollars, contract count and the current month. Reads the `Sales YTD` tab, which does not exist yet, so today it shows `—`.
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person, with a ding and a green name when somebody closes one
-- **Eight cash/ops tiles** — Appointments Set, Cost per Appt, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, each with a 12-week sparkline where `L10 History` has a series for it
+- **Eight cash/ops tiles** — Rest Index, Appointments Set, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, most with a 12-week sparkline where `L10 History` has a series for it
+
+Rest Index is the first small tile and reads its own tab, so the Monthly/Weekly
+toggle does not touch it. **Cost per Appt is not on the main board** — it lives
+on the L10 page, where it is one of the nine measurables.
 
 In the middle sits the Talon HUD: concentric instrument rings — graticules, arc
 brackets, radial bar readouts, a hex core and a radar sweep — in blues and
@@ -136,6 +140,7 @@ Then in **Site settings → Environment variables**:
 | `TALON_PASSWORD` | optional | set it to turn on the passphrase gate |
 | `SHEET_TAB_KPI` / `SHEET_TAB_TOP5` / `SHEET_TAB_REST` / `SHEET_TAB_META` | optional | only if you rename tabs |
 | `SHEET_TAB_L10` / `SHEET_TAB_L10_HISTORY` | optional | only if you rename the L10 tabs |
+| `SHEET_TAB_SALES_YTD` | optional | only if you rename the sales tab |
 | `ALERT_WEBHOOK_URL` | optional | where the Sheet watchdog posts when a tab needs a look — see below |
 | `HEALTH_MAX_AGE_HOURS` | optional | overrides every tab's staleness limit (hours) |
 | `SHEET_GID_L10` / `SHEET_GID_L10_HISTORY` | optional | numeric gids, if you would rather address the L10 tabs by id than by name |
@@ -298,7 +303,25 @@ Motion:
 Check changes against `/?mode=example` (full) and `/?mode=empty` (empty states)
 before deploying, then `npm test && npm run check`.
 
-## 10. Top Five celebrations
+## 10. Sheet metrics Talon still owes us
+
+The board renders honestly around these, but they are blank or stale until the
+ops bot fills them. Written up in full as
+[`docs/TALON_SALES_YTD_REQUEST.md`](docs/TALON_SALES_YTD_REQUEST.md).
+
+| Missing | Effect on the board |
+|---|---|
+| **`Sales YTD` tab** | The large top-left card shows its frame with `—`. The board will not derive a year from the monthly `Contracts Signed $$` tile. |
+| **`Close Rates` Value** (`KPI`) | Tile 4 shows `—`. Blocked on a per-closer appointment denominator, which does not exist in any export yet. |
+| **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
+| **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |
+| **`Target` column** (`KPI`) | Empty on every row, so no tile can show a goal or a hit/miss. |
+
+`/api/health` reports all of this per tab — see §11.
+
+---
+
+## 11. Top Five celebrations
 
 Somebody finishes an item on their Daily Top Five, the ops bot writes the new
 percentage, and within a few seconds the board dings once and turns that
@@ -355,7 +378,7 @@ is just dropping another file at that path.
 
 ---
 
-## 11. The Sheet watchdog
+## 12. The Sheet watchdog
 
 Both ways the Sheet goes wrong are invisible from the board:
 
@@ -406,7 +429,7 @@ contract entry is a tab the watchdog cannot check.
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|

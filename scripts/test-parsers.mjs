@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { buildL10FromCsv, buildModelFromCsv, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { createCelebrations } from '../assets/js/celebrate.js';
 import { CONFIG } from '../assets/js/config.js';
@@ -384,8 +384,9 @@ await (async function missingRestTabStillRenders() {
     assert.equal(model.rest.index, null);
     assert.equal(model.sources.top5, 'ok');
     assert.equal(model.sources.rest, 'unavailable');
-    // Rest Index + Meta + L10 History (the sparkline source), all tolerated.
-    assert.equal(model.sourceErrors.length, 3);
+    // Rest Index + Meta + L10 History + Sales YTD, every one tolerated.
+    assert.equal(model.sourceErrors.length, 4);
+    assert.equal(model.salesYtd.present, false, 'no Sales YTD tab is a frame of em dashes, not a broken board');
     assert.equal(model.trends.size, 0, 'no history tab means no sparklines, not a broken board');
   });
 })();
@@ -688,6 +689,80 @@ test('a series with no values at all yields no runs to draw', () => {
     const served = tabs.slots().map((s) => s.slot).sort();
     assert.deepEqual(served, Object.keys(tabs.CONTRACT).sort(),
       'a tab with no contract entry is a tab the watchdog cannot check');
+  });
+})();
+
+/* --- Sales YTD scoreboard ----------------------------------------------- */
+
+(function salesYtd() {
+  const CSV = [
+    'Closer,Contract $$,Contracts Count,Month $$,Notes,Updated ET',
+    'John,412000,14,38000,,2026-10-05T14:30:00-04:00',
+    'Anas,288500.50,9,12500,,2026-10-05T14:30:00-04:00',
+    'Henry,197000,7,0,,2026-10-05T14:30:00-04:00',
+    'Other,38500,2,0,Jacob $38500 (2),2026-10-05T14:30:00-04:00',
+    'Total,936000.50,32,50500,,2026-10-05T14:30:00-04:00',
+  ].join('\n');
+
+  test('the scoreboard reads closers in the board order, with the Sheet total', () => {
+    const s = buildSalesYtd(CSV, { ytdlabel: '2026 YTD', ytdbasis: 'ProLine Won Date' });
+    assert.deepEqual(s.closers.map((c) => c.closer), ['John', 'Anas', 'Henry', 'Other']);
+    assert.deepEqual(s.closers.map((c) => c.dollars), [412000, 288500.5, 197000, 38500]);
+    assert.equal(s.total.dollars, 936000.5);
+    assert.equal(s.label, '2026 YTD');
+    assert.equal(s.basis, 'ProLine Won Date');
+    assert.equal(s.present, true);
+  });
+
+  test('the Other bucket carries its breakdown through', () => {
+    const other = buildSalesYtd(CSV, {}).closers.find((c) => c.closer === 'Other');
+    assert.equal(other.notes, 'Jacob $38500 (2)', 'a real closer must not hide inside Other');
+  });
+
+  test('a total that disagrees with its parts is flagged, never corrected', () => {
+    assert.equal(buildSalesYtd(CSV, {}).reconciles, true);
+    const wrong = CSV.replace('Total,936000.50', 'Total,900000.00');
+    const s = buildSalesYtd(wrong, {});
+    assert.equal(s.reconciles, false);
+    assert.equal(s.total.dollars, 900000, "the Sheet's total is shown as written");
+  });
+
+  test('a missing closer is unknown, not zero, and keeps its row', () => {
+    const partial = [
+      'Closer,Contract $$,Contracts Count',
+      'John,412000,14',
+      'Total,412000,14',
+    ].join('\n');
+    const s = buildSalesYtd(partial, {});
+    assert.deepEqual(s.closers.map((c) => c.closer), ['John', 'Anas', 'Henry', 'Other'],
+      'a scoreboard that silently drops a person is worse than one showing em dashes');
+    assert.deepEqual(s.closers.map((c) => c.dollars), [412000, null, null, null]);
+    assert.equal(s.reconciles, null, 'a partial set cannot be reconciled either way');
+  });
+
+  test('a real zero survives and is not confused with a blank', () => {
+    const s = buildSalesYtd(CSV, {});
+    const henry = s.closers.find((c) => c.closer === 'Henry');
+    assert.equal(henry.monthDollars, 0, 'nothing closed this month is zero');
+    const noMonth = buildSalesYtd('Closer,Contract $$\nJohn,10\n', {});
+    assert.equal(noMonth.closers[0].monthDollars, null, 'a column the Sheet lacks is unknown');
+  });
+
+  test('no Sales YTD tab yields a frame of em dashes, never a derived figure', () => {
+    const s = buildSalesYtd('', {});
+    assert.equal(s.present, false);
+    assert.equal(s.total.dollars, null);
+    assert.deepEqual(s.closers.map((c) => c.dollars), [null, null, null, null]);
+  });
+
+  test('the board still never invents the year from the month', () => {
+    const model = buildModelFromCsv({
+      kpi: 'Metric,Period,Value,Unit\nContracts Signed $$,monthly,46750.07,USD\n',
+      salesYtd: '',
+    });
+    assert.equal(model.salesYtd.total.dollars, null,
+      'a monthly tile is not a year, however tempting');
+    assert.equal(kpiFor(model, 'Contracts Signed $$').number, 46750.07);
   });
 })();
 

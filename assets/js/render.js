@@ -14,8 +14,12 @@ const el = {
   board: () => document.getElementById('board'),
   tiles: () => document.getElementById('tiles'),
   top5: () => document.getElementById('top5-rows'),
-  restValue: () => document.getElementById('rest-value'),
-  restChips: () => document.getElementById('rest-chips'),
+  salesTotal: () => document.getElementById('sales-total'),
+  salesClosers: () => document.getElementById('sales-closers'),
+  salesLabel: () => document.getElementById('sales-label'),
+  salesBasis: () => document.getElementById('sales-basis'),
+  salesTotalLabel: () => document.getElementById('sales-total-label'),
+  salesViews: () => document.getElementById('sales-views'),
   period: () => document.getElementById('period-label'),
   periodToggle: () => document.getElementById('period-toggle'),
   updated: () => document.getElementById('last-updated'),
@@ -55,6 +59,12 @@ export function buildTiles() {
 
     foot.append(target, note);
     node.append(label, value);
+
+    if (tile.kind === 'rest') {
+      const chips = document.createElement('ul');
+      chips.className = 'tile__chips';
+      node.append(chips);
+    }
 
     /* Only the tiles with a weekly series get a sparkline slot. The others get
        no empty box either - a reserved gap reads as a chart that failed. */
@@ -104,37 +114,89 @@ function orderPeople(people, order) {
 
 /* --- zones -------------------------------------------------------------- */
 
-function renderRest(model) {
-  const value = el.restValue();
-  const text = fmtRest(model.rest.index);
-  value.textContent = text;
-  value.classList.toggle('is-empty', text === EMPTY);
-  value.title = model.rest.computed
-    ? 'Computed client-side as the mean of Jacob / John / Henry / Anas'
-    : 'Rest Index provided by the Sheet';
+/* Zone A: year-to-date signed contracts by closer.
+ *
+ * The company total is the headline because this is the first thing anyone sees
+ * walking into the office. Everything on this card comes from the `Sales YTD`
+ * tab verbatim - including the Total, which is the Sheet's own figure and never
+ * a sum this board computed. When that tab does not exist the card still draws
+ * its frame with em dashes, because the alternative would be deriving a year
+ * from the monthly Contracts tile, and that number would be wrong.
+ */
+const SALES_VIEWS = {
+  ytd: {
+    label: 'company year to date',
+    pick: (r) => r.dollars,
+    format: (v) => fmtByUnit(v, 'usd'),
+  },
+  count: {
+    label: 'contracts signed year to date',
+    pick: (r) => r.count,
+    format: (v) => fmtByUnit(v, 'count'),
+  },
+  month: {
+    label: 'company this month',
+    pick: (r) => r.monthDollars,
+    format: (v) => fmtByUnit(v, 'usd'),
+  },
+};
 
-  const people = orderPeople(model.rest.people, CONFIG.restOwners);
-  const host = el.restChips();
-  syncRows(host, people.map((p) => p.person), (name) => {
+function renderSales(model, view) {
+  const sales = model.salesYtd || {};
+  const spec = SALES_VIEWS[view] || SALES_VIEWS[CONFIG.salesDefaultView];
+  const closers = sales.closers || [];
+
+  el.salesLabel().textContent = sales.label || '';
+  el.salesTotalLabel().textContent = spec.label;
+
+  const totalValue = spec.pick(sales.total || {});
+  const totalText = totalValue === null || totalValue === undefined ? EMPTY : spec.format(totalValue);
+  const total = el.salesTotal();
+  total.textContent = totalText;
+  total.classList.toggle('is-empty', totalText === EMPTY);
+
+  const host = el.salesClosers();
+  syncRows(host, closers.map((c) => c.closer), (name) => {
     const li = document.createElement('li');
-    li.className = 'chip';
-    li.dataset.person = norm(name);
+    li.className = 'closer';
+    li.dataset.closer = norm(name);
     const label = document.createElement('span');
-    label.className = 'chip__name';
+    label.className = 'closer__name';
     label.textContent = name;
     const val = document.createElement('span');
-    val.className = 'chip__value is-empty';
+    val.className = 'closer__value is-empty';
     val.textContent = EMPTY;
     li.append(label, val);
     return li;
   });
 
-  for (const person of people) {
-    const chip = host.querySelector(`[data-person="${norm(person.person)}"] .chip__value`);
-    if (!chip) continue;
-    const text = fmtRest(person.days);
-    chip.textContent = text;
-    chip.classList.toggle('is-empty', text === EMPTY);
+  for (const row of closers) {
+    const li = host.querySelector(`[data-closer="${norm(row.closer)}"]`);
+    if (!li) continue;
+    const raw = spec.pick(row);
+    const text = raw === null || raw === undefined ? EMPTY : spec.format(raw);
+    const val = li.querySelector('.closer__value');
+    val.textContent = text;
+    val.classList.toggle('is-empty', text === EMPTY);
+    /* The ops bot lists who got folded into Other, so a real closer hiding in
+       that bucket is visible rather than buried. */
+    li.title = row.notes || '';
+    li.classList.toggle('has-note', Boolean(row.notes));
+  }
+
+  /* The basis line says what the number counts, so nobody has to ask. A Total
+     that disagrees with its parts is footnoted rather than hidden - and never
+     silently corrected, because the Sheet's total is the Sheet's to state. */
+  const notes = [];
+  if (sales.basis) notes.push(sales.basis);
+  if (!sales.present) notes.push('awaiting the Sales YTD tab');
+  else if (sales.reconciles === false) notes.push('total differs from the closer rows — see Sheet notes');
+  el.salesBasis().textContent = notes.join(' · ');
+
+  for (const btn of el.salesViews().querySelectorAll('.sales__view')) {
+    const on = btn.dataset.view === view;
+    btn.classList.toggle('is-on', on);
+    btn.setAttribute('aria-pressed', String(on));
   }
 }
 
@@ -227,6 +289,8 @@ function renderTiles(model, period) {
     const node = el.tiles().querySelector(`[data-metric="${norm(spec.metric)}"]`);
     if (!node) continue;
 
+    if (spec.kind === 'rest') { renderRestTile(node, model); continue; }
+
     const row = kpiFor(model, spec.metric, period);
     const unit = normalizeUnit(row?.unit) || spec.unit;
     const number = unit === 'pct' ? (row ? row.percent : null) : (row ? row.number : null);
@@ -247,6 +311,44 @@ function renderTiles(model, period) {
     }
 
     renderTileTrend(node, spec, model, unit);
+  }
+}
+
+/* Rest Index as a small card. It reads its own tab rather than a KPI Period
+   row, so the Monthly/Weekly toggle does not touch it - the number means the
+   same thing either way. The person chips ride in the footer when there is
+   room for them; at tile size the hero number has to win. */
+function renderRestTile(node, model) {
+  const text = fmtRest(model.rest.index);
+  const value = node.querySelector('.tile__value');
+  value.textContent = text;
+  value.classList.toggle('is-empty', text === EMPTY);
+  value.title = model.rest.computed
+    ? 'Computed client-side as the mean of Jacob / John / Henry / Anas'
+    : 'Rest Index provided by the Sheet';
+
+  const target = node.querySelector('.tile__target');
+  target.hidden = true;
+
+  const chips = node.querySelector('.tile__chips');
+  if (!chips) return;
+  const people = orderPeople(model.rest.people, CONFIG.restOwners);
+  syncRows(chips, people.map((p) => p.person), (name) => {
+    const li = document.createElement('li');
+    li.className = 'tile__chip';
+    li.dataset.person = norm(name);
+    const who = document.createElement('span');
+    who.className = 'tile__chip-name';
+    who.textContent = name;
+    const val = document.createElement('span');
+    val.className = 'tile__chip-value';
+    val.textContent = EMPTY;
+    li.append(who, val);
+    return li;
+  });
+  for (const person of people) {
+    const li = chips.querySelector(`[data-person="${norm(person.person)}"] .tile__chip-value`);
+    if (li) li.textContent = fmtRest(person.days);
   }
 }
 
@@ -368,7 +470,7 @@ export function renderModel(model, state = {}) {
   const period = state.period || CONFIG.defaultPeriod;
   document.documentElement.dataset.mode = model.mode;
   document.documentElement.dataset.period = period;
-  renderRest(model);
+  renderSales(model, state.salesView || CONFIG.salesDefaultView);
   renderTop5(model);
   renderTiles(model, period);
   renderChrome(model, state);

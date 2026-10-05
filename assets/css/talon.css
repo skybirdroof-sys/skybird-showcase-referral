@@ -236,6 +236,7 @@ body { -webkit-font-smoothing: antialiased; }
 
 .panel {
   position: relative;
+  container-type: inline-size;
   min-height: 0;
   padding: calc(var(--u) * 1.4) calc(var(--u) * 1.6);
   border: 1px solid var(--panel-line);
@@ -262,52 +263,147 @@ body { -webkit-font-smoothing: antialiased; }
   color: var(--cyan);
 }
 
-/* Zone A — Rest Index */
+/* Zone A — year-to-date sales scoreboard.
+   Total dominant, closers as rows beneath it. It replaced the Rest Index hero,
+   whose numbers moved to the first small card. */
 
-.panel--rest { justify-content: center; }
+/* overflow hidden is a backstop, not the layout: the closers list is what
+   gives when the card is short, so the total and the controls stay put. */
+.panel--sales { justify-content: flex-start; overflow: hidden; }
 
-.rest__value {
-  margin: calc(var(--u) * 0.2) 0 0;
-  font-size: calc(var(--u) * 13);
+.sales__closers { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+
+.sales__chip {
+  font-size: calc(var(--u) * 0.85);
   font-weight: 800;
-  line-height: 0.88;
-  letter-spacing: calc(var(--u) * -0.3);
+  letter-spacing: calc(var(--u) * 0.12);
+  text-transform: uppercase;
+  color: var(--amber-dim);
+  white-space: nowrap;
+}
+
+.sales__hero { margin-top: calc(var(--u) * 0.4); }
+
+.sales__total {
+  /* Sized against the card, not the window: a seven-figure total is wider than
+     a five-figure one and this panel is only about a quarter of the board.
+     A dollar amount must never wrap or shrink to a different size per screen. */
+  font-size: clamp(18px, 13cqi, 112px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: calc(var(--u) * -0.22);
   color: #fff;
   text-shadow: 0 0 calc(var(--u) * 3) var(--cyan-glow);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-/* An em dash set at hero size reads as a grey slab, so empty states step down. */
-.rest__value.is-empty {
+/* An em dash at hero size reads as a grey slab, so empty states step down - and
+   step down FAR enough: at 6u the placeholder was taller than the real figure
+   it stands in for, which pushed the view buttons and the basis line out
+   through the bottom of the card. */
+.sales__total.is-empty {
   color: var(--ink-3);
   text-shadow: none;
-  font-size: calc(var(--u) * 6.5);
-  line-height: 1.3;
+  font-size: calc(var(--u) * 3.2);
+  line-height: 1.1;
 }
 
-.rest__sub {
-  margin: calc(var(--u) * 0.7) 0 0;
-  font-size: calc(var(--u) * 1.25);
+.sales__total-label {
+  margin: calc(var(--u) * 0.3) 0 0;
+  font-size: calc(var(--u) * 1.05);
   font-weight: 600;
-  color: var(--ink-2);
   letter-spacing: calc(var(--u) * 0.06);
+  color: var(--ink-2);
 }
 
-.rest__hint {
-  margin: calc(var(--u) * 0.25) 0 0;
-  font-size: calc(var(--u) * 0.95);
+.sales__closers {
+  list-style: none;
+  margin: calc(var(--u) * 0.9) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.45);
+}
+
+.closer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.42) calc(var(--u) * 0.85);
+  border: 1px solid rgba(47, 230, 255, 0.18);
+  border-radius: calc(var(--u) * 0.55);
+  background: rgba(47, 230, 255, 0.05);
+  min-width: 0;
+}
+
+.closer__name {
+  font-size: calc(var(--u) * 1.05);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: calc(var(--u) * 0.14);
-  color: var(--amber-dim);
+  letter-spacing: calc(var(--u) * 0.1);
+  color: var(--ink-2);
+  white-space: nowrap;
 }
 
-.rest__chips {
-  list-style: none;
-  margin: calc(var(--u) * 1.6) 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--u) * 0.6);
+/* A closer carrying a Sheet note - the Other bucket's breakdown - is marked, so
+   the detail is known to exist rather than only discoverable by hovering. */
+.closer.has-note .closer__name::after {
+  content: '\00b7\00b7\00b7';
+  margin-left: calc(var(--u) * 0.3);
+  color: var(--cyan-dim);
+}
+
+.closer__value {
+  font-size: calc(var(--u) * 1.5);
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.closer__value.is-empty { color: var(--ink-3); font-size: calc(var(--u) * 1.1); }
+
+.sales__foot {
+  margin-top: auto;
+  padding-top: calc(var(--u) * 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.4);
+}
+
+.sales__views { display: flex; gap: calc(var(--u) * 0.35); flex-wrap: wrap; }
+
+.sales__view {
+  font: inherit;
+  font-size: calc(var(--u) * 0.72);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.07);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  padding: calc(var(--u) * 0.25) calc(var(--u) * 0.6);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sales__view.is-on {
+  color: #04141a;
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.sales__view:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+.sales__basis {
+  margin: 0;
+  font-size: calc(var(--u) * 0.72);
+  font-weight: 600;
+  color: var(--ink-3);
+  line-height: 1.3;
 }
 
 .chip {
@@ -802,6 +898,56 @@ body { -webkit-font-smoothing: antialiased; }
   line-height: 1.6;
 }
 
+/* Rest Index as a small card: the four owners ride under the number.
+   ONE row of four, not a 2x2 - the tile has about a line and a half spare under
+   the hero number, and a 2x2 grid clipped Henry and Anas, which reads as a
+   broken card rather than a dense one. They are still the first thing to go on
+   a short screen, because the company figure is what the card is for. */
+.tile__chips {
+  list-style: none;
+  margin: calc(var(--u) * 0.3) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--u) * 0.45);
+  min-height: 0;
+}
+
+.tile__chip {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 0.25);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.tile__chip-name {
+  font-size: calc(var(--u) * 0.68);
+  font-weight: 700;
+  letter-spacing: calc(var(--u) * 0.05);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile__chip-value {
+  font-size: calc(var(--u) * 0.78);
+  font-weight: 800;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-height: 820px) {
+  /* Not enough height for both; the hero number wins. */
+  .tile__chips { display: none; }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  /* Stacked phone layout: the tile is wide enough for two per row. */
+  .tile__chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* --- tile sparkline ---------------------------------------------------- */
 
 /* The weekly shape behind the number, sitting between the value and the footer.
@@ -984,7 +1130,7 @@ body { -webkit-font-smoothing: antialiased; }
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
   :root { --u: min(1.15vw, 3.1vh); }
   .zones { grid-template-columns: 1fr 1fr; }
-  .panel--rest { grid-column: 1; grid-row: 1; }
+  .panel--sales { grid-column: 1; grid-row: 1; }
   .panel--top5 { grid-column: 2; grid-row: 1; }
   .hud-stage { grid-column: 1 / -1; grid-row: 2; }
   .hud { width: min(calc(var(--u) * 16), 30vh); }
