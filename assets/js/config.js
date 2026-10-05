@@ -65,7 +65,22 @@ export const CONFIG = {
      own tab, which is why it carries `kind`, and why the Monthly/Weekly toggle
      does not touch it wherever it sits. */
   tiles: [
-    { metric: 'Close Rates', unit: 'pct', note: 'Anas · John · Henry' },
+    /* Company rate as the hero, the three closers as chips beneath it. The
+       chip metrics are ordinary KPI rows, so the Monthly/Weekly toggle flips
+       all four together and any that the Sheet has not filled shows an em
+       dash. ProLine owns the definition of this number - Talon transcribes it
+       and the board displays it; nothing here computes a close rate. See
+       docs/TALON_CLOSE_RATES_REQUEST.md. */
+    {
+      metric: 'Close Rates',
+      unit: 'pct',
+      kind: 'rates',
+      chips: [
+        { label: 'John', metric: 'Close Rate - John' },
+        { label: 'Anas', metric: 'Close Rate - Anas' },
+        { label: 'Henry', metric: 'Close Rate - Henry' },
+      ],
+    },
     { metric: 'Appointments Set', unit: 'count', trend: 'Appointments Set' },
     { metric: 'Contracts Signed $$', unit: 'usd', trend: 'Contracts Signed - $$' },
     { kind: 'rest', metric: 'Rest Index', unit: 'rest', note: 'avg days at rest · lower is better' },

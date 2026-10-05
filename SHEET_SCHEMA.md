@@ -73,6 +73,23 @@ extra rows or another tab — the board ignores rows it doesn't have a tile for.
 
 ---
 
+**Close rates are four rows, not one.** `Close Rates` holds the company figure
+and `Close Rate - John` / `Close Rate - Anas` / `Close Rate - Henry` hold the
+closers, each with a `monthly` and a `weekly` Period row like every other metric
+here. The board shows the company rate as the tile's big number and the three
+closers as chips beneath it, and any that is blank shows `—`.
+
+**ProLine owns that definition — the board never computes a close rate.**
+Whatever ProLine reports is transcribed verbatim, including its window, which is
+recorded in the row's `Notes` so the tile can be labelled honestly rather than
+re-cut to match the other tiles. See
+[`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md).
+
+Percent values are stored as written: `42` means 42%. A `0.42` would render as
+`0.4%`.
+
+---
+
 ## Tab: `Daily Top-Five Progress`
 
 Row 1 headers:

@@ -35,7 +35,7 @@ export function buildTiles() {
 
   for (const tile of CONFIG.tiles) {
     const node = document.createElement('article');
-    node.className = `tile${tile.alert ? ' tile--alert' : ''}`;
+    node.className = `tile${tile.alert ? ' tile--alert' : ''}${tile.kind ? ` tile--${tile.kind}` : ''}`;
     node.dataset.metric = norm(tile.metric);
 
     const label = document.createElement('h3');
@@ -60,7 +60,7 @@ export function buildTiles() {
     foot.append(target, note);
     node.append(label, value);
 
-    if (tile.kind === 'rest') {
+    if (tile.kind === 'rest' || tile.kind === 'rates') {
       const chips = document.createElement('ul');
       chips.className = 'tile__chips';
       node.append(chips);
@@ -303,6 +303,7 @@ function renderTiles(model, period) {
     if (!node) continue;
 
     if (spec.kind === 'rest') { renderRestTile(node, model); continue; }
+    if (spec.kind === 'rates') { renderRatesTile(node, spec, model, period); continue; }
 
     const row = kpiFor(model, spec.metric, period);
     const unit = normalizeUnit(row?.unit) || spec.unit;
@@ -324,6 +325,52 @@ function renderTiles(model, period) {
     }
 
     renderTileTrend(node, spec, model, unit);
+  }
+}
+
+/* Close Rates: the company figure as the hero, the three closers as chips.
+   Every one of the four is an ordinary KPI Period row, so the Monthly/Weekly
+   toggle flips them together, and any the Sheet has not filled shows an em
+   dash rather than a borrowed or derived number. The board does not compute a
+   close rate from anything - ProLine owns that definition. */
+function renderRatesTile(node, spec, model, period) {
+  const row = kpiFor(model, spec.metric, period);
+  const value = node.querySelector('.tile__value');
+  const text = row ? fmtByUnit(row.percent, 'pct') : EMPTY;
+  value.textContent = text;
+  value.classList.toggle('is-empty', text === EMPTY);
+
+  const target = node.querySelector('.tile__target');
+  const goal = row?.targetPercent;
+  if (goal === null || goal === undefined) {
+    target.hidden = true;
+    target.textContent = '';
+  } else {
+    target.hidden = false;
+    target.textContent = `target ${fmtByUnit(goal, 'pct')}`;
+  }
+
+  const host = node.querySelector('.tile__chips');
+  if (!host) return;
+  const chips = spec.chips || [];
+  syncRows(host, chips.map((c) => c.label), (label) => {
+    const li = document.createElement('li');
+    li.className = 'tile__chip';
+    li.dataset.person = norm(label);
+    const who = document.createElement('span');
+    who.className = 'tile__chip-name';
+    who.textContent = label;
+    const val = document.createElement('span');
+    val.className = 'tile__chip-value';
+    val.textContent = EMPTY;
+    li.append(who, val);
+    return li;
+  });
+  for (const chip of chips) {
+    const el_ = host.querySelector(`[data-person="${norm(chip.label)}"] .tile__chip-value`);
+    if (!el_) continue;
+    const r = kpiFor(model, chip.metric, period);
+    el_.textContent = r ? fmtByUnit(r.percent, 'pct') : EMPTY;
   }
 }
 

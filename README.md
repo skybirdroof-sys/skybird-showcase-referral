@@ -312,7 +312,7 @@ ops bot fills them. Written up in full as
 | Missing | Effect on the board |
 |---|---|
 | **`Sales YTD Detail` tab** | Clicking a closer opens the panel saying *"Detail tab not ready"*. The card keeps its summary numbers; the board never derives job rows from a count. |
-| **`Close Rates` Value** (`KPI`) | Tile 4 shows `—`. Blocked on a per-closer appointment denominator, which does not exist in any export yet. |
+| **`Close Rates` Value** (`KPI`) | Tile 1 shows `—` for the company figure and all three closers. ProLine owns the definition and Talon transcribes it — the board never derives a close rate. Four rows needed: `Close Rates`, `Close Rate - John`, `Close Rate - Anas`, `Close Rate - Henry`, monthly and weekly. See [`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md). |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |
 | **`Target` column** (`KPI`) | Empty on every row, so no tile can show a goal or a hit/miss. |

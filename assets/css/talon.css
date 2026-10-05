@@ -1204,6 +1204,9 @@ body { -webkit-font-smoothing: antialiased; }
   .tile__chips { display: none; }
 }
 
+/* Three closers rather than four owners, so they get more room each. */
+.tile--rates .tile__chips { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
 @media (max-aspect-ratio: 1/1) {
   /* Stacked phone layout: the tile is wide enough for two per row. */
   .tile__chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
