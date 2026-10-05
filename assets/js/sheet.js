@@ -247,6 +247,120 @@ function reconcileSales(closers, total) {
   return Math.abs(sum - total) < 0.5;
 }
 
+/* `Sales YTD Detail` — one row per signed job, behind each closer on the card. */
+function parseSalesDetail(csv) {
+  return records(csv)
+    .map((r) => ({
+      closer: String(pick(r, ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'])).trim(),
+      projectNumber: String(pick(r, ['projectnumber', 'projectno', 'projectid', 'project'])).trim(),
+      customer: String(pick(r, ['customer', 'customername', 'homeowner', 'project'])).trim(),
+      wonDate: String(pick(r, ['wondate', 'date', 'signeddate', 'signed'])).trim(),
+      wonMonth: String(pick(r, ['wonmonth', 'month'])).trim(),
+      dollars: parseValue(pick(r, ['contract', 'contracts', 'contractdollars', 'dollars', 'amount', 'value'])),
+      updated: String(pick(r, ['updatedet', 'updated'])).trim(),
+    }))
+    .filter((row) => row.closer !== '' && !/^note/i.test(row.closer));
+}
+
+/* YYYY-MM, taken from Won Month when the Sheet supplies it and derived from the
+   first seven characters of Won Date when it does not. Deliberately string
+   surgery rather than Date parsing: `new Date('2026-10-01')` is read as UTC and
+   comes back as September 30th west of Greenwich, which would file a job under
+   the wrong month on a board whose whole point is which month it was signed. */
+export function monthKeyOf(row) {
+  const m = String(row.wonMonth || '').trim();
+  if (/^\d{4}-\d{2}$/.test(m)) return m;
+  const d = String(row.wonDate || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 7);
+  return '';
+}
+
+/* Jobs per closer, grouped by month, newest month first and newest job first
+   inside it. The Sheet's own row order is never trusted - it is a convenience,
+   not a contract. */
+export function buildSalesDetail(csv) {
+  const rows = parseSalesDetail(csv);
+  const byCloser = new Map();
+
+  for (const row of rows) {
+    const key = norm(row.closer);
+    if (!byCloser.has(key)) byCloser.set(key, []);
+    byCloser.get(key).push({ ...row, monthKey: monthKeyOf(row) });
+  }
+
+  for (const [key, list] of byCloser) {
+    const months = new Map();
+    for (const job of list) {
+      if (!months.has(job.monthKey)) months.set(job.monthKey, []);
+      months.get(job.monthKey).push(job);
+    }
+
+    const grouped = [...months.entries()]
+      /* A job with no readable month sorts last rather than being dropped: it
+         is a real signed job and hiding it would make the panel disagree with
+         its own footer. */
+      .sort((a, b) => (b[0] || '').localeCompare(a[0] || ''))
+      .map(([monthKey, jobs]) => {
+        jobs.sort((x, y) => {
+          const d = String(y.wonDate || '').localeCompare(String(x.wonDate || ''));
+          return d !== 0 ? d : String(x.customer || '').localeCompare(String(y.customer || ''));
+        });
+        const known = jobs.map((j) => j.dollars).filter((v) => v !== null);
+        return {
+          monthKey,
+          jobs,
+          /* A subtotal across rows where some dollar cells are blank would be a
+             number nobody can reconcile, so it stays null and renders an em
+             dash - the job count is still true and still shown. */
+          subtotal: known.length === jobs.length ? known.reduce((a, b) => a + b, 0) : null,
+          count: jobs.length,
+        };
+      });
+
+    const all = list.map((j) => j.dollars).filter((v) => v !== null);
+    byCloser.set(key, {
+      months: grouped,
+      total: all.length === list.length ? all.reduce((a, b) => a + b, 0) : null,
+      count: list.length,
+    });
+  }
+
+  return {
+    present: rows.length > 0,
+    byCloser,
+    updated: freshest('', rows.map((r) => r.updated)),
+  };
+}
+
+/* The job list for one closer, plus whether it agrees with the summary tab.
+   A disagreement is reported, never reconciled by inventing or dropping rows:
+   the panel shows what the detail tab actually holds and says the summary
+   differs. */
+export function detailFor(model, closer) {
+  const detail = model.salesDetail || { present: false, byCloser: new Map() };
+  const found = detail.byCloser.get(norm(closer)) || { months: [], total: null, count: 0 };
+  const summary = (model.salesYtd?.closers || []).find((c) => norm(c.closer) === norm(closer)) || {};
+
+  const dollarsAgree = summary.dollars === null || summary.dollars === undefined || found.total === null
+    ? null
+    : Math.abs(found.total - summary.dollars) < 0.5;
+  const countAgree = summary.count === null || summary.count === undefined
+    ? null
+    : found.count === summary.count;
+
+  return {
+    closer,
+    present: detail.present,
+    months: found.months,
+    total: found.total,
+    count: found.count,
+    summaryDollars: summary.dollars ?? null,
+    summaryCount: summary.count ?? null,
+    agrees: dollarsAgree === false || countAgree === false ? false
+      : dollarsAgree === null && countAgree === null ? null : true,
+  };
+}
+
 function parseL10Current(csv) {
   return records(csv)
     .map((r) => ({
@@ -589,6 +703,7 @@ export function normalizeModel(raw) {
     /* Always an object, so the card can render its frame whether or not the
        Sheet has the tab yet. */
     salesYtd: raw.salesYtd || buildSalesYtd('', raw.meta || {}),
+    salesDetail: raw.salesDetail || buildSalesDetail(''),
     updated,
     sources: raw.sources || {},
     sourceErrors: raw.sourceErrors || [],
@@ -598,7 +713,7 @@ export function normalizeModel(raw) {
 
 /* CSV text (all four tabs) -> board model. Exported so it can be exercised
    without a network: see scripts/test-parsers.mjs. */
-export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l10History = '', salesYtd = '', sources, sourceErrors }) {
+export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l10History = '', salesYtd = '', salesDetail = '', sources, sourceErrors }) {
   const parsed = {
     kpi: parseKpi(kpi),
     top5: parseTop5(top5),
@@ -652,6 +767,7 @@ export function buildModelFromCsv({ kpi = '', top5 = '', rest = '', meta = '', l
     mode: 'live',
     ...parsed,
     salesYtd: buildSalesYtd(salesYtd, parsed.meta),
+    salesDetail: buildSalesDetail(salesDetail),
     trends,
     sources: marks,
     sourceErrors: errors,
@@ -676,10 +792,11 @@ export async function loadLive() {
        tab is missing the tiles simply show no line, which is the honest
        outcome - a board with eight numbers and no trends still works. */
     ['l10History', tabs.l10History],
-    /* The YTD scoreboard. The ops bot has not shipped this tab yet, so a
-       failure here is expected and must not touch the rest of the board: the
-       card renders its frame with em dashes. */
+    /* The YTD scoreboard, and the job list behind each closer on it. Both are
+       tolerated failures: the card renders its frame with em dashes, and the
+       drill-down panel says the detail tab is not ready. */
     ['salesYtd', tabs.salesYtd],
+    ['salesDetail', tabs.salesDetail],
   ];
 
   const settled = await Promise.all(wanted.map(async ([key, tab]) => {
@@ -690,7 +807,7 @@ export async function loadLive() {
     }
   }));
 
-  const csv = { kpi: '', top5: '', rest: '', meta: '', l10History: '', salesYtd: '' };
+  const csv = { kpi: '', top5: '', rest: '', meta: '', l10History: '', salesYtd: '', salesDetail: '' };
   const sources = {};
   const sourceErrors = [];
   let noSource = 0;

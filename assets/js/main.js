@@ -7,6 +7,7 @@ import {
   renderCelebrationState, pulsePerson, announce, renderSoundButton, renderTop5Rows,
 } from './render.js';
 import { createCelebrations, createSound } from './celebrate.js';
+import { createDrilldown } from './drilldown.js';
 import { ensureAccess } from './gate.js';
 import { startHud } from './hud.js';
 import { clamp } from './format.js';
@@ -49,6 +50,8 @@ const celebrations = createCelebrations({
   },
   onState: renderCelebrationState,
 });
+
+const drilldown = createDrilldown();
 
 const state = {
   lastModel: null,
@@ -137,6 +140,12 @@ async function tick() {
       state.period = model.meta.defaultPeriod;
     }
     renderModel(model, { stale: false, lastFetchAt: state.lastFetchAt, period: state.period, salesView: state.salesView });
+    /* A refresh while the job list is open must not leave last refresh's jobs
+       sitting in it. Re-rendered in place, and the panel is not re-anchored,
+       so nothing moves under the reader. */
+    if (drilldown.isOpen && drilldown.openCloser) {
+      drilldown.open(model, drilldown.openCloser, null);
+    }
     /* The full refresh sees the same rows as the fast poll. Identical values
        are a no-op in the engine, so feeding it from both paths cannot
        double-fire, and whichever arrives first wins the ding. */
@@ -247,6 +256,14 @@ async function start() {
   document.getElementById('sales-views').addEventListener('click', (event) => {
     const btn = event.target.closest('.sales__view');
     if (btn) setSalesView(btn.dataset.view);
+  });
+
+  /* Delegated, because the closer rows are rebuilt whenever the Sheet changes
+     which names it carries. */
+  document.getElementById('sales-closers').addEventListener('click', (event) => {
+    const btn = event.target.closest('.closer__btn');
+    if (!btn || !state.lastModel) return;
+    drilldown.open(state.lastModel, btn.dataset.closerName, btn);
   });
 
   document.addEventListener('keydown', (event) => {

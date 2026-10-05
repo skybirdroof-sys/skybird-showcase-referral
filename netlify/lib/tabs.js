@@ -29,6 +29,7 @@ const DEFAULT_TABS = {
   L10: 'L10 Scorecard',
   L10_HISTORY: 'L10 History',
   SALES_YTD: 'Sales YTD',
+  SALES_YTD_DETAIL: 'Sales YTD Detail',
 };
 
 /* Each slot resolves to a tab name (SHEET_TAB_*) and, optionally, a stable gid
@@ -123,6 +124,16 @@ const CONTRACT = {
   SALES_YTD: {
     required: [['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'], ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value']],
     known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value', 'contractscount', 'contractcount', 'count', 'jobs', 'month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'monthcount', 'mtdcount', 'thismonthcount', 'notes', 'note', 'updatedet', 'updated'],
+    maxAgeHours: 30,
+  },
+  /* The job list behind each closer on the sales card. One row per job, so an
+     empty tab is a real possibility (nobody has signed anything yet this year
+     would be zero rows, not an error) - which is why the watchdog's "parses to
+     zero rows" check is the only thing that would flag it, and why the panel
+     says "no YTD jobs in Sheet" rather than treating it as a fault. */
+  SALES_YTD_DETAIL: {
+    required: [['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'], ['customer', 'project', 'customername', 'homeowner'], ['wondate', 'date', 'signed', 'signeddate']],
+    known: ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name', 'projectnumber', 'projectno', 'project', 'projectid', 'customer', 'customername', 'homeowner', 'wondate', 'date', 'signed', 'signeddate', 'wonmonth', 'month', 'contract', 'contracts', 'contractdollars', 'dollars', 'amount', 'value', 'notes', 'note', 'updatedet', 'updated'],
     maxAgeHours: 30,
   },
 };

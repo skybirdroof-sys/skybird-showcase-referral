@@ -3,7 +3,7 @@
 A single-page, read-only wall display for the Skybird Roofing office TV. It shows
 three things at a glance, in giant type, on a dark HUD:
 
-- **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Buttons switch between YTD dollars, contract count and the current month. Reads the `Sales YTD` tab, which does not exist yet, so today it shows `—`.
+- **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Buttons switch between YTD dollars, contract count and the current month. **Click a closer on YTD sales for the job list** — every signed job, grouped by month, with the total at the bottom that matches their card figure.
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person, with a ding and a green name when somebody closes one
 - **Eight cash/ops tiles** — Rest Index, Appointments Set, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, most with a 12-week sparkline where `L10 History` has a series for it
 
@@ -311,13 +311,15 @@ ops bot fills them. Written up in full as
 
 | Missing | Effect on the board |
 |---|---|
-| **`Sales YTD` tab** | The large top-left card shows its frame with `—`. The board will not derive a year from the monthly `Contracts Signed $$` tile. |
+| **`Sales YTD Detail` tab** | Clicking a closer opens the panel saying *"Detail tab not ready"*. The card keeps its summary numbers; the board never derives job rows from a count. |
 | **`Close Rates` Value** (`KPI`) | Tile 4 shows `—`. Blocked on a per-closer appointment denominator, which does not exist in any export yet. |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |
 | **`Target` column** (`KPI`) | Empty on every row, so no tile can show a goal or a hit/miss. |
 
-`/api/health` reports all of this per tab — see §11.
+`Sales YTD` itself landed Oct 5 and the card is live.
+
+`/api/health` reports all of this per tab — see §12.
 
 ---
 

@@ -160,13 +160,26 @@ function renderSales(model, view) {
     const li = document.createElement('li');
     li.className = 'closer';
     li.dataset.closer = norm(name);
+
+    /* A real <button>, not a clickable row: it has to be reachable from a
+       keyboard and announce itself, and the TV's pointer is not the only way
+       anyone opens this board. */
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'closer__btn';
+    btn.dataset.closer = norm(name);
+    btn.dataset.closerName = name;
+    btn.setAttribute('aria-label', `Show ${name}'s signed jobs`);
+
     const label = document.createElement('span');
     label.className = 'closer__name';
     label.textContent = name;
     const val = document.createElement('span');
     val.className = 'closer__value is-empty';
     val.textContent = EMPTY;
-    li.append(label, val);
+
+    btn.append(label, val);
+    li.append(btn);
     return li;
   });
 

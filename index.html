@@ -126,6 +126,21 @@
     <!-- Zone C: eight cash/ops tiles -->
     <section class="tiles" id="tiles" aria-label="Cash and ops metrics"></section>
 
+    <!-- The job list behind a closer on the sales card. A real <dialog> so Esc,
+         the focus trap, returning focus to the name that was clicked and
+         inert-ing the board behind it are all native. -->
+    <dialog class="drill" id="drill" aria-labelledby="drill-title">
+      <header class="drill__head">
+        <div>
+          <h2 class="drill__title" id="drill-title"></h2>
+          <p class="drill__sub" id="drill-sub"></p>
+        </div>
+        <button class="drill__x" type="button" aria-label="Close job list">&#215;</button>
+      </header>
+      <div class="drill__body" id="drill-body" tabindex="0"></div>
+      <footer class="drill__foot" id="drill-foot"></footer>
+    </dialog>
+
     <!-- Celebrations are announced here as well as shown, so the ding is not
          the only non-visual signal that something happened. -->
     <p id="top5-live" class="visually-hidden" role="status" aria-live="polite"></p>

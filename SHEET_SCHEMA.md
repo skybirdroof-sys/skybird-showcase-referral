@@ -232,6 +232,44 @@ Five rows: `John`, `Anas`, `Henry`, `Other`, `Total`.
 
 ---
 
+## Tab: `Sales YTD Detail`
+
+The job list behind each closer on the sales card — one row per signed job.
+Clicking a closer's name opens it.
+
+Row 1 headers:
+
+```
+Closer | Project Number | Customer | Won Date | Won Month | Contract $$ | Updated ET
+```
+
+| Column | Notes |
+|---|---|
+| `Closer` | the same four labels as `Sales YTD`: `John`, `Anas`, `Henry`, `Other`. |
+| `Project Number` | ProLine project #. Not shown on the row — it rides on the customer's tooltip, because it settles arguments rather than being read across a room. |
+| `Customer` | homeowner or project name. |
+| `Won Date` | `YYYY-MM-DD`, the America/New_York calendar day. |
+| `Won Month` | `YYYY-MM`, for grouping. Optional — the board falls back to the first seven characters of `Won Date`. |
+| `Contract $$` | plain number. A blank leaves that month's subtotal unknown (`—`) rather than producing a sum nobody can reconcile; the job count stays true. |
+
+- **The board regroups and re-sorts regardless of the Sheet's row order** —
+  month descending, then date descending, then customer. Row order is a
+  convenience, not a contract.
+- Dates are never parsed through `Date`. `new Date('2026-10-01')` is read as UTC
+  and comes back as September 30th west of Greenwich, which would file a job
+  under the wrong month on a panel whose whole point is which month it was
+  signed.
+- A job whose month cannot be read sorts last rather than being dropped — it is
+  a real signed job, and hiding it would make the panel disagree with its own
+  footer.
+- **The footer total is what the detail rows add up to.** If the `Sales YTD`
+  summary disagrees, both figures are shown and the difference is named in
+  amber. No row is invented or dropped to make them match.
+- An empty tab, or a closer with no rows in it, says *"No YTD jobs in Sheet"*.
+  A missing tab says *"Detail tab not ready"*. Neither invents a job.
+
+---
+
 ## Tab: `Meta` (optional, recommended)
 
 Row 1 headers:

@@ -263,6 +263,231 @@ body { -webkit-font-smoothing: antialiased; }
   color: var(--cyan);
 }
 
+/* --- Sales drill-down panel -------------------------------------------- */
+
+/* Jacob's Oct 5 lock: nothing rotates, flips or tumbles. A fade under 200ms,
+   sized to its content, and the board behind it does not move. */
+.drill {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  width: min(44ch, calc(100vw - 32px));
+  max-height: 80vh;
+  display: none;
+  flex-direction: column;
+  border: 1px solid rgba(47, 230, 255, 0.35);
+  border-radius: calc(var(--u) * 0.8);
+  background: #0a121b;
+  color: var(--ink);
+  box-shadow: 0 calc(var(--u) * 1.5) calc(var(--u) * 4) rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.drill[open] { display: flex; animation: drill-in 150ms ease-out; }
+
+.drill.is-centred {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes drill-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drill[open] { animation: none; }
+}
+
+.drill::backdrop { background: rgba(2, 5, 9, 0.55); }
+
+.drill__head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 0.9) calc(var(--u) * 1) calc(var(--u) * 0.7);
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.drill__title {
+  margin: 0;
+  font-size: calc(var(--u) * 1.35);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.04);
+  color: var(--cyan);
+}
+
+.drill__sub {
+  margin: calc(var(--u) * 0.2) 0 0;
+  font-size: calc(var(--u) * 0.72);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.drill__x {
+  flex: none;
+  font: inherit;
+  font-size: calc(var(--u) * 1.4);
+  line-height: 1;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid var(--panel-line);
+  border-radius: calc(var(--u) * 0.4);
+  padding: 0 calc(var(--u) * 0.45);
+  cursor: pointer;
+}
+
+.drill__x:hover { color: var(--ink); border-color: var(--cyan); }
+.drill__x:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+/* The list scrolls, not the board behind it. */
+.drill__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 1);
+}
+
+.drill__body:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+.drill__month + .drill__month { margin-top: calc(var(--u) * 0.9); }
+
+.drill__month-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.35) 0 calc(var(--u) * 0.25);
+  background: #0a121b;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.drill__month-name {
+  margin: 0;
+  font-size: calc(var(--u) * 0.95);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.09);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.drill__month-sum {
+  font-size: calc(var(--u) * 0.88);
+  font-weight: 800;
+  color: var(--cyan);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.drill__jobs { list-style: none; margin: 0; padding: 0; }
+
+.drill__job {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.32) 0;
+  border-bottom: 1px solid rgba(226, 240, 255, 0.06);
+}
+
+/* The customer name can give way; the money never does. */
+.drill__customer {
+  font-size: calc(var(--u) * 0.92);
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drill__when {
+  font-size: calc(var(--u) * 0.75);
+  font-weight: 700;
+  letter-spacing: calc(var(--u) * 0.05);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.drill__amount {
+  font-size: calc(var(--u) * 1);
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.drill__foot {
+  flex: none;
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 1) calc(var(--u) * 0.8);
+  border-top: 1px solid var(--panel-line);
+  background: rgba(47, 230, 255, 0.05);
+}
+
+.drill__total {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 0.6);
+}
+
+.drill__total-amount {
+  font-size: calc(var(--u) * 1.6);
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.drill__total-jobs {
+  font-size: calc(var(--u) * 0.85);
+  font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.1);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* Amber because on this board amber means "look here", and a summary that
+   disagrees with the rows under it is exactly that. */
+.drill__warn {
+  margin: calc(var(--u) * 0.35) 0 0;
+  font-size: calc(var(--u) * 0.72);
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.drill__note { padding: calc(var(--u) * 0.8) 0; }
+
+.drill__note-head {
+  margin: 0;
+  font-size: calc(var(--u) * 1);
+  font-weight: 800;
+  color: var(--ink-2);
+}
+
+.drill__note-dash {
+  margin: calc(var(--u) * 0.3) 0;
+  font-size: calc(var(--u) * 2);
+  font-weight: 700;
+  color: var(--ink-3);
+  line-height: 1;
+}
+
+.drill__note-body {
+  margin: 0;
+  font-size: calc(var(--u) * 0.78);
+  font-weight: 600;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+
 /* Zone A — year-to-date sales scoreboard.
    Total dominant, closers as rows beneath it. It replaced the Rest Index hero,
    whose numbers moved to the first small card. */
@@ -326,7 +551,14 @@ body { -webkit-font-smoothing: antialiased; }
   gap: calc(var(--u) * 0.45);
 }
 
-.closer {
+.closer { min-width: 0; }
+
+/* The whole row is the control - a name on a wall display is a small target,
+   and the number beside it is part of what you are clicking. */
+.closer__btn {
+  font: inherit;
+  color: inherit;
+  width: 100%;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -336,7 +568,34 @@ body { -webkit-font-smoothing: antialiased; }
   border-radius: calc(var(--u) * 0.55);
   background: rgba(47, 230, 255, 0.05);
   min-width: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 140ms ease, border-color 140ms ease;
 }
+
+.closer__btn:hover,
+.closer__btn:focus-visible {
+  background: rgba(47, 230, 255, 0.12);
+  border-color: rgba(47, 230, 255, 0.45);
+}
+
+.closer__btn:hover .closer__name,
+.closer__btn:focus-visible .closer__name { text-decoration: underline; }
+
+.closer__btn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+/* A chevron that is always laid out, so the hover state cannot shift the row. */
+.closer__btn::after {
+  content: '\203a';
+  flex: none;
+  order: 3;
+  font-size: calc(var(--u) * 1.2);
+  line-height: 1;
+  color: var(--cyan-dim);
+  opacity: 0.55;
+}
+
+.closer__btn:hover::after, .closer__btn:focus-visible::after { opacity: 1; }
 
 .closer__name {
   font-size: calc(var(--u) * 1.05);
@@ -349,6 +608,8 @@ body { -webkit-font-smoothing: antialiased; }
 
 /* A closer carrying a Sheet note - the Other bucket's breakdown - is marked, so
    the detail is known to exist rather than only discoverable by hovering. */
+.closer__value { order: 2; margin-left: auto; }
+
 .closer.has-note .closer__name::after {
   content: '\00b7\00b7\00b7';
   margin-left: calc(var(--u) * 0.3);

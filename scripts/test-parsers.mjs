@@ -3,9 +3,10 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, detailFor, monthKeyOf, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { createCelebrations } from '../assets/js/celebrate.js';
+import { monthLabel, dayLabel } from '../assets/js/drilldown.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
@@ -384,8 +385,8 @@ await (async function missingRestTabStillRenders() {
     assert.equal(model.rest.index, null);
     assert.equal(model.sources.top5, 'ok');
     assert.equal(model.sources.rest, 'unavailable');
-    // Rest Index + Meta + L10 History + Sales YTD, every one tolerated.
-    assert.equal(model.sourceErrors.length, 4);
+    // Rest + Meta + L10 History + Sales YTD + Sales YTD Detail, all tolerated.
+    assert.equal(model.sourceErrors.length, 5);
     assert.equal(model.salesYtd.present, false, 'no Sales YTD tab is a frame of em dashes, not a broken board');
     assert.equal(model.trends.size, 0, 'no history tab means no sparklines, not a broken board');
   });
@@ -763,6 +764,108 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(model.salesYtd.total.dollars, null,
       'a monthly tile is not a year, however tempting');
     assert.equal(kpiFor(model, 'Contracts Signed $$').number, 46750.07);
+  });
+})();
+
+/* --- Sales YTD drill-down ----------------------------------------------- */
+
+(function salesDrilldown() {
+  const SUMMARY = [
+    'Closer,Contract $$,Contracts Count,Updated ET',
+    'John,231847.84,15,2026-10-05T16:57:01-04:00',
+    'Henry,71750.50,3,2026-10-05T16:57:01-04:00',
+    'Total,303598.34,18,2026-10-05T16:57:01-04:00',
+  ].join('\n');
+
+  /* Deliberately out of order, and one job whose Won Month is blank, because
+     the Sheet's row order is a convenience and not a contract. */
+  const DETAIL = [
+    'Closer,Project Number,Customer,Won Date,Won Month,Contract $$,Updated ET',
+    'Henry,P-0988,Shay Peterson,2026-09-14,2026-09,22100.50,2026-10-05T16:57:01-04:00',
+    'Henry,P-1001,James Marlowe,2026-10-04,,31200.00,2026-10-05T16:57:01-04:00',
+    'Henry,P-1042,Bryan Law,2026-10-02,2026-10,18450.00,2026-10-05T16:57:01-04:00',
+    'John,P-0900,Deb Glaser,2026-08-11,2026-08,231847.84,2026-10-05T16:57:01-04:00',
+  ].join('\n');
+
+  const model = buildModelFromCsv({ salesYtd: SUMMARY, salesDetail: DETAIL });
+
+  test('a closer drills to only their own jobs', () => {
+    const henry = detailFor(model, 'Henry');
+    assert.equal(henry.count, 3);
+    assert.deepEqual(
+      henry.months.flatMap((m) => m.jobs).map((j) => j.customer).sort(),
+      ['Bryan Law', 'James Marlowe', 'Shay Peterson'],
+    );
+    assert.equal(detailFor(model, 'John').count, 1);
+  });
+
+  test('jobs group by month, newest month and newest job first', () => {
+    const henry = detailFor(model, 'Henry');
+    assert.deepEqual(henry.months.map((m) => m.monthKey), ['2026-10', '2026-09']);
+    assert.deepEqual(henry.months[0].jobs.map((j) => j.customer), ['James Marlowe', 'Bryan Law']);
+    assert.deepEqual(henry.months.map((m) => m.count), [2, 1]);
+    assert.equal(henry.months[0].subtotal, 49650);
+  });
+
+  test('a blank Won Month falls back to the Won Date rather than losing the job', () => {
+    assert.equal(monthKeyOf({ wonMonth: '', wonDate: '2026-10-04' }), '2026-10');
+    assert.equal(monthKeyOf({ wonMonth: '2026-07', wonDate: '2026-10-04' }), '2026-07');
+    assert.equal(monthKeyOf({ wonMonth: '', wonDate: '' }), '', 'unknown, but still counted');
+  });
+
+  test('month and day labels never go through Date, so no timezone slip', () => {
+    assert.equal(monthLabel('2026-10'), 'October 2026');
+    assert.equal(monthLabel('2026-01'), 'January 2026');
+    assert.equal(dayLabel('2026-01-01'), 'Jan 1', 'UTC parsing would call this Dec 31');
+    assert.equal(dayLabel('2026-12-31'), 'Dec 31');
+    assert.equal(monthLabel('nonsense'), 'Month not recorded');
+  });
+
+  test('the footer total is what the rows add up to, and agrees with the card', () => {
+    const henry = detailFor(model, 'Henry');
+    assert.equal(henry.total, 71750.5);
+    assert.equal(henry.summaryDollars, 71750.5);
+    assert.equal(henry.agrees, true);
+  });
+
+  test('a summary that disagrees is reported, never reconciled away', () => {
+    const wrong = SUMMARY.replace('Henry,71750.50,3', 'Henry,80000.00,4');
+    const m = buildModelFromCsv({ salesYtd: wrong, salesDetail: DETAIL });
+    const henry = detailFor(m, 'Henry');
+    assert.equal(henry.agrees, false);
+    assert.equal(henry.total, 71750.5, 'the panel shows what the detail rows hold');
+    assert.equal(henry.count, 3, 'no row is invented to reach the summary count');
+    assert.equal(henry.summaryDollars, 80000, 'and the card figure is named alongside it');
+  });
+
+  test('a closer with no detail rows is empty, not fabricated', () => {
+    const anas = detailFor(model, 'Anas');
+    assert.deepEqual(anas.months, []);
+    assert.equal(anas.count, 0);
+    assert.equal(anas.present, true, 'the tab exists, this closer just has no jobs');
+  });
+
+  test('no detail tab at all is reported as not ready', () => {
+    const m = buildModelFromCsv({ salesYtd: SUMMARY, salesDetail: '' });
+    const henry = detailFor(m, 'Henry');
+    assert.equal(henry.present, false);
+    assert.equal(henry.count, 0);
+    assert.deepEqual(henry.months, [], 'never derive job rows from the summary count');
+    assert.equal(m.salesYtd.closers.find((c) => c.closer === 'Henry').dollars, 71750.5,
+      'the card keeps its summary number regardless');
+  });
+
+  test('a blank dollar cell leaves the subtotal unknown rather than wrong', () => {
+    const gap = [
+      'Closer,Customer,Won Date,Won Month,Contract $$',
+      'Henry,Bryan Law,2026-10-02,2026-10,18450',
+      'Henry,Unpriced Job,2026-10-03,2026-10,',
+    ].join('\n');
+    const m = buildModelFromCsv({ salesYtd: SUMMARY, salesDetail: gap });
+    const henry = detailFor(m, 'Henry');
+    assert.equal(henry.months[0].subtotal, null, 'a partial sum is a number nobody can reconcile');
+    assert.equal(henry.months[0].count, 2, 'but the job count is still true');
+    assert.equal(henry.total, null);
   });
 })();
 

@@ -20,6 +20,7 @@ export const CONFIG = {
     l10: 'L10 Scorecard',
     l10History: 'L10 History',
     salesYtd: 'Sales YTD',
+    salesDetail: 'Sales YTD Detail',
   },
 
   /* Level 10 scorecard page. Week count is a display cap; Meta
