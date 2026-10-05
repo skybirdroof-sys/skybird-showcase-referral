@@ -5,10 +5,10 @@ three things at a glance, in giant type, on a dark HUD:
 
 - **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Buttons switch between YTD dollars, contract count and the current month. **Click a closer on YTD sales for the job list** — every signed job, grouped by month, with the total at the bottom that matches their card figure.
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person, with a ding and a green name when somebody closes one
-- **Eight cash/ops tiles** — Rest Index, Appointments Set, Contracts Signed $$, Close Rates, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, most with a 12-week sparkline where `L10 History` has a series for it
+- **Eight cash/ops tiles** — Close Rates, Appointments Set, Contracts Signed $$, Rest Index, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, most with a 12-week sparkline where `L10 History` has a series for it
 
-Rest Index is the first small tile and reads its own tab, so the Monthly/Weekly
-toggle does not touch it. **Cost per Appt is not on the main board** — it lives
+Rest Index is the one tile that reads its own tab rather than a `KPI` Period
+row, so the Monthly/Weekly toggle does not touch it. **Cost per Appt is not on the main board** — it lives
 on the L10 page, where it is one of the nine measurables.
 
 In the middle sits the Talon HUD: concentric instrument rings — graticules, arc

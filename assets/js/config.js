@@ -59,15 +59,16 @@ export const CONFIG = {
      Close Rates has no company-wide series (only the three per-closer ones,
      all of them blank), and Sent CoC cash sitting is not in the history tab at
      all. Neither gets a line invented for it. */
+  /* Reading order, left to right then top to bottom. Close Rates leads because
+     it sits under the sales story on the card above it; Rest Index closes the
+     top row. Rest Index is the one tile that is not a KPI row - it reads its
+     own tab, which is why it carries `kind`, and why the Monthly/Weekly toggle
+     does not touch it wherever it sits. */
   tiles: [
-    /* Card 1 is not a KPI row. It reads the Rest Index tab directly, which is
-       why it carries `kind` - and why the Monthly/Weekly toggle does not touch
-       it. It used to be the big top-left card; the YTD sales scoreboard has
-       that slot now. */
-    { kind: 'rest', metric: 'Rest Index', unit: 'rest', note: 'avg days at rest · lower is better' },
+    { metric: 'Close Rates', unit: 'pct', note: 'Anas · John · Henry' },
     { metric: 'Appointments Set', unit: 'count', trend: 'Appointments Set' },
     { metric: 'Contracts Signed $$', unit: 'usd', trend: 'Contracts Signed - $$' },
-    { metric: 'Close Rates', unit: 'pct', note: 'Anas · John · Henry' },
+    { kind: 'rest', metric: 'Rest Index', unit: 'rest', note: 'avg days at rest · lower is better' },
     { metric: 'Jobs Completed', unit: 'count', trend: 'Jobs Completed' },
     { metric: 'Sent CoC cash sitting', unit: 'usd' },
     { metric: 'Total AR Over 60 Days', unit: 'usd', alert: true, trend: 'Total AR Over 60 Days' },
