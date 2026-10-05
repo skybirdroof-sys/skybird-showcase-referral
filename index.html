@@ -71,11 +71,8 @@
         <ul class="sales__closers" id="sales-closers"></ul>
 
         <div class="sales__foot">
-          <div class="sales__views" id="sales-views" role="group" aria-label="Sales view">
-            <button class="sales__view" type="button" data-view="ytd">YTD $$</button>
-            <button class="sales__view" type="button" data-view="count">Contracts</button>
-            <button class="sales__view" type="button" data-view="month">This month</button>
-          </div>
+          <!-- Built from CONFIG.salesPeriods so a period is added in one place. -->
+          <div class="sales__views" id="sales-views" role="group" aria-label="Sales period"></div>
           <p class="sales__basis" id="sales-basis"></p>
         </div>
       </section>
@@ -131,10 +128,7 @@
          inert-ing the board behind it are all native. -->
     <dialog class="drill" id="drill" aria-labelledby="drill-title">
       <header class="drill__head">
-        <div>
-          <h2 class="drill__title" id="drill-title"></h2>
-          <p class="drill__sub" id="drill-sub"></p>
-        </div>
+        <h2 class="drill__title" id="drill-title"></h2>
         <button class="drill__x" type="button" aria-label="Close job list">&#215;</button>
       </header>
       <div class="drill__body" id="drill-body" tabindex="0"></div>

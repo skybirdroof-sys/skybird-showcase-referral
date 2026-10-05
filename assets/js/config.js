@@ -98,10 +98,50 @@ export const CONFIG = {
   salesClosers: ['John', 'Anas', 'Henry', 'Other'],
   salesTotalRow: 'Total',
 
-  /* The views the card's buttons offer. A view whose numbers the Sheet does
-     not supply keeps its button and shows em dashes - the button vanishing
-     would be a worse lie than an honest blank. */
-  salesViews: ['ytd', 'count', 'month'],
+  /* The periods the card's buttons offer, in Jacob's order. A period whose
+     numbers the Sheet does not carry keeps its button and shows em dashes: the
+     button vanishing would be a worse lie than an honest blank, and the board
+     never derives one period from another.
+
+     `dollars` / `count` are the column spellings the board will accept on the
+     `Sales YTD` tab when Talon ships them. Only the YTD pair exists today. */
+  salesPeriods: [
+    {
+      key: 'ytd',
+      label: 'Year to date',
+      short: 'YTD',
+      dollars: ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars'],
+      count: ['contractscount', 'contractcount', 'count', 'jobs'],
+    },
+    {
+      key: 'month',
+      label: 'This month',
+      short: 'This month',
+      dollars: ['month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth', 'thismonthdollars'],
+      count: ['monthcount', 'mtdcount', 'thismonthcount'],
+    },
+    {
+      key: 'lastmonth',
+      label: 'Last month',
+      short: 'Last month',
+      dollars: ['lastmonth', 'lastmonthdollars', 'priormonth', 'priormonthdollars'],
+      count: ['lastmonthcount', 'priormonthcount'],
+    },
+    {
+      key: 'quarter',
+      label: 'This quarter',
+      short: 'This qtr',
+      dollars: ['quarter', 'quarterdollars', 'qtd', 'qtddollars', 'thisquarter', 'thisquarterdollars'],
+      count: ['quartercount', 'qtdcount', 'thisquartercount'],
+    },
+    {
+      key: 'lastquarter',
+      label: 'Last quarter',
+      short: 'Last qtr',
+      dollars: ['lastquarter', 'lastquarterdollars', 'priorquarter', 'priorquarterdollars'],
+      count: ['lastquartercount', 'priorquartercount'],
+    },
+  ],
   salesDefaultView: 'ytd',
   salesViewStorageKey: 'talon.salesView',
 

@@ -95,9 +95,13 @@ body { -webkit-font-smoothing: antialiased; }
 
 /* ------------------------------------------------------------------ chrome */
 
+/* The same column proportions as .zones below, so the Monthly/Weekly control
+   sits optically over the HUD rather than over the middle of the window. The
+   zones are not three equal columns - the orb's centre is around 45% of the
+   board, so a plain 1fr auto 1fr put the control noticeably right of it. */
 .chrome {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1.02fr 0.86fr 1.32fr;
   align-items: center;
   gap: var(--gap);
 }
@@ -267,12 +271,16 @@ body { -webkit-font-smoothing: antialiased; }
 
 /* Jacob's Oct 5 lock: nothing rotates, flips or tumbles. A fade under 200ms,
    sized to its content, and the board behind it does not move. */
+/* Centred and landscape. It used to anchor beside the clicked name, which on a
+   1920 board made a tall skinny column down one side; a wide panel in the
+   middle reads as one object and halves the scrolling. */
 .drill {
   position: fixed;
-  margin: 0;
+  inset: 0;
+  margin: auto;
   padding: 0;
-  width: min(44ch, calc(100vw - 32px));
-  max-height: 80vh;
+  width: min(92ch, calc(100vw - 64px));
+  max-height: 78vh;
   display: none;
   flex-direction: column;
   border: 1px solid rgba(47, 230, 255, 0.35);
@@ -284,12 +292,6 @@ body { -webkit-font-smoothing: antialiased; }
 }
 
 .drill[open] { display: flex; animation: drill-in 150ms ease-out; }
-
-.drill.is-centred {
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
 
 @keyframes drill-in {
   from { opacity: 0; }
@@ -343,22 +345,31 @@ body { -webkit-font-smoothing: antialiased; }
 .drill__x:hover { color: var(--ink); border-color: var(--cyan); }
 .drill__x:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 
-/* The list scrolls, not the board behind it. */
+/* The list scrolls, not the board behind it. Months flow into columns on a
+   wide panel, so eight months of jobs are two short columns rather than one
+   long scroll - a month section never splits across the break. */
 .drill__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   padding: calc(var(--u) * 0.6) calc(var(--u) * 1);
+  columns: 2;
+  column-gap: calc(var(--u) * 2);
 }
+
+@media (max-width: 900px) {
+  .drill__body { columns: 1; }
+}
+
+.drill__month { break-inside: avoid; }
 
 .drill__body:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
 
-.drill__month + .drill__month { margin-top: calc(var(--u) * 0.9); }
+.drill__month { margin-bottom: calc(var(--u) * 0.9); }
 
+/* Not sticky any more: in a two-column flow a sticky header belongs to no
+   column and detaches from its own list. */
 .drill__month-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -388,16 +399,15 @@ body { -webkit-font-smoothing: antialiased; }
 .drill__jobs { list-style: none; margin: 0; padding: 0; }
 
 .drill__job {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
   align-items: baseline;
-  gap: calc(var(--u) * 0.6);
-  padding: calc(var(--u) * 0.32) 0;
-  border-bottom: 1px solid rgba(226, 240, 255, 0.06);
+  gap: calc(var(--u) * 0.4);
+  padding: calc(var(--u) * 0.3) 0;
 }
 
 /* The customer name can give way; the money never does. */
 .drill__customer {
+  flex: 0 1 auto;
   font-size: calc(var(--u) * 0.92);
   font-weight: 600;
   color: var(--ink);
@@ -407,7 +417,18 @@ body { -webkit-font-smoothing: antialiased; }
   white-space: nowrap;
 }
 
+/* Dotted leader, the way a contents page carries the eye from a chapter title
+   to its page number. The panel is wide enough now that the row needs it. */
+.drill__leader {
+  flex: 1 1 auto;
+  min-width: calc(var(--u) * 1);
+  align-self: center;
+  border-bottom: 1px dotted rgba(226, 240, 255, 0.22);
+  transform: translateY(-0.15em);
+}
+
 .drill__when {
+  flex: none;
   font-size: calc(var(--u) * 0.75);
   font-weight: 700;
   letter-spacing: calc(var(--u) * 0.05);
@@ -417,6 +438,9 @@ body { -webkit-font-smoothing: antialiased; }
 }
 
 .drill__amount {
+  flex: none;
+  min-width: calc(var(--u) * 5);
+  text-align: right;
   font-size: calc(var(--u) * 1);
   font-weight: 800;
   color: #fff;
@@ -463,7 +487,7 @@ body { -webkit-font-smoothing: antialiased; }
   color: var(--amber);
 }
 
-.drill__note { padding: calc(var(--u) * 0.8) 0; }
+.drill__note { padding: calc(var(--u) * 0.8) 0; column-span: all; }
 
 .drill__note-head {
   margin: 0;
@@ -634,11 +658,18 @@ body { -webkit-font-smoothing: antialiased; }
   gap: calc(var(--u) * 0.4);
 }
 
-.sales__views { display: flex; gap: calc(var(--u) * 0.35); flex-wrap: wrap; }
+/* Five buttons across a quarter-width card, so they are deliberately small -
+   they are a control, not a readout, and the figure above them is the thing
+   being read from across the room. */
+.sales__views {
+  display: flex;
+  gap: calc(var(--u) * 0.25);
+  flex-wrap: wrap;
+}
 
 .sales__view {
   font: inherit;
-  font-size: calc(var(--u) * 0.72);
+  font-size: calc(var(--u) * 0.64);
   font-weight: 800;
   letter-spacing: calc(var(--u) * 0.07);
   text-transform: uppercase;
@@ -646,7 +677,7 @@ body { -webkit-font-smoothing: antialiased; }
   background: transparent;
   border: 1px solid var(--panel-line);
   border-radius: 999px;
-  padding: calc(var(--u) * 0.25) calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.22) calc(var(--u) * 0.5);
   cursor: pointer;
   white-space: nowrap;
 }

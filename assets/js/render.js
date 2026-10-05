@@ -123,96 +123,6 @@ function orderPeople(people, order) {
  * its frame with em dashes, because the alternative would be deriving a year
  * from the monthly Contracts tile, and that number would be wrong.
  */
-const SALES_VIEWS = {
-  ytd: {
-    label: 'company year to date',
-    pick: (r) => r.dollars,
-    format: (v) => fmtByUnit(v, 'usd'),
-  },
-  count: {
-    label: 'contracts signed year to date',
-    pick: (r) => r.count,
-    format: (v) => fmtByUnit(v, 'count'),
-  },
-  month: {
-    label: 'company this month',
-    pick: (r) => r.monthDollars,
-    format: (v) => fmtByUnit(v, 'usd'),
-  },
-};
-
-function renderSales(model, view) {
-  const sales = model.salesYtd || {};
-  const spec = SALES_VIEWS[view] || SALES_VIEWS[CONFIG.salesDefaultView];
-  const closers = sales.closers || [];
-
-  el.salesLabel().textContent = sales.label || '';
-  el.salesTotalLabel().textContent = spec.label;
-
-  const totalValue = spec.pick(sales.total || {});
-  const totalText = totalValue === null || totalValue === undefined ? EMPTY : spec.format(totalValue);
-  const total = el.salesTotal();
-  total.textContent = totalText;
-  total.classList.toggle('is-empty', totalText === EMPTY);
-
-  const host = el.salesClosers();
-  syncRows(host, closers.map((c) => c.closer), (name) => {
-    const li = document.createElement('li');
-    li.className = 'closer';
-    li.dataset.closer = norm(name);
-
-    /* A real <button>, not a clickable row: it has to be reachable from a
-       keyboard and announce itself, and the TV's pointer is not the only way
-       anyone opens this board. */
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'closer__btn';
-    btn.dataset.closer = norm(name);
-    btn.dataset.closerName = name;
-    btn.setAttribute('aria-label', `Show ${name}'s signed jobs`);
-
-    const label = document.createElement('span');
-    label.className = 'closer__name';
-    label.textContent = name;
-    const val = document.createElement('span');
-    val.className = 'closer__value is-empty';
-    val.textContent = EMPTY;
-
-    btn.append(label, val);
-    li.append(btn);
-    return li;
-  });
-
-  for (const row of closers) {
-    const li = host.querySelector(`[data-closer="${norm(row.closer)}"]`);
-    if (!li) continue;
-    const raw = spec.pick(row);
-    const text = raw === null || raw === undefined ? EMPTY : spec.format(raw);
-    const val = li.querySelector('.closer__value');
-    val.textContent = text;
-    val.classList.toggle('is-empty', text === EMPTY);
-    /* The ops bot lists who got folded into Other, so a real closer hiding in
-       that bucket is visible rather than buried. */
-    li.title = row.notes || '';
-    li.classList.toggle('has-note', Boolean(row.notes));
-  }
-
-  /* The basis line says what the number counts, so nobody has to ask. A Total
-     that disagrees with its parts is footnoted rather than hidden - and never
-     silently corrected, because the Sheet's total is the Sheet's to state. */
-  const notes = [];
-  if (sales.basis) notes.push(sales.basis);
-  if (!sales.present) notes.push('awaiting the Sales YTD tab');
-  else if (sales.reconciles === false) notes.push('total differs from the closer rows — see Sheet notes');
-  el.salesBasis().textContent = notes.join(' · ');
-
-  for (const btn of el.salesViews().querySelectorAll('.sales__view')) {
-    const on = btn.dataset.view === view;
-    btn.classList.toggle('is-on', on);
-    btn.setAttribute('aria-pressed', String(on));
-  }
-}
-
 function renderTop5(model) {
   renderTop5Rows(model.top5);
 }
@@ -485,6 +395,99 @@ export function renderSoundButton({ enabled, unlocked }) {
       ? 'This browser blocks audio until the page is clicked. Click here once to allow the ding.'
       : 'Celebration ding is on. Click to silence it.';
   btn.setAttribute('aria-label', btn.title);
+}
+
+/* The period buttons, built once from config so adding a period is a config
+   change rather than three edits in three files. */
+export function buildSalesViews() {
+  const host = el.salesViews();
+  if (!host) return;
+  host.textContent = '';
+  for (const spec of CONFIG.salesPeriods) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sales__view';
+    btn.dataset.view = spec.key;
+    btn.textContent = spec.short || spec.label;
+    btn.setAttribute('aria-label', spec.label);
+    host.append(btn);
+  }
+}
+
+function renderSales(model, view) {
+  const sales = model.salesYtd || {};
+  const spec = CONFIG.salesPeriods.find((p) => p.key === view)
+    || CONFIG.salesPeriods.find((p) => p.key === CONFIG.salesDefaultView);
+  const closers = sales.closers || [];
+  const valueOf = (row) => ((row.periods || {})[spec.key] || {});
+
+  /* A short chip, never the formula. Year to date keeps the Sheet's own
+     ytd_label when it has one; every other period is named by its button. */
+  el.salesLabel().textContent = spec.key === 'ytd' ? (sales.label || spec.label) : spec.label;
+
+  const total = valueOf(sales.total || {});
+  const totalText = total.dollars === null || total.dollars === undefined
+    ? EMPTY : fmtByUnit(total.dollars, 'usd');
+  const node = el.salesTotal();
+  node.textContent = totalText;
+  node.classList.toggle('is-empty', totalText === EMPTY);
+
+  /* The job count rides on the caption rather than costing a button of its
+     own - it is context for the figure above it, not a separate view. */
+  el.salesTotalLabel().textContent = total.count === null || total.count === undefined
+    ? 'company total'
+    : `company total · ${fmtByUnit(total.count, 'count')} ${total.count === 1 ? 'contract' : 'contracts'}`;
+
+  const host = el.salesClosers();
+  syncRows(host, closers.map((c) => c.closer), (name) => {
+    const li = document.createElement('li');
+    li.className = 'closer';
+    li.dataset.closer = norm(name);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'closer__btn';
+    btn.dataset.closer = norm(name);
+    btn.dataset.closerName = name;
+    btn.setAttribute('aria-label', `Show ${name}'s signed jobs`);
+
+    const label = document.createElement('span');
+    label.className = 'closer__name';
+    label.textContent = name;
+    const val = document.createElement('span');
+    val.className = 'closer__value is-empty';
+    val.textContent = EMPTY;
+
+    btn.append(label, val);
+    li.append(btn);
+    return li;
+  });
+
+  for (const row of closers) {
+    const li = host.querySelector(`[data-closer="${norm(row.closer)}"]`);
+    if (!li) continue;
+    const v = valueOf(row);
+    const text = v.dollars === null || v.dollars === undefined ? EMPTY : fmtByUnit(v.dollars, 'usd');
+    const val = li.querySelector('.closer__value');
+    val.textContent = text;
+    val.classList.toggle('is-empty', text === EMPTY);
+    li.title = row.notes || '';
+    li.classList.toggle('has-note', Boolean(row.notes));
+  }
+
+  /* Short notes only - no basis paragraph. The one thing worth saying here is
+     when the Sheet's own total disagrees with the rows under it, which is
+     reported rather than quietly corrected. */
+  const notes = [];
+  if (!sales.present) notes.push('awaiting Sheet data');
+  else if (spec.key === 'ytd' && sales.reconciles === false) notes.push('total differs from the closer rows');
+  el.salesBasis().textContent = notes.join(' · ');
+
+  for (const btn of el.salesViews().querySelectorAll('.sales__view')) {
+    const on = btn.dataset.view === spec.key;
+    btn.classList.toggle('is-on', on);
+    btn.setAttribute('aria-pressed', String(on));
+  }
 }
 
 function renderChrome(model, state) {

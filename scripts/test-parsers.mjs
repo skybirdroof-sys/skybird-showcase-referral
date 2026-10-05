@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, detailFor, monthKeyOf, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
+import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, detailFor, monthKeyOf, periodRange, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { createCelebrations } from '../assets/js/celebrate.js';
 import { monthLabel, dayLabel } from '../assets/js/drilldown.js';
@@ -763,8 +763,8 @@ test('a series with no values at all yields no runs to draw', () => {
   test('the scoreboard reads closers in the board order, with the Sheet total', () => {
     const s = buildSalesYtd(CSV, { ytdlabel: '2026 YTD', ytdbasis: 'ProLine Won Date' });
     assert.deepEqual(s.closers.map((c) => c.closer), ['John', 'Anas', 'Henry', 'Other']);
-    assert.deepEqual(s.closers.map((c) => c.dollars), [412000, 288500.5, 197000, 38500]);
-    assert.equal(s.total.dollars, 936000.5);
+    assert.deepEqual(s.closers.map((c) => c.periods.ytd.dollars), [412000, 288500.5, 197000, 38500]);
+    assert.equal(s.total.periods.ytd.dollars, 936000.5);
     assert.equal(s.label, '2026 YTD');
     assert.equal(s.basis, 'ProLine Won Date');
     assert.equal(s.present, true);
@@ -780,7 +780,7 @@ test('a series with no values at all yields no runs to draw', () => {
     const wrong = CSV.replace('Total,936000.50', 'Total,900000.00');
     const s = buildSalesYtd(wrong, {});
     assert.equal(s.reconciles, false);
-    assert.equal(s.total.dollars, 900000, "the Sheet's total is shown as written");
+    assert.equal(s.total.periods.ytd.dollars, 900000, "the Sheet's total is shown as written");
   });
 
   test('a missing closer is unknown, not zero, and keeps its row', () => {
@@ -792,23 +792,23 @@ test('a series with no values at all yields no runs to draw', () => {
     const s = buildSalesYtd(partial, {});
     assert.deepEqual(s.closers.map((c) => c.closer), ['John', 'Anas', 'Henry', 'Other'],
       'a scoreboard that silently drops a person is worse than one showing em dashes');
-    assert.deepEqual(s.closers.map((c) => c.dollars), [412000, null, null, null]);
+    assert.deepEqual(s.closers.map((c) => c.periods.ytd.dollars), [412000, null, null, null]);
     assert.equal(s.reconciles, null, 'a partial set cannot be reconciled either way');
   });
 
   test('a real zero survives and is not confused with a blank', () => {
     const s = buildSalesYtd(CSV, {});
     const henry = s.closers.find((c) => c.closer === 'Henry');
-    assert.equal(henry.monthDollars, 0, 'nothing closed this month is zero');
+    assert.equal(henry.periods.month.dollars, 0, 'nothing closed this month is zero');
     const noMonth = buildSalesYtd('Closer,Contract $$\nJohn,10\n', {});
-    assert.equal(noMonth.closers[0].monthDollars, null, 'a column the Sheet lacks is unknown');
+    assert.equal(noMonth.closers[0].periods.month.dollars, null, 'a column the Sheet lacks is unknown');
   });
 
   test('no Sales YTD tab yields a frame of em dashes, never a derived figure', () => {
     const s = buildSalesYtd('', {});
     assert.equal(s.present, false);
-    assert.equal(s.total.dollars, null);
-    assert.deepEqual(s.closers.map((c) => c.dollars), [null, null, null, null]);
+    assert.equal(s.total.periods.ytd.dollars, null);
+    assert.deepEqual(s.closers.map((c) => c.periods.ytd.dollars), [null, null, null, null]);
   });
 
   test('the board still never invents the year from the month', () => {
@@ -816,7 +816,7 @@ test('a series with no values at all yields no runs to draw', () => {
       kpi: 'Metric,Period,Value,Unit\nContracts Signed $$,monthly,46750.07,USD\n',
       salesYtd: '',
     });
-    assert.equal(model.salesYtd.total.dollars, null,
+    assert.equal(model.salesYtd.total.periods.ytd.dollars, null,
       'a monthly tile is not a year, however tempting');
     assert.equal(kpiFor(model, 'Contracts Signed $$').number, 46750.07);
   });
@@ -893,6 +893,67 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(henry.summaryDollars, 80000, 'and the card figure is named alongside it');
   });
 
+  test('each card period reads its own column and never borrows another', () => {
+    const csv = [
+      'Closer,Contract $$,Contracts Count,Last Month $$,Last Month Count',
+      'Henry,326816.58,21,44828.22,2',
+    ].join('\n');
+    const henry = buildSalesYtd(csv, {}).closers.find((c) => c.closer === 'Henry');
+    assert.equal(henry.periods.ytd.dollars, 326816.58);
+    assert.equal(henry.periods.lastmonth.dollars, 44828.22);
+    assert.equal(henry.periods.lastmonth.count, 2);
+    assert.equal(henry.periods.quarter.dollars, null,
+      'a period the Sheet does not carry stays unknown - never derived from YTD');
+    assert.equal(henry.periods.month.dollars, null);
+  });
+
+  test('the card periods cover the windows Jacob asked for', () => {
+    const today = new Date(2026, 9, 5);                 // Mon Oct 5 2026
+    assert.deepEqual(periodRange('ytd', today), { start: '2026-01-01', end: '2026-10-05' });
+    assert.deepEqual(periodRange('month', today), { start: '2026-10-01', end: '2026-10-05' });
+    assert.deepEqual(periodRange('lastmonth', today), { start: '2026-09-01', end: '2026-09-30' });
+    assert.deepEqual(periodRange('quarter', today), { start: '2026-10-01', end: '2026-10-05' });
+    assert.deepEqual(periodRange('lastquarter', today), { start: '2026-07-01', end: '2026-09-30' });
+  });
+
+  test('period windows roll over a year boundary correctly', () => {
+    const jan = new Date(2026, 0, 9);                   // Jan 9 2026
+    assert.deepEqual(periodRange('lastmonth', jan), { start: '2025-12-01', end: '2025-12-31' });
+    assert.deepEqual(periodRange('lastquarter', jan), { start: '2025-10-01', end: '2025-12-31' });
+    const mar = new Date(2026, 2, 31);                  // Mar 31, a 31-day month end
+    assert.deepEqual(periodRange('lastmonth', mar), { start: '2026-02-01', end: '2026-02-28' });
+  });
+
+  test('the pop-up narrows the job list to the chosen window', () => {
+    const today = new Date(2026, 9, 5);
+    const detail = [
+      'Closer,Customer,Won Date,Won Month,Contract $$',
+      'Henry,October Job,2026-10-02,2026-10,10000',
+      'Henry,September Job,2026-09-14,2026-09,20000',
+      'Henry,July Job,2026-07-08,2026-07,30000',
+      'Henry,No Date,,,,'.replace(/,$/, ''),
+    ].join('\n');
+    const m = buildModelFromCsv({ salesYtd: 'Closer,Contract $$\nHenry,60000\n', salesDetail: detail });
+
+    assert.equal(detailFor(m, 'Henry', 'ytd', today).count, 4, 'YTD keeps every row, dated or not');
+    assert.equal(detailFor(m, 'Henry', 'month', today).count, 1);
+    assert.equal(detailFor(m, 'Henry', 'lastmonth', today).total, 20000);
+    assert.equal(detailFor(m, 'Henry', 'lastquarter', today).count, 2, 'Jul and Sep are both in Q3');
+    const q3 = detailFor(m, 'Henry', 'lastquarter', today);
+    assert.equal(q3.total, 50000, 're-totalled from the rows actually in the window');
+  });
+
+  test('an undated job is kept out of a narrowed window rather than guessed into one', () => {
+    const today = new Date(2026, 9, 5);
+    const detail = [
+      'Closer,Customer,Won Date,Won Month,Contract $$',
+      'Henry,No Date,,,15000',
+    ].join('\n');
+    const m = buildModelFromCsv({ salesDetail: detail });
+    assert.equal(detailFor(m, 'Henry', 'ytd', today).count, 1, 'it still shows under year to date');
+    assert.equal(detailFor(m, 'Henry', 'lastmonth', today).count, 0);
+  });
+
   test('a closer with no detail rows is empty, not fabricated', () => {
     const anas = detailFor(model, 'Anas');
     assert.deepEqual(anas.months, []);
@@ -906,7 +967,7 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(henry.present, false);
     assert.equal(henry.count, 0);
     assert.deepEqual(henry.months, [], 'never derive job rows from the summary count');
-    assert.equal(m.salesYtd.closers.find((c) => c.closer === 'Henry').dollars, 71750.5,
+    assert.equal(m.salesYtd.closers.find((c) => c.closer === 'Henry').periods.ytd.dollars, 71750.5,
       'the card keeps its summary number regardless');
   });
 

@@ -46,7 +46,6 @@ export function createDrilldown() {
   if (!dialog) return { open() {}, close() {} };
 
   const title = document.getElementById('drill-title');
-  const sub = document.getElementById('drill-sub');
   const body = document.getElementById('drill-body');
   const foot = document.getElementById('drill-foot');
 
@@ -55,6 +54,7 @@ export function createDrilldown() {
      and a click that began inside and ended on the backdrop (a drag off the end
      of a selection) must not count either. */
   let openCloser = null;
+  let openPeriod = null;
   let downInside = false;
   dialog.addEventListener('pointerdown', (e) => { downInside = e.target !== dialog; });
   dialog.addEventListener('click', (e) => {
@@ -62,36 +62,12 @@ export function createDrilldown() {
     downInside = false;
   });
   dialog.querySelector('.drill__x').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => { openCloser = null; });
+  dialog.addEventListener('close', () => { openCloser = null; openPeriod = null; });
 
-  function place(anchor) {
-    /* Near the name that was clicked when there is room, centred when there is
-       not. Measured after the content is in, so the clamp uses the real height
-       rather than the previous closer's. */
-    dialog.style.left = '';
-    dialog.style.top = '';
-    dialog.classList.remove('is-centred');
-    if (!anchor) { dialog.classList.add('is-centred'); return; }
-
-    const a = anchor.getBoundingClientRect();
-    const d = dialog.getBoundingClientRect();
-    const margin = 16;
-
-    let left = a.right + 12;
-    if (left + d.width > window.innerWidth - margin) left = a.left - d.width - 12;
-    if (left < margin) { dialog.classList.add('is-centred'); return; }
-
-    let top = a.top - 8;
-    if (top + d.height > window.innerHeight - margin) top = window.innerHeight - d.height - margin;
-    if (top < margin) top = margin;
-
-    dialog.style.left = `${Math.round(left)}px`;
-    dialog.style.top = `${Math.round(top)}px`;
-  }
-
-  function render(view, label, basis) {
+  function render(view, label) {
+    /* Title carries the period; there is no subtitle. The basis paragraph that
+       used to sit here was a formula dump nobody reads on a wall. */
     title.textContent = `${view.closer} · ${label}`;
-    sub.textContent = basis;
     body.textContent = '';
     foot.textContent = '';
 
@@ -102,8 +78,8 @@ export function createDrilldown() {
     }
 
     if (!view.months.length) {
-      body.append(note('No YTD jobs in Sheet',
-        `The detail tab has no rows for ${view.closer} this year.`));
+      body.append(note(`No jobs in ${label}`,
+        `The detail tab has no rows for ${view.closer} in this period.`));
       foot.append(footLine(EMPTY, 0));
       return;
     }
@@ -131,9 +107,19 @@ export function createDrilldown() {
         const who = document.createElement('span');
         who.className = 'drill__customer';
         who.textContent = job.customer || EMPTY;
-        /* The project number is for settling an argument, not for reading
-           across a room, so it rides on the title rather than the row. */
-        if (job.projectNumber) who.title = `Project ${job.projectNumber}`;
+        /* A long name ellipsizes in a fixed column, so the full one goes on the
+           title where it can be recovered - along with the project number,
+           which is for settling an argument rather than reading across a
+           room. */
+        who.title = [job.customer, job.projectNumber && `Project ${job.projectNumber}`]
+          .filter(Boolean).join(' · ');
+
+        /* The panel is wide now, so the eye needs help getting from a name on
+           the left to a figure on the right. Dotted leader, the way a contents
+           page does it. */
+        const leader = document.createElement('span');
+        leader.className = 'drill__leader';
+        leader.setAttribute('aria-hidden', 'true');
 
         const when = document.createElement('span');
         when.className = 'drill__when';
@@ -143,7 +129,7 @@ export function createDrilldown() {
         amount.className = 'drill__amount';
         amount.textContent = usd(job.dollars);
 
-        li.append(who, when, amount);
+        li.append(who, leader, when, amount);
         list.append(li);
       }
 
@@ -197,20 +183,24 @@ export function createDrilldown() {
   return {
     /* One panel, reused. Opening a second closer replaces the list rather than
        stacking another dialog on top. */
-    open(model, closer, anchor) {
-      const view = detailFor(model, closer);
-      const label = model.salesYtd?.label || `${new Date().getFullYear()} YTD`;
-      const basis = model.salesYtd?.basis || 'ProLine Won Date · Assigned To';
+    open(model, closer, period = CONFIG.salesDefaultView) {
+      const view = detailFor(model, closer, period);
+      const spec = CONFIG.salesPeriods.find((p) => p.key === period)
+        || CONFIG.salesPeriods.find((p) => p.key === CONFIG.salesDefaultView);
+      const label = period === 'ytd'
+        ? (model.salesYtd?.label || spec.label)
+        : spec.label;
 
-      /* A repaint from a background refresh keeps the reader's scroll position
-         and the panel's place; only a fresh open resets them. */
-      const reopening = openCloser !== closer || !dialog.open;
+      /* A repaint from a background refresh keeps the reader's scroll position;
+         a fresh open, or a change of period, starts at the top. */
+      const reopening = openCloser !== closer || openPeriod !== period || !dialog.open;
       const scroll = body.scrollTop;
 
-      render(view, label, basis);
+      render(view, label);
       openCloser = closer;
+      openPeriod = period;
       if (!dialog.open) dialog.showModal();
-      if (reopening) { body.scrollTop = 0; place(anchor); } else { body.scrollTop = scroll; }
+      body.scrollTop = reopening ? 0 : scroll;
       return view;
     },
     close() { if (dialog.open) dialog.close(); },

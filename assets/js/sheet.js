@@ -177,19 +177,32 @@ function parseRest(csv) {
    `Month $$` / `Month Count` are optional: the card's "This month" view shows
    em dashes until the Sheet supplies them, rather than deriving a month from
    the YTD figure or borrowing the monthly Contracts tile. */
+/* One row per closer. Every period the card offers gets read here from its own
+   columns - the board never derives one period from another, so a period the
+   Sheet does not carry comes back null and renders an em dash. */
 function parseSalesYtd(csv) {
   return records(csv)
-    .map((r) => ({
-      closer: String(pick(r, ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'])).trim(),
-      dollars: parseValue(pick(r, ['contract', 'contracts', 'contractdollars', 'ytd', 'ytddollars', 'dollars', 'amount', 'value'])),
-      count: parseValue(pick(r, ['contractscount', 'contractcount', 'count', 'jobs', 'contracts#'])),
-      monthDollars: parseValue(pick(r, ['month', 'monthdollars', 'mtd', 'mtddollars', 'thismonth'])),
-      monthCount: parseValue(pick(r, ['monthcount', 'mtdcount', 'thismonthcount'])),
-      notes: String(pick(r, ['notes', 'note'])).trim(),
-      updated: String(pick(r, ['updatedet', 'updated'])).trim(),
-    }))
+    .map((r) => {
+      const periods = {};
+      for (const spec of CONFIG.salesPeriods) {
+        periods[spec.key] = {
+          dollars: parseValue(pick(r, spec.dollars)),
+          count: parseValue(pick(r, spec.count)),
+        };
+      }
+      return {
+        closer: String(pick(r, ['closer', 'salesman', 'salesperson', 'owner', 'person', 'name'])).trim(),
+        periods,
+        notes: String(pick(r, ['notes', 'note'])).trim(),
+        updated: String(pick(r, ['updatedet', 'updated'])).trim(),
+      };
+    })
     .filter((row) => row.closer !== '' && !/^note/i.test(row.closer));
 }
+
+const emptyPeriods = () => Object.fromEntries(
+  CONFIG.salesPeriods.map((p) => [p.key, { dollars: null, count: null }]),
+);
 
 /* Closers in the board's locked order, then the company total. A closer the
    Sheet does not mention still gets a row, showing em dashes - an absent name
@@ -203,10 +216,7 @@ export function buildSalesYtd(csv, meta = {}) {
     const row = byName.get(norm(name)) || {};
     return {
       closer: name,
-      dollars: row.dollars ?? null,
-      count: row.count ?? null,
-      monthDollars: row.monthDollars ?? null,
-      monthCount: row.monthCount ?? null,
+      periods: row.periods || emptyPeriods(),
       notes: row.notes || '',
     };
   });
@@ -224,16 +234,13 @@ export function buildSalesYtd(csv, meta = {}) {
     basis: meta.ytdbasis || meta.ytdBasis || '',
     closers,
     total: {
-      dollars: totalRow.dollars ?? null,
-      count: totalRow.count ?? null,
-      monthDollars: totalRow.monthDollars ?? null,
-      monthCount: totalRow.monthCount ?? null,
+      periods: totalRow.periods || emptyPeriods(),
       notes: totalRow.notes || '',
     },
     /* The Sheet's own Total is what the board shows - never a sum the board
        computed. But a Total that disagrees with its parts is worth saying out
        loud rather than hiding, so the card can footnote it. */
-    reconciles: reconcileSales(closers, totalRow.dollars ?? null),
+    reconciles: reconcileSales(closers, (totalRow.periods || emptyPeriods()).ytd.dollars),
     updated: freshest(meta.ytdupdatedet || '', rows.map((r) => r.updated)),
     present: rows.length > 0,
   };
@@ -241,7 +248,7 @@ export function buildSalesYtd(csv, meta = {}) {
 
 function reconcileSales(closers, total) {
   if (total === null) return null;
-  const parts = closers.map((c) => c.dollars).filter((v) => v !== null);
+  const parts = closers.map((c) => c.periods.ytd.dollars).filter((v) => v !== null);
   if (parts.length !== closers.length) return null;   // can't judge a partial set
   const sum = parts.reduce((a, b) => a + b, 0);
   return Math.abs(sum - total) < 0.5;
@@ -332,32 +339,110 @@ export function buildSalesDetail(csv) {
   };
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+const ymd = (y, m, d) => `${y}-${pad2(m)}-${pad2(d)}`;
+const lastDayOf = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+/* The calendar window a card period covers, as plain YYYY-MM-DD strings so the
+   Sheet's own date strings can be compared without ever being parsed. (A
+   `new Date('2026-10-01')` is read as UTC and lands on September 30th west of
+   Greenwich, which would put a job in the wrong month.)
+
+   `today` comes from the browser's clock, which on the TV is Eastern - the same
+   calendar ProLine's Won Date uses. */
+export function periodRange(key, today = new Date()) {
+  const y = today.getFullYear();
+  const m = today.getMonth() + 1;         // 1-12
+  const d = today.getDate();
+  const q = Math.floor((m - 1) / 3);      // 0-3
+
+  switch (key) {
+    case 'ytd':
+      return { start: ymd(y, 1, 1), end: ymd(y, m, d) };
+    case 'month':
+      return { start: ymd(y, m, 1), end: ymd(y, m, d) };
+    case 'lastmonth': {
+      const py = m === 1 ? y - 1 : y;
+      const pm = m === 1 ? 12 : m - 1;
+      return { start: ymd(py, pm, 1), end: ymd(py, pm, lastDayOf(py, pm)) };
+    }
+    case 'quarter':
+      return { start: ymd(y, q * 3 + 1, 1), end: ymd(y, m, d) };
+    case 'lastquarter': {
+      const py = q === 0 ? y - 1 : y;
+      const pq = q === 0 ? 3 : q - 1;
+      const endMonth = pq * 3 + 3;
+      return { start: ymd(py, pq * 3 + 1, 1), end: ymd(py, endMonth, lastDayOf(py, endMonth)) };
+    }
+    default:
+      return null;
+  }
+}
+
 /* The job list for one closer, plus whether it agrees with the summary tab.
    A disagreement is reported, never reconciled by inventing or dropping rows:
    the panel shows what the detail tab actually holds and says the summary
    differs. */
-export function detailFor(model, closer) {
+export function detailFor(model, closer, period = 'ytd', today = new Date()) {
   const detail = model.salesDetail || { present: false, byCloser: new Map() };
-  const found = detail.byCloser.get(norm(closer)) || { months: [], total: null, count: 0 };
-  const summary = (model.salesYtd?.closers || []).find((c) => norm(c.closer) === norm(closer)) || {};
+  const all = detail.byCloser.get(norm(closer)) || { months: [], total: null, count: 0 };
 
-  const dollarsAgree = summary.dollars === null || summary.dollars === undefined || found.total === null
+  /* Narrowing the job list to the selected window is filtering, not deriving:
+     every row carries its own Won Date. The CARD's number still comes from the
+     Sheet's own column for that period and is never computed from these rows. */
+  const found = period === 'ytd' ? all : narrowToPeriod(all, periodRange(period, today));
+  const summary = (model.salesYtd?.closers || []).find((c) => norm(c.closer) === norm(closer)) || {};
+  const summaryYtd = (summary.periods || {}).ytd || {};
+
+  const dollarsAgree = summaryYtd.dollars === null || summaryYtd.dollars === undefined || found.total === null
     ? null
-    : Math.abs(found.total - summary.dollars) < 0.5;
-  const countAgree = summary.count === null || summary.count === undefined
+    : Math.abs(found.total - summaryYtd.dollars) < 0.5;
+  const countAgree = summaryYtd.count === null || summaryYtd.count === undefined
     ? null
-    : found.count === summary.count;
+    : found.count === summaryYtd.count;
 
   return {
     closer,
+    period,
     present: detail.present,
     months: found.months,
     total: found.total,
     count: found.count,
-    summaryDollars: summary.dollars ?? null,
-    summaryCount: summary.count ?? null,
+    summaryDollars: summaryYtd.dollars ?? null,
+    summaryCount: summaryYtd.count ?? null,
     agrees: dollarsAgree === false || countAgree === false ? false
       : dollarsAgree === null && countAgree === null ? null : true,
+  };
+}
+
+/* Keeps only the jobs whose Won Date falls inside the window, re-totalling as
+   it goes. A job with no readable date is kept out of a narrowed window rather
+   than guessed into one - it still appears under YTD, where it belongs. */
+function narrowToPeriod(found, range) {
+  if (!range) return { months: [], total: null, count: 0 };
+
+  const months = [];
+  for (const month of found.months) {
+    const jobs = month.jobs.filter((j) => {
+      const date = String(j.wonDate || '').slice(0, 10);
+      return date.length === 10 && date >= range.start && date <= range.end;
+    });
+    if (!jobs.length) continue;
+    const known = jobs.map((j) => j.dollars).filter((v) => v !== null);
+    months.push({
+      monthKey: month.monthKey,
+      jobs,
+      subtotal: known.length === jobs.length ? known.reduce((a, b) => a + b, 0) : null,
+      count: jobs.length,
+    });
+  }
+
+  const all = months.flatMap((m) => m.jobs);
+  const known = all.map((j) => j.dollars).filter((v) => v !== null);
+  return {
+    months,
+    total: known.length === all.length ? known.reduce((a, b) => a + b, 0) : null,
+    count: all.length,
   };
 }
 

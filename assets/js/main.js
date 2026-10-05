@@ -3,7 +3,7 @@
 import { CONFIG } from './config.js';
 import { loadLive, loadFixture, loadTop5, normalizeModel, NoSourceError } from './sheet.js';
 import {
-  buildTiles, renderModel, setStale,
+  buildTiles, buildSalesViews, renderModel, setStale,
   renderCelebrationState, pulsePerson, announce, renderSoundButton, renderTop5Rows,
 } from './render.js';
 import { createCelebrations, createSound } from './celebrate.js';
@@ -29,7 +29,7 @@ function storedPeriod() {
 function storedSalesView() {
   try {
     const saved = localStorage.getItem(CONFIG.salesViewStorageKey);
-    return CONFIG.salesViews.includes(saved) ? saved : null;
+    return CONFIG.salesPeriods.some((p) => p.key === saved) ? saved : null;
   } catch {
     return null;
   }
@@ -71,7 +71,7 @@ const state = {
    model, so switching needs no fetch - and a view the Sheet has no numbers for
    shows em dashes rather than losing its button. */
 function setSalesView(view) {
-  if (!CONFIG.salesViews.includes(view) || view === state.salesView) return;
+  if (!CONFIG.salesPeriods.some((p) => p.key === view) || view === state.salesView) return;
   state.salesView = view;
   try { localStorage.setItem(CONFIG.salesViewStorageKey, view); } catch { /* private mode */ }
   if (state.lastModel) {
@@ -81,6 +81,9 @@ function setSalesView(view) {
       period: state.period,
       salesView: state.salesView,
     });
+    if (drilldown.isOpen && drilldown.openCloser) {
+      drilldown.open(state.lastModel, drilldown.openCloser, state.salesView);
+    }
   }
 }
 
@@ -144,7 +147,7 @@ async function tick() {
        sitting in it. Re-rendered in place, and the panel is not re-anchored,
        so nothing moves under the reader. */
     if (drilldown.isOpen && drilldown.openCloser) {
-      drilldown.open(model, drilldown.openCloser, null);
+      drilldown.open(model, drilldown.openCloser, state.salesView);
     }
     /* The full refresh sees the same rows as the fast poll. Identical values
        are a no-op in the engine, so feeding it from both paths cannot
@@ -219,6 +222,7 @@ function onVisibility() {
 
 async function start() {
   buildTiles();
+  buildSalesViews();
   await ensureAccess();
 
   /* Typing the passphrase is a real user gesture, and Chrome's activation is
@@ -263,7 +267,7 @@ async function start() {
   document.getElementById('sales-closers').addEventListener('click', (event) => {
     const btn = event.target.closest('.closer__btn');
     if (!btn || !state.lastModel) return;
-    drilldown.open(state.lastModel, btn.dataset.closerName, btn);
+    drilldown.open(state.lastModel, btn.dataset.closerName, state.salesView);
   });
 
   document.addEventListener('keydown', (event) => {
