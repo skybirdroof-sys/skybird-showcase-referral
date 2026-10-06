@@ -45,6 +45,8 @@ export function buildTiles() {
     const value = document.createElement('p');
     value.className = 'tile__value is-empty';
     value.textContent = EMPTY;
+    // Close Rates has no single hero figure; its three closers are the content.
+    if (tile.kind === 'rates') value.hidden = true;
 
     const foot = document.createElement('p');
     foot.className = 'tile__foot';
@@ -207,13 +209,13 @@ export function renderTop5Rows(rows) {
   }
 }
 
-function renderTiles(model, period) {
+function renderTiles(model, period, salesView) {
   for (const spec of CONFIG.tiles) {
     const node = el.tiles().querySelector(`[data-metric="${norm(spec.metric)}"]`);
     if (!node) continue;
 
     if (spec.kind === 'rest') { renderRestTile(node, model); continue; }
-    if (spec.kind === 'rates') { renderRatesTile(node, spec, model, period); continue; }
+    if (spec.kind === 'rates') { renderRatesTile(node, spec, model, salesView); continue; }
 
     const row = kpiFor(model, spec.metric, period);
     const unit = normalizeUnit(row?.unit) || spec.unit;
@@ -243,26 +245,25 @@ function renderTiles(model, period) {
    toggle flips them together, and any the Sheet has not filled shows an em
    dash rather than a borrowed or derived number. The board does not compute a
    close rate from anything - ProLine owns that definition. */
-function renderRatesTile(node, spec, model, period) {
-  const row = kpiFor(model, spec.metric, period);
-  const value = node.querySelector('.tile__value');
-  const text = row ? fmtByUnit(row.percent, 'pct') : EMPTY;
-  value.textContent = text;
-  value.classList.toggle('is-empty', text === EMPTY);
+/* Close Rates: three closers, read large, following the SALES card's period
+   rather than the Monthly/Weekly toggle - the rate belongs beside the sales
+   story on the card above it.
 
-  const target = node.querySelector('.tile__target');
-  const goal = row?.targetPercent;
-  if (goal === null || goal === undefined) {
-    target.hidden = true;
-    target.textContent = '';
-  } else {
-    target.hidden = false;
-    target.textContent = `target ${fmtByUnit(goal, 'pct')}`;
-  }
+   No company figure. ProLine does not report one, and an average of three
+   closers' rates is a number nobody actually closes. */
+function renderRatesTile(node, spec, model, salesView) {
+  /* A row tagged with this exact period wins. Failing that, the one legacy tag
+     the Sheet's Notes document as covering the same window - today the KPI
+     "monthly" rows are ProLine's Last month, so Last month finds them. */
+  const lookup = (metric) => kpiFor(model, metric, salesView)
+    || (CONFIG.closeRateFallback[salesView]
+      ? kpiFor(model, metric, CONFIG.closeRateFallback[salesView])
+      : undefined);
 
   const host = node.querySelector('.tile__chips');
   if (!host) return;
   const chips = spec.chips || [];
+
   syncRows(host, chips.map((c) => c.label), (label) => {
     const li = document.createElement('li');
     li.className = 'tile__chip';
@@ -276,12 +277,25 @@ function renderRatesTile(node, spec, model, period) {
     li.append(who, val);
     return li;
   });
+
   for (const chip of chips) {
-    const el_ = host.querySelector(`[data-person="${norm(chip.label)}"] .tile__chip-value`);
-    if (!el_) continue;
-    const r = kpiFor(model, chip.metric, period);
-    el_.textContent = r ? fmtByUnit(r.percent, 'pct') : EMPTY;
+    const cell = host.querySelector(`[data-person="${norm(chip.label)}"] .tile__chip-value`);
+    if (!cell) continue;
+    const row = lookup(chip.metric);
+    const text = row ? fmtByUnit(row.percent, 'pct') : EMPTY;
+    cell.textContent = text;
+    cell.classList.toggle('is-empty', text === EMPTY);
   }
+
+  /* The period the figures cover, so a rate is never read as belonging to a
+     window it does not. */
+  const foot = node.querySelector('.tile__note');
+  if (foot) {
+    const period = CONFIG.salesPeriods.find((p) => p.key === salesView);
+    foot.textContent = period ? period.label.toLowerCase() : '';
+  }
+  const target = node.querySelector('.tile__target');
+  if (target) target.hidden = true;
 }
 
 /* Rest Index as a small card. It reads its own tab rather than a KPI Period
@@ -535,7 +549,7 @@ export function renderModel(model, state = {}) {
   document.documentElement.dataset.period = period;
   renderSales(model, state.salesView || CONFIG.salesDefaultView);
   renderTop5(model);
-  renderTiles(model, period);
+  renderTiles(model, period, state.salesView || CONFIG.salesDefaultView);
   renderChrome(model, state);
   el.board().hidden = false;
 }

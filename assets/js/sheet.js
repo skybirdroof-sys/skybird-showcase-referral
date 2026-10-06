@@ -303,13 +303,19 @@ export function buildSalesDetail(csv) {
     }
 
     const grouped = [...months.entries()]
-      /* A job with no readable month sorts last rather than being dropped: it
-         is a real signed job and hiding it would make the panel disagree with
-         its own footer. */
-      .sort((a, b) => (b[0] || '').localeCompare(a[0] || ''))
+      /* Oldest month first, so the year reads the way a calendar does: January
+         at the top of the left column, working down and then rightward. A job
+         with no readable month sorts last rather than being dropped - it is a
+         real signed job and hiding it would make the panel disagree with its
+         own footer. */
+      .sort((a, b) => {
+        if (!a[0]) return 1;
+        if (!b[0]) return -1;
+        return a[0].localeCompare(b[0]);
+      })
       .map(([monthKey, jobs]) => {
         jobs.sort((x, y) => {
-          const d = String(y.wonDate || '').localeCompare(String(x.wonDate || ''));
+          const d = String(x.wonDate || '').localeCompare(String(y.wonDate || ''));
           return d !== 0 ? d : String(x.customer || '').localeCompare(String(y.customer || ''));
         });
         const known = jobs.map((j) => j.dollars).filter((v) => v !== null);
@@ -649,6 +655,17 @@ export function normalizePeriod(raw) {
   if (!text) return CONFIG.defaultPeriod;
   if (['monthly', 'month', 'mtd', 'm', 'monthtodate'].includes(text)) return 'monthly';
   if (['weekly', 'week', 'wtd', 'w', 'l10', 'weektodate'].includes(text)) return 'weekly';
+
+  /* The sales card's five windows, so a KPI row can be tagged with the period
+     it actually covers rather than squeezed into monthly or weekly. Spellings
+     avoid the existing vocabulary on purpose: bare "month" has always meant
+     the monthly tile view and still does. */
+  if (['ytd', 'yeartodate'].includes(text)) return 'ytd';
+  if (['thismonth', 'currentmonth'].includes(text)) return 'month';
+  if (['lastmonth', 'priormonth', 'previousmonth'].includes(text)) return 'lastmonth';
+  if (['thisquarter', 'quarter', 'qtd', 'quartertodate', 'currentquarter'].includes(text)) return 'quarter';
+  if (['lastquarter', 'priorquarter', 'previousquarter'].includes(text)) return 'lastquarter';
+
   return null;
 }
 

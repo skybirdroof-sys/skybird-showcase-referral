@@ -73,11 +73,19 @@ extra rows or another tab — the board ignores rows it doesn't have a tile for.
 
 ---
 
-**Close rates are four rows, not one.** `Close Rates` holds the company figure
-and `Close Rate - John` / `Close Rate - Anas` / `Close Rate - Henry` hold the
-closers, each with a `monthly` and a `weekly` Period row like every other metric
-here. The board shows the company rate as the tile's big number and the three
-closers as chips beneath it, and any that is blank shows `—`.
+**Close rates are three rows.** `Close Rate - John` / `Close Rate - Anas` /
+`Close Rate - Henry`. The board shows those three large and side by side, and
+shows **no company figure**: ProLine does not report one, and an average of
+three closers' rates is a number nobody closes. A `Close Rates` row is still
+read harmlessly if present, but nothing on the board displays it.
+
+**The close-rate tile follows the SALES card's period**, not the Monthly/Weekly
+toggle — the rate belongs beside the sales story on the card above it. So these
+rows want a `Period` naming the window they actually cover: `ytd`,
+`this_month`, `last_month`, `this_quarter`, `last_quarter`. A row tagged
+`monthly` is still read for **Last month**, because the Sheet's own Notes
+document that window as ProLine's "Last month" — the one legacy mapping, and it
+is documented rather than guessed.
 
 **ProLine owns that definition — the board never computes a close rate.**
 Whatever ProLine reports is transcribed verbatim, including its window, which is

@@ -75,6 +75,9 @@ export const CONFIG = {
       metric: 'Close Rates',
       unit: 'pct',
       kind: 'rates',
+      /* Three closers, read large. There is no company average here on
+         purpose: ProLine does not report one, and an average of three rates is
+         a number nobody closes. */
       chips: [
         { label: 'John', metric: 'Close Rate - John' },
         { label: 'Anas', metric: 'Close Rate - Anas' },
@@ -142,6 +145,13 @@ export const CONFIG = {
       count: ['lastquartercount', 'priorquartercount'],
     },
   ],
+  /* The Close Rates tile follows the SALES card's period rather than the
+     Monthly/Weekly toggle - a close rate belongs beside the sales story above
+     it. A KPI row is matched on its own Period tag; `fallback` names a legacy
+     tag that the Sheet's own Notes document as covering the same window, which
+     is how the existing monthly rows keep working while Talon retags them. */
+  closeRateFallback: { lastmonth: 'monthly' },
+
   salesDefaultView: 'ytd',
   salesViewStorageKey: 'talon.salesView',
 

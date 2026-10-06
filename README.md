@@ -3,7 +3,7 @@
 A single-page, read-only wall display for the Skybird Roofing office TV. It shows
 three things at a glance, in giant type, on a dark HUD:
 
-- **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Five buttons switch the period: **Year to date · This month · Last month · This quarter · Last quarter**. Only YTD has Sheet columns today; the rest keep their button and show `—` rather than deriving one period from another. **Click a closer for the job list** — a centred panel of every signed job in the active period, grouped by month, with the total at the bottom.
+- **Sales** (top left, large) — year-to-date signed contracts by closer: company total dominant, then John / Anas / Henry / Other. Five buttons switch the period: **Year to date · This month · Last month · This quarter · Last quarter**. Only YTD has Sheet columns today; the rest keep their button and show `—` rather than deriving one period from another. **Click a closer for the job list** — a centred panel of every signed job in the active period, grouped by month oldest first (January top-left, working right), with the total at the bottom.
 - **Top 5 Daily** — today's count-based Daily Top Five % and the ~5-day average per person, with a ding and a green name when somebody closes one
 - **Eight cash/ops tiles** — Close Rates, Appointments Set, Contracts Signed $$, Rest Index, Jobs Completed, Sent CoC cash sitting, Total AR Over 60 Days, Cash Collected, most with a 12-week sparkline where `L10 History` has a series for it
 
@@ -311,7 +311,8 @@ ops bot fills them. Written up in full as
 
 | Missing | Effect on the board |
 |---|---|
-| *(nothing outstanding on the sales card)* | All five periods landed Oct 5. Each reads its own `… $$` / `… Count` column pair; the board never derives one period from another. The pop-up narrows the job list by the same window from each row's own Won Date, and its footer is checked against that period's summary column. |
+| **Close rates for four of the five periods** | The `Close Rates` tile follows the sales card's period. Only `last month` has rows today (tagged `monthly`, which the Sheet's Notes document as ProLine's Last month window), so the other four read `—`. Talon tags a `KPI` row with `ytd` / `this_month` / `last_month` / `this_quarter` / `last_quarter` and the tile fills in. |
+| *(nothing outstanding on the sales dollars)* | All five periods landed Oct 5. Each reads its own `… $$` / `… Count` column pair; the board never derives one period from another. The pop-up narrows the job list by the same window from each row's own Won Date, and its footer is checked against that period's summary column. |
 | **`Close Rates` Value** (`KPI`) | Tile 1 shows `—` for the company figure and all three closers. ProLine owns the definition and Talon transcribes it — the board never derives a close rate. Four rows needed: `Close Rates`, `Close Rate - John`, `Close Rate - Anas`, `Close Rate - Henry`, monthly and weekly. See [`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md). |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |

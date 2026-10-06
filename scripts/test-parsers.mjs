@@ -854,12 +854,25 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(detailFor(model, 'John').count, 1);
   });
 
-  test('jobs group by month, newest month and newest job first', () => {
+  test('jobs read oldest first, so the year starts where a calendar does', () => {
     const henry = detailFor(model, 'Henry');
-    assert.deepEqual(henry.months.map((m) => m.monthKey), ['2026-10', '2026-09']);
-    assert.deepEqual(henry.months[0].jobs.map((j) => j.customer), ['James Marlowe', 'Bryan Law']);
-    assert.deepEqual(henry.months.map((m) => m.count), [2, 1]);
-    assert.equal(henry.months[0].subtotal, 49650);
+    assert.deepEqual(henry.months.map((m) => m.monthKey), ['2026-09', '2026-10'],
+      'January on the left, working right');
+    assert.deepEqual(henry.months[1].jobs.map((j) => j.customer), ['Bryan Law', 'James Marlowe'],
+      'and within a month, the earliest job first');
+    assert.deepEqual(henry.months.map((m) => m.count), [1, 2]);
+    assert.equal(henry.months[1].subtotal, 49650);
+  });
+
+  test('a job with no readable month still sorts last, not first', () => {
+    const csv = [
+      'Closer,Customer,Won Date,Won Month,Contract $$',
+      'Henry,Undated,,,5000',
+      'Henry,January,2026-01-06,2026-01,1000',
+      'Henry,March,2026-03-06,2026-03,2000',
+    ].join('\n');
+    const m = buildModelFromCsv({ salesDetail: csv });
+    assert.deepEqual(detailFor(m, 'Henry').months.map((x) => x.monthKey), ['2026-01', '2026-03', '']);
   });
 
   test('a blank Won Month falls back to the Won Date rather than losing the job', () => {

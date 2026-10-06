@@ -385,7 +385,7 @@ body { -webkit-font-smoothing: antialiased; }
   font-weight: 800;
   letter-spacing: calc(var(--u) * 0.09);
   text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--amber);
 }
 
 .drill__month-sum {
@@ -1235,8 +1235,52 @@ body { -webkit-font-smoothing: antialiased; }
   .tile__chips { display: none; }
 }
 
-/* Three closers rather than four owners, so they get more room each. */
-.tile--rates .tile__chips { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Close Rates is the one tile with no hero figure: the three closers ARE the
+   content, so their row takes the whole card and the percentages are sized to
+   be read from across the room rather than leaned in on. */
+.tile--rates .tile__chips {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--u) * 0.5);
+  margin: auto 0;
+  align-items: end;
+}
+
+.tile--rates .tile__chip {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.tile--rates .tile__chip-name {
+  font-size: calc(var(--u) * 0.8);
+  letter-spacing: calc(var(--u) * 0.08);
+  color: var(--ink-3);
+}
+
+.tile--rates .tile__chip-value {
+  font-size: calc(var(--u) * 2.1);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile--rates .tile__chip-value.is-empty {
+  color: var(--ink-3);
+  font-size: calc(var(--u) * 1.4);
+}
+
+/* The tile's footer names the window the rates cover, in the same amber the
+   period chips use, so a rate is never read as a window it is not. */
+.tile--rates .tile__note { color: var(--amber-dim); }
+
+@media (max-height: 820px) {
+  /* These are the tile's only content, so unlike the Rest Index chips they
+     never hide - they shrink. */
+  .tile--rates .tile__chips { display: grid; }
+  .tile--rates .tile__chip-value { font-size: calc(var(--u) * 1.6); }
+}
 
 @media (max-aspect-ratio: 1/1) {
   /* Stacked phone layout: the tile is wide enough for two per row. */
