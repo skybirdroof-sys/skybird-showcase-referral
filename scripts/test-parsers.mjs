@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { buildL10FromCsv, buildModelFromCsv, buildSalesYtd, detailFor, monthKeyOf, periodRange, hitStatus, historyFor, normalizeL10View, kpiFor, loadLive, NoSourceError, normalizePeriod, periodLabel } from '../assets/js/sheet.js';
 import { segments } from '../assets/js/chart.js';
 import { createCelebrations } from '../assets/js/celebrate.js';
-import { monthLabel, dayLabel } from '../assets/js/drilldown.js';
+import { monthLabel, dayLabel, spansYears } from '../assets/js/drilldown.js';
 import { CONFIG } from '../assets/js/config.js';
 import { parseCsv } from '../assets/js/csv.js';
 import { fmtUsd, fmtPct, fmtCount, fmtRest, EMPTY } from '../assets/js/format.js';
@@ -881,9 +881,21 @@ test('a series with no values at all yields no runs to draw', () => {
     assert.equal(monthKeyOf({ wonMonth: '', wonDate: '' }), '', 'unknown, but still counted');
   });
 
+  test('a month header is just the month - the panel title already says the year', () => {
+    assert.equal(monthLabel('2026-10'), 'October');
+    assert.equal(monthLabel('2026-01'), 'January');
+    assert.equal(monthLabel('2026-10', true), 'October 2026',
+      'the year comes back only where a list crosses one');
+  });
+
+  test('the year returns only when the months on show span more than one', () => {
+    assert.equal(spansYears([{ monthKey: '2026-01' }, { monthKey: '2026-10' }]), false);
+    assert.equal(spansYears([{ monthKey: '2025-12' }, { monthKey: '2026-01' }]), true);
+    assert.equal(spansYears([]), false);
+    assert.equal(spansYears([{ monthKey: '' }]), false, 'an unreadable month is not a second year');
+  });
+
   test('month and day labels never go through Date, so no timezone slip', () => {
-    assert.equal(monthLabel('2026-10'), 'October 2026');
-    assert.equal(monthLabel('2026-01'), 'January 2026');
     assert.equal(dayLabel('2026-01-01'), 'Jan 1', 'UTC parsing would call this Dec 31');
     assert.equal(dayLabel('2026-12-31'), 'Dec 31');
     assert.equal(monthLabel('nonsense'), 'Month not recorded');

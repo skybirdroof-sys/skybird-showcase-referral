@@ -22,13 +22,28 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/* "2026-10" -> "October 2026". Split rather than parsed: Date would read it as
-   UTC midnight and name the previous month west of Greenwich. */
-export function monthLabel(key) {
+/* "2026-10" -> "October". Split rather than parsed: Date would read it as UTC
+   midnight and name the previous month west of Greenwich.
+
+   The year is left off, because the panel's own title already states it -
+   repeating it on every header is eight copies of something nobody is in doubt
+   about. It comes back only when a list genuinely spans more than one year,
+   where "October" alone would be ambiguous. */
+export function monthLabel(key, withYear = false) {
   const m = /^(\d{4})-(\d{2})$/.exec(String(key || ''));
   if (!m) return 'Month not recorded';
-  const index = Number(m[2]) - 1;
-  return MONTHS[index] ? `${MONTHS[index]} ${m[1]}` : `Month not recorded`;
+  const name = MONTHS[Number(m[2]) - 1];
+  if (!name) return 'Month not recorded';
+  return withYear ? `${name} ${m[1]}` : name;
+}
+
+/* True only when the months on show cross a year, which is the one case where
+   a bare month name could mean two different things. */
+export function spansYears(months) {
+  const years = new Set(
+    (months || []).map((m) => String(m.monthKey || '').slice(0, 4)).filter(Boolean),
+  );
+  return years.size > 1;
 }
 
 /* "2026-10-02" -> "Oct 2". Same reasoning: never through Date. */
@@ -88,6 +103,8 @@ export function createDrilldown() {
       return;
     }
 
+    const withYear = spansYears(view.months);
+
     for (const month of view.months) {
       const section = document.createElement('section');
       section.className = 'drill__month';
@@ -96,7 +113,7 @@ export function createDrilldown() {
       head.className = 'drill__month-head';
       const name = document.createElement('h3');
       name.className = 'drill__month-name';
-      name.textContent = monthLabel(month.monthKey);
+      name.textContent = monthLabel(month.monthKey, withYear);
       const sum = document.createElement('span');
       sum.className = 'drill__month-sum';
       sum.textContent = `${usd(month.subtotal)} · ${month.count} ${month.count === 1 ? 'job' : 'jobs'}`;
@@ -127,7 +144,7 @@ export function createDrilldown() {
 
         const when = document.createElement('span');
         when.className = 'drill__when';
-        when.textContent = dayLabel(job.wonDate) || monthLabel(job.monthKey);
+        when.textContent = dayLabel(job.wonDate) || monthLabel(job.monthKey, withYear);
 
         const amount = document.createElement('span');
         amount.className = 'drill__amount';
