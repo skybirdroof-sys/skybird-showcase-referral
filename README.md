@@ -441,11 +441,15 @@ for all of them or `HEALTH_MAX_AGE_KPI`, `HEALTH_MAX_AGE_TOP5`,
 `HEALTH_MAX_AGE_REST`, `HEALTH_MAX_AGE_META`, `HEALTH_MAX_AGE_L10`,
 `HEALTH_MAX_AGE_L10_HISTORY` for one.
 
-**Getting told about it.** `netlify.toml` schedules `health-cron` for 13:05 UTC
-daily — 9:05am ET in summer, 8:05am in winter — early enough that a tab which
-stopped being written overnight is reported before the day starts. Only that
-function notifies; `GET /api/health` never sends anything, so checking by hand
-is free.
+**Getting told about it.** `netlify.toml` schedules `health-cron` for 15:05 UTC
+daily — 11:05am ET in summer, 10:05am in winter — **after** the ops bot's
+morning routines rather than during them. At 9:05am it caught the Top Five tab
+mid-morning every Monday, when the newest write is still Friday evening and 64h
+old, and would have raised the same false alarm every week. Only that function
+notifies; `GET /api/health` never sends anything, so checking by hand is free.
+
+The cadence the ops bot is held to, and the rules behind these limits, are in
+[`docs/TALON_STANDING_INSTRUCTIONS.md`](docs/TALON_STANDING_INSTRUCTIONS.md).
 
 To actually receive the message, set **`ALERT_WEBHOOK_URL`** to anything that
 accepts `{"text": "..."}` — a Slack or Discord incoming webhook, a Zapier or

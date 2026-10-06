@@ -6,16 +6,20 @@
 [functions]
   node_bundler = "esbuild"
 
-# The Sheet watchdog's daily run. 13:05 UTC is 9:05am Eastern while the US is on
-# daylight time and 8:05am once it is not - early enough that a tab which
-# stopped being written overnight is reported before the day starts.
+# The Sheet watchdog's daily run. 15:05 UTC is 11:05am Eastern on daylight time
+# and 10:05am once it is not - AFTER the ops bot's morning routines rather than
+# during them. At 9:05am it would have caught the Top Five tab mid-morning every
+# Monday, when the newest write is still Friday evening and 64h old, and raised
+# the same false alarm every week. Late enough to let the morning land, early
+# enough that a routine which did not run at all is reported before the day is
+# over.
 #
 # The schedule is on health-cron, NOT on health: Netlify refuses to serve a
 # scheduled function over HTTP, so putting it on health made GET /api/health
 # answer 403 - the one command anybody was told to run. Reading the report by
 # hand goes to health.js, which has no schedule and never notifies.
 [functions."health-cron"]
-  schedule = "5 13 * * *"
+  schedule = "5 15 * * *"
 
 [dev]
   framework = "#static"
