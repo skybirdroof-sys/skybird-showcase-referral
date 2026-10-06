@@ -252,13 +252,9 @@ function renderTiles(model, period, salesView) {
    No company figure. ProLine does not report one, and an average of three
    closers' rates is a number nobody actually closes. */
 function renderRatesTile(node, spec, model, salesView) {
-  /* A row tagged with this exact period wins. Failing that, the one legacy tag
-     the Sheet's Notes document as covering the same window - today the KPI
-     "monthly" rows are ProLine's Last month, so Last month finds them. */
-  const lookup = (metric) => kpiFor(model, metric, salesView)
-    || (CONFIG.closeRateFallback[salesView]
-      ? kpiFor(model, metric, CONFIG.closeRateFallback[salesView])
-      : undefined);
+  /* Matched on the row's own Period tag and nothing else. No window is ever
+     stretched to stand in for another: a period with no row shows an em dash. */
+  const lookup = (metric) => kpiFor(model, metric, salesView);
 
   const host = node.querySelector('.tile__chips');
   if (!host) return;

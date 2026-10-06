@@ -80,12 +80,12 @@ three closers' rates is a number nobody closes. A `Close Rates` row is still
 read harmlessly if present, but nothing on the board displays it.
 
 **The close-rate tile follows the SALES card's period**, not the Monthly/Weekly
-toggle — the rate belongs beside the sales story on the card above it. So these
-rows want a `Period` naming the window they actually cover: `ytd`,
-`this_month`, `last_month`, `this_quarter`, `last_quarter`. A row tagged
-`monthly` is still read for **Last month**, because the Sheet's own Notes
-document that window as ProLine's "Last month" — the one legacy mapping, and it
-is documented rather than guessed.
+toggle — the rate belongs beside the sales story on the card above it. So each
+row's `Period` names the window it actually covers: `ytd`, `this_month`,
+`last_month`, `this_quarter`, `last_quarter`. The board matches on that tag and
+nothing else; a period with no row shows `—` rather than borrowing another
+window's figure. A `0` is a real zero and renders `0%` — ProLine reporting
+nobody closed anything this month is not the same as ProLine not reporting.
 
 **ProLine owns that definition — the board never computes a close rate.**
 Whatever ProLine reports is transcribed verbatim, including its window, which is

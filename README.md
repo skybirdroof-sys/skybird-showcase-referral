@@ -311,8 +311,7 @@ ops bot fills them. Written up in full as
 
 | Missing | Effect on the board |
 |---|---|
-| **Close rates for four of the five periods** | The `Close Rates` tile follows the sales card's period. Only `last month` has rows today (tagged `monthly`, which the Sheet's Notes document as ProLine's Last month window), so the other four read `—`. Talon tags a `KPI` row with `ytd` / `this_month` / `last_month` / `this_quarter` / `last_quarter` and the tile fills in. |
-| *(nothing outstanding on the sales dollars)* | All five periods landed Oct 5. Each reads its own `… $$` / `… Count` column pair; the board never derives one period from another. The pop-up narrows the job list by the same window from each row's own Won Date, and its footer is checked against that period's summary column. |
+| *(nothing outstanding on the sales card or close rates)* | All five periods landed Oct 5, on both the dollars and the close rates. | All five periods landed Oct 5. Each reads its own `… $$` / `… Count` column pair; the board never derives one period from another. The pop-up narrows the job list by the same window from each row's own Won Date, and its footer is checked against that period's summary column. |
 | **`Close Rates` Value** (`KPI`) | Tile 1 shows `—` for the company figure and all three closers. ProLine owns the definition and Talon transcribes it — the board never derives a close rate. Four rows needed: `Close Rates`, `Close Rate - John`, `Close Rate - Anas`, `Close Rate - Henry`, monthly and weekly. See [`docs/TALON_CLOSE_RATES_REQUEST.md`](docs/TALON_CLOSE_RATES_REQUEST.md). |
 | **`Cash Sitting` / `Sent CoC`** | Has a value but no `L10 History` series, so that tile gets no sparkline. |
 | **`KPI` freshness** | As of Oct 5 the whole tab was last written Sep 18, so seven tiles show September under a "September MTD" label. |

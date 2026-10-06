@@ -147,10 +147,10 @@ export const CONFIG = {
   ],
   /* The Close Rates tile follows the SALES card's period rather than the
      Monthly/Weekly toggle - a close rate belongs beside the sales story above
-     it. A KPI row is matched on its own Period tag; `fallback` names a legacy
-     tag that the Sheet's own Notes document as covering the same window, which
-     is how the existing monthly rows keep working while Talon retags them. */
-  closeRateFallback: { lastmonth: 'monthly' },
+     it. A KPI row is matched on its own Period tag and nothing else: every
+     per-closer row now names the window it covers (ytd, this_month,
+     last_month, this_quarter, last_quarter), so there is no legacy tag left to
+     bridge and no window gets stretched to cover another. */
 
   salesDefaultView: 'ytd',
   salesViewStorageKey: 'talon.salesView',

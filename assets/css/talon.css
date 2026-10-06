@@ -1242,7 +1242,10 @@ body { -webkit-font-smoothing: antialiased; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--u) * 0.5);
   margin: auto 0;
-  align-items: end;
+  /* Names on one line, figures on another. Aligning to the bottom instead let
+     a blank closer's name ride lower than the other two, because its em dash
+     made a shorter cell. */
+  align-items: start;
 }
 
 .tile--rates .tile__chip {
@@ -1269,6 +1272,14 @@ body { -webkit-font-smoothing: antialiased; }
 .tile--rates .tile__chip-value.is-empty {
   color: var(--ink-3);
   font-size: calc(var(--u) * 1.4);
+}
+
+/* A blank closer keeps the figure's size here, unlike the sales hero where an
+   em dash steps down. In a row of three, a smaller dash knocks that column out
+   of line with the other two, and the mis-set names read as a bug. */
+.tile--rates .tile__chip-value.is-empty {
+  color: var(--ink-3);
+  font-size: calc(var(--u) * 2.1);
 }
 
 /* The tile's footer names the window the rates cover, in the same amber the
