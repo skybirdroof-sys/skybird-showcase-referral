@@ -145,6 +145,32 @@ function skybird_projects_meta_fields() {
 		//   moment the project is published, because every field here is
 		//   show_in_rest and a published post's meta is public. Invisible on
 		//   the page is not the same as unreachable (docs/07 §16.3).
+		// The storm a hail claim traces back to. Published as a plain fact about
+		// a finished job — "the claim traced back to hail on 3 September" —
+		// which is reporting, not the storm-chasing docs/06-trigger-design.md §3
+		// forbids. The line is tense: a date on work already done, never a
+		// current storm and never a call to action (docs/12 §10).
+		'storm_date'                => array(
+			'type'     => 'string',
+			'sanitize' => 'skybird_projects_sanitize_date',
+			'reviewer' => true,
+			'label'    => 'Storm date',
+		),
+		// Which of the three packages the homeowner bought.
+		//
+		// PRIVATE, and this one is a judgement rather than a legal line: the
+		// page says what is on the roof and who warrants it, never what the
+		// customer spent. "Bare Bones" is our word for a price tier and it is
+		// nobody else's business that a particular household chose it
+		// (docs/12 §9). The shingle, colour and warranty it implies are public
+		// and flattering; the tier name is not.
+		'package'                   => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+			'private'  => true,
+			'reviewer' => true,
+			'label'    => 'Package (internal)',
+		),
 		'field_notes'               => array(
 			'type'     => 'string',
 			'sanitize' => 'skybird_projects_sanitize_notes',

@@ -91,6 +91,28 @@ function skybird_projects_register_acf_fields() {
 		'first_day'     => 0,
 	);
 
+	$fields[] = array(
+		'key'           => 'field_skybird_storm_date',
+		'label'         => __( 'Storm date', 'skybird-projects' ),
+		'name'          => 'storm_date',
+		'type'          => 'date_picker',
+		'display_format'=> 'F j, Y',
+		'return_format' => 'Y-m-d',
+		'first_day'     => 0,
+		'instructions'  => __( 'For a hail or storm claim, the date of the storm itself. Published as a fact about this job — never about a current storm, and never with a call to action.', 'skybird-projects' ),
+	);
+
+	// Read-only, and private. The page says what is on the roof and who
+	// warrants it; it never says which price tier the household bought.
+	$fields[] = array(
+		'key'          => 'field_skybird_package',
+		'label'        => __( 'Package (internal, not published)', 'skybird-projects' ),
+		'name'         => 'package',
+		'type'         => 'text',
+		'readonly'     => 1,
+		'instructions' => __( 'From the CompanyCam checklist. Shown here so you can check the shingle and warranty on the page match what was sold. The tier name itself is hidden from the public API and never rendered.', 'skybird-projects' ),
+	);
+
 	// The project manager's notes, mirrored from CompanyCam. Read-only on
 	// purpose: this is a snapshot of what was in CompanyCam when the draft was
 	// built, and editing it here would change nothing at the other end. The

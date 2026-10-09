@@ -178,6 +178,8 @@ $expected_meta = array(
 	'color',
 	'warranty',
 	'completion_date',
+	'storm_date',
+	'package',
 	'field_notes',
 );
 
@@ -605,17 +607,44 @@ it(
 	! empty( skybird_projects_meta_fields()['field_notes']['private'] )
 );
 
+// Pinned as an exact set, not a count. A field added with `private` and no
+// containment test of its own would otherwise ride in silently — and a field
+// that LOSES the flag would too.
+$private_fields = array_keys(
+	array_filter(
+		skybird_projects_meta_fields(),
+		function ( $f ) {
+			return ! empty( $f['private'] );
+		}
+	)
+);
+sort( $private_fields );
+
 it(
-	'field_notes is the only private field',
-	array( 'field_notes' ) === array_keys(
-		array_filter(
-			skybird_projects_meta_fields(),
-			function ( $f ) {
-				return ! empty( $f['private'] );
-			}
-		)
-	),
-	'a new private field needs its own containment tests'
+	'the private fields are exactly the two we mean',
+	array( 'field_notes', 'package' ) === $private_fields,
+	'got: ' . implode( ', ', $private_fields ) . ' — a new private field needs its own containment tests'
+);
+
+// The package name is a price tier. The page says what is on the roof, never
+// what the household spent (docs/12 section 9).
+$GLOBALS['wp_fixture']['post_meta'] = array();
+
+it(
+	'package is private',
+	! empty( skybird_projects_meta_fields()['package']['private'] )
+);
+
+it(
+	'storm_date is NOT private',
+	empty( skybird_projects_meta_fields()['storm_date']['private'] ),
+	'the storm date is a published fact about the job'
+);
+
+it(
+	'storm_date goes through the date sanitiser',
+	'skybird_projects_sanitize_date' === skybird_projects_meta_fields()['storm_date']['sanitize'],
+	'a free-typed date must not reach the page as "early Sept"'
 );
 
 // Sanitiser.
@@ -649,6 +678,8 @@ $response_for = function ( $can_edit ) use ( $notes_payload ) {
 			'id'   => 1183,
 			'meta' => array(
 				'field_notes'            => $notes_payload,
+				'package'                => 'Bare Bones',
+				'storm_date'             => '2026-09-03',
 				'city'                   => 'Youngsville',
 				'companycam_project_id'  => '110848078',
 			),
@@ -660,6 +691,9 @@ $response_for = function ( $can_edit ) use ( $notes_payload ) {
 $anon_data = $response_for( false );
 
 it( 'a visitor cannot read the notes over REST', ! isset( $anon_data['meta']['field_notes'] ) );
+it( 'a visitor cannot read the package tier over REST', ! isset( $anon_data['meta']['package'] ) );
+it( 'no trace of the tier name survives', false === strpos( wp_json_encode( $anon_data ), 'Bare Bones' ) );
+it( 'the storm date IS public', '2026-09-03' === $anon_data['meta']['storm_date'], 'it is a fact about the job, not about the household' );
 it( 'stripping the notes leaves the public fields alone', 'Youngsville' === $anon_data['meta']['city'] );
 it(
 	'no trace of the notes survives anywhere in the public response',
