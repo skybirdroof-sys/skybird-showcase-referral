@@ -139,7 +139,7 @@ if ( $tax ) {
 
 $areas = skybird_projects_service_areas();
 
-eq( 'thirteen service areas', 13, count( $areas ) );
+eq( 'fourteen service areas', 14, count( $areas ) );
 
 $slugs = wp_list_pluck_stub( $areas, 'slug' );
 sort( $slugs );
@@ -149,7 +149,7 @@ sort( $slugs );
 // unpublishable. Goldsboro is 54 jobs on its own and Pikeville and La Grange
 // are next door to it.
 eq(
-	'the thirteen expected slugs',
+	'the fourteen expected slugs',
 	array(
 		'durham',
 		'franklinton',
@@ -164,6 +164,7 @@ eq(
 		'wilson',
 		'winterville',
 		'youngsville',
+		'zebulon',
 	),
 	$slugs
 );
@@ -602,6 +603,7 @@ $area_centres = array(
 	'la-grange'   => array( 35.3085, -77.7889 ),
 	'winterville' => array( 35.5293, -77.4005 ),
 	'durham'      => array( 35.9940, -78.8986 ),
+	'zebulon'     => array( 35.8266, -78.3139 ),
 );
 
 $outside = array();
@@ -613,7 +615,7 @@ foreach ( $area_centres as $slug => $point ) {
 }
 
 it(
-	'all thirteen service areas fall inside the bounds',
+	'all fourteen service areas fall inside the bounds',
 	array() === $outside,
 	implode( ', ', $outside )
 );
@@ -850,8 +852,8 @@ foreach ( $real_towns as $town ) {
 
 it(
 	'every town with real volume has somewhere to be filed',
-	array( 'Zebulon' ) === $unfiled,
-	'unfiled: ' . implode( ', ', $unfiled ) . ' (Zebulon, 3 jobs, is knowingly out)'
+	array() === $unfiled,
+	'unfiled: ' . implode( ', ', $unfiled )
 );
 
 // --- Candidate photo URLs (the upload gate) --------------------------------

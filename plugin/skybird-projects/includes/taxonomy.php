@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  * @return array[] Each entry: name, slug, page.
  */
 function skybird_projects_service_areas() {
-	// Thirteen, not the original eight. The five at the bottom were added
+	// Fourteen, not the original eight. The six at the bottom were added
 	// 2026-10-14 after counting the real back catalogue: of 201 completed
 	// roofs in Production HQ, 68 were in towns with no service area to be
 	// filed under, so a third of the company's own work could not be
@@ -42,6 +42,7 @@ function skybird_projects_service_areas() {
 		'la-grange'   => 'La Grange',
 		'winterville' => 'Winterville',
 		'durham'      => 'Durham',
+		'zebulon'     => 'Zebulon',
 	);
 
 	$out = array();

@@ -1793,9 +1793,19 @@ no area, by design, so nothing is ever filed into the wrong place.
 | Winterville / Durham | 5 each |
 
 The strongest market in the company was a single pin on a map that had no
-room for its neighbours. Five areas added, taking the taxonomy to thirteen:
-Pikeville, Wilson, La Grange, Winterville, Durham. Zebulon (3 jobs) stays out
-knowingly, and the suite asserts exactly that.
+room for its neighbours. Six areas added, taking the taxonomy to fourteen:
+Pikeville, Wilson, La Grange, Winterville, Durham, Zebulon.
+
+**Correction, same day.** This section first said thirteen areas covered 198
+of 201 jobs and that Zebulon was "knowingly out". Both were wrong. Fourteen
+areas cover **174**; Zebulon was never offered for a decision, it was simply
+missing from the list I put to Jacob, and describing that as a decision made a
+gap look like a judgement.
+
+**27 jobs remain unfiled**, spread across 21 towns at one or two jobs each —
+Garner, Apex, Bunn, Selma, Smithfield, Louisburg, Morrisville, Chapel Hill,
+Cary, Clayton, Fuquay-Varina and a dozen more. Those are a separate question:
+whether a town with one job should become a service area at all.
 
 ### 18.3 Three things that would have published something false
 
@@ -1849,3 +1859,26 @@ The warranty column is 29 rows blank and 89 "No Extended Warranty". Jacob is
 having the GAF portal cross-referenced to confirm Production HQ is the source
 of truth before any warranty claim is published. Until that comes back, a
 blank warranty means the page says nothing — which is correct either way.
+
+
+### 18.7 Adding an area has a dependency nobody has checked
+
+The project page's back-link points at `/service-areas/{slug}-nc/`, and the
+template renders it whenever the project has an area — it does not check that
+the page exists.
+
+The original eight areas have pages on skybirdroofing.net. **The six added
+today almost certainly do not.** Every Pikeville, Wilson, La Grange,
+Winterville, Durham and Zebulon project would therefore carry a prominent
+"Back to all {town} projects" link straight to a 404 — on the exact internal
+link the whole SEO structure depends on.
+
+Two ways out, and they are not exclusive: Pitch Peak creates the six pages, or
+the template suppresses the link when the target does not resolve. The second
+is a safety net, not a substitute — a project page with no route back to its
+town is weaker, and the service-area pages are where `docs/12` §6 says the
+depth belongs.
+
+**Not fixed yet.** Flagged before the first backlog page is published, because
+publishing twenty Goldsboro-cluster pages pointing at 404s would be worse than
+publishing none.
