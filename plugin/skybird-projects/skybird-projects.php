@@ -39,6 +39,7 @@ require_once SKYBIRD_PROJECTS_DIR . 'includes/rest.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/acf-fields.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/admin-pin.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/exif.php';
+require_once SKYBIRD_PROJECTS_DIR . 'includes/photo-gate.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/template.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/map-shortcode.php';
 

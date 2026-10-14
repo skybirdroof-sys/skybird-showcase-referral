@@ -481,59 +481,10 @@ const CURATED = () => {
   return curatedCache;
 };
 
-it('Prepare Photo Items puts the cover first', () => {
-  const out = run('Prepare Photo Items', { __input: [{ json: CURATED() }] });
-  eq(out.length, 4, 'one item per photo');
-  eq(out[0].json.isCover, true, 'cover first');
-  eq(out.filter((i) => i.json.isCover).length, 1, 'exactly one cover');
-});
-
-it('Prepare Photo Items builds filenames from the area and project id', () => {
-  const out = run('Prepare Photo Items', { __input: [{ json: CURATED() }] });
-  eq(out[0].json.filename, 'skybird-roof-youngsville-110848078-cover.jpeg', 'cover filename');
-  eq(out[1].json.filename, 'skybird-roof-youngsville-110848078-1.jpeg', 'first gallery filename');
-  eq(out[3].json.filename, 'skybird-roof-youngsville-110848078-3.jpeg', 'last gallery filename');
-});
-
-it('Prepare Photo Items keeps the homeowner out of filenames', () => {
-  // The CompanyCam project name IS the customer's name, so a filename built
-  // from it would publish PII in a URL. docs/06 §3.
-  const out = run('Prepare Photo Items', { __input: [{ json: CURATED() }] });
-  for (const item of out) {
-    for (const needle of PII) {
-      if (item.json.filename.toLowerCase().includes(needle.toLowerCase())) {
-        throw new Error(`PII in filename: ${item.json.filename}`);
-      }
-    }
-  }
-});
-
-// --- Collect Media --------------------------------------------------------
-
-const prepared = () => run('Prepare Photo Items', { __input: [{ json: CURATED() }] });
-
-it('Collect Media splits the cover back out of the uploads', () => {
-  const uploads = [4011, 4012, 4013, 4014].map((id) => ({ json: { id } }));
-  const out = run('Collect Media', { __input: uploads, 'Prepare Photo Items': prepared() });
-  eq(out[0].json.coverId, 4011, 'cover attachment id');
-  same(out[0].json.galleryIds, [4012, 4013, 4014], 'gallery attachment ids');
-});
-
-it('Collect Media throws when an upload comes back without an id', () => {
-  const uploads = [{ json: { id: 4011 } }, { json: { code: 'rest_upload_unknown_error' } }];
-  throwsMatching(
-    () => run('Collect Media', { __input: uploads, 'Prepare Photo Items': prepared() }),
-    /returned no id/,
-    'failed upload'
-  );
-});
-
 // --- Build Payload --------------------------------------------------------
 
-const MEDIA = { coverId: 4011, galleryIds: [4012, 4013, 4014] };
 const payloadInputs = (terms) => ({
   Curate: [{ json: CURATED() }],
-  'Collect Media': [{ json: MEDIA }],
   'Get Area Term': split(terms, true),
 });
 
@@ -541,14 +492,43 @@ it('Build Payload reads the term out of a split array response', () => {
   const p = run('Build Payload', payloadInputs([AREA_TERM]))[0].json;
   eq(p.status, 'draft', 'status');
   eq(p.title, 'Roof Replacement in Youngsville, NC', 'title');
-  eq(p.featured_media, 4011, 'featured media');
   same(p['service-areas'], [37], 'service area term');
   eq(p.meta.companycam_project_id, '110848078', 'meta project id');
   eq(p.meta.completion_date, '2026-09-10', 'meta completion date');
-  same(p.meta.gallery, [4012, 4013, 4014], 'meta gallery');
+  same(
+    p.meta.pending_photos,
+    [CURATED().coverUrl].concat(CURATED().galleryUrls),
+    'candidate photos, cover first'
+  );
   eq(p.meta.field_notes, CURATED().fieldNotes, 'meta field notes');
   eq(p.meta.approx_lat, CURATED().approxLat, 'meta approx_lat');
   eq(p.meta.approx_lng, CURATED().approxLng, 'meta approx_lng');
+});
+
+it('Build Payload uploads nothing and attaches nothing', () => {
+  // The whole point of the gate. An attachment is a public file the moment it
+  // exists, so the draft must arrive with no media on the server at all
+  // (docs/07 sections 16.1, 16.4 and 16.9).
+  const p = run('Build Payload', payloadInputs([AREA_TERM]))[0].json;
+  if ('featured_media' in p) throw new Error('draft still claims a featured image');
+  if (p.meta && 'gallery' in p.meta) throw new Error('draft still claims a gallery');
+  if (!Array.isArray(p.meta.pending_photos)) throw new Error('no candidate list');
+});
+
+it('the cover is first in the candidate list', () => {
+  // The approval screen defaults its cover radio to the first photo, so order
+  // carries Curate's choice without a second field.
+  const p = run('Build Payload', payloadInputs([AREA_TERM]))[0].json;
+  eq(p.meta.pending_photos[0], CURATED().coverUrl, 'first candidate');
+});
+
+it('the workflow has no upload nodes left', () => {
+  const names = workflow.nodes.map((n) => n.name);
+  for (const gone of ['Prepare Photo Items', 'Download Photo', 'Upload Media', 'Collect Media']) {
+    if (names.includes(gone)) throw new Error(`${gone} still uploads before review`);
+  }
+  const after = (workflow.connections.Curate.main[0] || []).map((l) => l.node);
+  same(after, ['Get Area Term'], 'Curate feeds the payload directly');
 });
 
 it('Build Payload never asks WordPress to publish', () => {

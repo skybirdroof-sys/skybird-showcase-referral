@@ -351,91 +351,6 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// One item per photo, cover first, so the HTTP nodes run once each and n8n\n// preserves the order.\nconst c = $input.first().json;\nconst items = [];\n\n// Filenames are built from the area slug and project ID - NEVER from the\n// CompanyCam project name, which is usually the customer's name\n// (docs/06-trigger-design.md section 3 forbids PII in image filenames).\nitems.push({\n  json: {\n    url: c.coverUrl,\n    isCover: true,\n    filename: `skybird-roof-${c.areaSlug}-${c.companycamProjectId}-cover.jpeg`,\n  },\n});\n\nc.galleryUrls.forEach((url, i) => {\n  items.push({\n    json: {\n      url,\n      isCover: false,\n      filename: `skybird-roof-${c.areaSlug}-${c.companycamProjectId}-${i + 1}.jpeg`,\n    },\n  });\n});\n\nreturn items;"
-      },
-      "id": "7304b21c-baba-4994-95bf-6747df881fd6",
-      "name": "Prepare Photo Items",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1740,
-        40
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.url }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file",
-              "outputPropertyName": "data"
-            }
-          }
-        }
-      },
-      "id": "b610553e-e09f-49be-a4b3-fd6d9d7c6e6c",
-      "name": "Download Photo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1960,
-        40
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/media",
-        "options": {},
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "contentType": "binaryData",
-        "inputDataFieldName": "data",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Disposition",
-              "value": "=attachment; filename=\"{{ $('Prepare Photo Items').item.json.filename }}\""
-            }
-          ]
-        }
-      },
-      "id": "1e78587a-bdc0-4c67-b47a-18afa7a73c85",
-      "name": "Upload Media",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2180,
-        40
-      ],
-      "credentials": {
-        "httpBasicAuth": {
-          "id": "REPLACE_ME",
-          "name": "WordPress skybird-sync"
-        }
-      },
-      "notes": "REST via ?rest_route= rather than /wp-json/. The query-string form needs no Apache rewrite, so it works on the WP Staging clone as well as on production. See n8n/README.md."
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Gather the uploaded attachment IDs, keeping order, and split the cover back\n// out from the gallery.\nconst uploads = $input.all();\n\nlet coverId = null;\nconst galleryIds = [];\n\nuploads.forEach((item, i) => {\n  const media = item.json || {};\n  const id = Number(media.id);\n  const source = $('Prepare Photo Items').all()[i];\n  const isCover = source && source.json.isCover;\n\n  if (!id) {\n    throw new Error(`Media upload ${i} returned no id: ${JSON.stringify(media).slice(0, 200)}`);\n  }\n\n  if (isCover) {\n    coverId = id;\n  } else {\n    galleryIds.push(id);\n  }\n});\n\nif (!coverId) {\n  throw new Error('Cover photo did not upload.');\n}\n\nreturn [{ json: { coverId, galleryIds } }];"
-      },
-      "id": "12574840-26a9-4d97-b09a-a50a7546a948",
-      "name": "Collect Media",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2400,
-        40
-      ]
-    },
-    {
-      "parameters": {
         "url": "={{ $('Config').first().json.wpBase }}/?rest_route=/wp/v2/service-areas&slug={{ $('Curate').first().json.areaSlug }}",
         "options": {},
         "authentication": "genericCredentialType",
@@ -446,7 +361,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2620,
+        1880,
         40
       ],
       "credentials": {
@@ -461,14 +376,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const c = $('Curate').first().json;\nconst media = $('Collect Media').first().json;\n// Same array-splitting rule as Curate: /wp/v2/service-areas returns a JSON\n// array, so n8n hands us one item per term and .first().json is a single\n// term. Get Area Term runs with \"Always Output Data\" on, so a no-match\n// lookup arrives as one empty item; the .id filter drops it and the throw\n// below fires instead of the branch ending quietly.\nconst terms = $('Get Area Term')\n  .all()\n  .map((item) => item.json)\n  .filter((t) => t && t.id);\n\n// A project whose city is not one of the eight service areas would otherwise\n// be filed nowhere and drop out of every map widget. Throw instead.\nif (!terms.length) {\n  throw new Error(\n    `No service_area term for slug \"${c.areaSlug}\" (city \"${c.city}\"). Expected one of the eight seeded areas.`\n  );\n}\n\nconst areaName = terms[0].name;\n\n// Title and copy are deliberately minimal.\n//\n// docs/06-trigger-design.md section 3 locks the SEO title as one job, one\n// town, roof replacement - e.g. \"GAF Timberline HDZ Roof Replacement in Wake\n// Forest, NC\". That needs manufacturer and product line, and NOTHING\n// populates those: there is no CompanyCam->ProLine bridge\n// (docs/07-phase-4-preflight.md section 2.4.2). So write the town-only form\n// and let the reviewer upgrade it after filling the product fields.\n//\n// The body is one factual sentence for the same reason. The locked copy rules\n// forbid invented prices, \"free roof\", city-stuffing and storm claims, and an\n// automation with no product data and no job notes has nothing true to say\n// beyond the town and the service. Writing the 2-4 sentence description is the\n// reviewer's job at the gate. A thin draft a human finishes beats a fluent one\n// that invents specifics.\nconst title = `Roof Replacement in ${areaName}, NC`;\nconst content = `<p>Skybird Roofing completed a full roof replacement in ${areaName}, North Carolina.</p>`;\n\nreturn [{\n  json: {\n    status: 'draft',\n    title,\n    content,\n    excerpt: `Roof replacement in ${areaName}, NC.`,\n    featured_media: media.coverId,\n    'service-areas': [terms[0].id],\n    meta: {\n      companycam_project_id: c.companycamProjectId,\n      approx_lat: c.approxLat,\n      approx_lng: c.approxLng,\n      gallery: media.galleryIds,\n      city: c.city,\n      zip: c.zip,\n      completion_date: c.completionDate,\n      field_notes: c.fieldNotes,\n    },\n  },\n}];"
+        "jsCode": "const c = $('Curate').first().json;\n// Same array-splitting rule as Curate: /wp/v2/service-areas returns a JSON\n// array, so n8n hands us one item per term and .first().json is a single\n// term. Get Area Term runs with \"Always Output Data\" on, so a no-match\n// lookup arrives as one empty item; the .id filter drops it and the throw\n// below fires instead of the branch ending quietly.\nconst terms = $('Get Area Term')\n  .all()\n  .map((item) => item.json)\n  .filter((t) => t && t.id);\n\n// A project whose city is not one of the eight service areas would otherwise\n// be filed nowhere and drop out of every map widget. Throw instead.\nif (!terms.length) {\n  throw new Error(\n    `No service_area term for slug \"${c.areaSlug}\" (city \"${c.city}\"). Expected one of the eight seeded areas.`\n  );\n}\n\nconst areaName = terms[0].name;\n\n// Title and copy are deliberately minimal.\n//\n// docs/06-trigger-design.md section 3 locks the SEO title as one job, one\n// town, roof replacement - e.g. \"GAF Timberline HDZ Roof Replacement in Wake\n// Forest, NC\". That needs manufacturer and product line, and NOTHING\n// populates those: there is no CompanyCam->ProLine bridge\n// (docs/07-phase-4-preflight.md section 2.4.2). So write the town-only form\n// and let the reviewer upgrade it after filling the product fields.\n//\n// The body is one factual sentence for the same reason. The locked copy rules\n// forbid invented prices, \"free roof\", city-stuffing and storm claims, and an\n// automation with no product data and no job notes has nothing true to say\n// beyond the town and the service. Writing the 2-4 sentence description is the\n// reviewer's job at the gate. A thin draft a human finishes beats a fluent one\n// that invents specifics.\nconst title = `Roof Replacement in ${areaName}, NC`;\nconst content = `<p>Skybird Roofing completed a full roof replacement in ${areaName}, North Carolina.</p>`;\n\nreturn [{\n  json: {\n    status: 'draft',\n    title,\n    content,\n    excerpt: `Roof replacement in ${areaName}, NC.`,\n    'service-areas': [terms[0].id],\n    // No featured_media and no gallery. NOTHING is uploaded here any more.\n    //\n    // A WordPress attachment is a file on disk with a public URL the moment\n    // the upload returns, and that URL does not care what status the post is\n    // in. Uploading first and reviewing second meant the only irreversible\n    // step happened before anyone looked \u2014 which published a homeowner's\n    // name and address, and then a photo carrying GPS 17.6 ft from their door\n    // (docs/07-phase-4-preflight.md sections 16.1 and 16.9).\n    //\n    // The draft now carries candidate URLs instead. The reviewer sees them in\n    // wp-admin served from CompanyCam, ticks the ones that are fine, and only\n    // those are ever fetched \u2014 through WordPress's own sideload path, so the\n    // plugin's EXIF stripper runs on every one.\n    //\n    // Cover first: the approval screen defaults its \"use as cover\" radio to\n    // the first photo, so the order carries Curate's choice without needing a\n    // second field for it.\n    meta: {\n      companycam_project_id: c.companycamProjectId,\n      approx_lat: c.approxLat,\n      approx_lng: c.approxLng,\n      pending_photos: [c.coverUrl].concat(c.galleryUrls).filter(Boolean),\n      city: c.city,\n      zip: c.zip,\n      completion_date: c.completionDate,\n      field_notes: c.fieldNotes,\n    },\n  },\n}];"
       },
       "id": "3a3bdfd0-3029-49f2-945d-5886c7564e96",
       "name": "Build Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2840,
+        2080,
         40
       ]
     },
@@ -488,7 +403,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3060,
+        2280,
         40
       ],
       "credentials": {
@@ -644,50 +559,6 @@
       ]
     },
     "Curate": {
-      "main": [
-        [
-          {
-            "node": "Prepare Photo Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Photo Items": {
-      "main": [
-        [
-          {
-            "node": "Download Photo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Download Photo": {
-      "main": [
-        [
-          {
-            "node": "Upload Media",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upload Media": {
-      "main": [
-        [
-          {
-            "node": "Collect Media",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Collect Media": {
       "main": [
         [
           {

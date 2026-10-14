@@ -171,6 +171,22 @@ function skybird_projects_meta_fields() {
 			'reviewer' => true,
 			'label'    => 'Package (internal)',
 		),
+		// Candidate photos, as CompanyCam URLs, waiting for a human to approve
+		// them. Nothing is downloaded until someone does.
+		//
+		// PRIVATE, and for a different reason from the other two: these are
+		// not secrets, they are an unreviewed set. Publishing the list would
+		// hand a visitor every photo the automation considered, including the
+		// ones the reviewer is about to reject — which is the exact failure
+		// this field exists to prevent (docs/07-phase-4-preflight.md §16.4).
+		'pending_photos'            => array(
+			'type'     => 'array',
+			'items'    => 'string',
+			'sanitize' => 'skybird_projects_sanitize_photo_urls',
+			'private'  => true,
+			'reviewer' => true,
+			'label'    => 'Photos awaiting approval',
+		),
 		'field_notes'               => array(
 			'type'     => 'string',
 			'sanitize' => 'skybird_projects_sanitize_notes',
@@ -307,6 +323,69 @@ function skybird_projects_sanitize_lng( $value ) {
  * @param mixed $value Incoming value.
  * @return int[]
  */
+/**
+ * Candidate photo URLs: HTTPS, CompanyCam only, capped.
+ *
+ * The host allowlist is a security control, not tidiness. WordPress fetches
+ * these URLs **server-side** when the reviewer approves them, so anything that
+ * can write this field can make the site issue a request. Without the check
+ * that is a server-side request forgery: an attacker writes
+ * http://169.254.169.254/… or an internal address and reads the response out
+ * of the resulting attachment.
+ *
+ * So: https only (no http, no file://, no gopher://), and the host must BE
+ * companycam.com or sit under it. The suffix test is deliberate —
+ * `str_ends_with( $host, 'companycam.com' )` alone would accept
+ * `evil-companycam.com`, which is somebody else's domain entirely.
+ *
+ * @param mixed $value Incoming value.
+ * @return array
+ */
+function skybird_projects_sanitize_photo_urls( $value ) {
+	if ( ! is_array( $value ) ) {
+		return array();
+	}
+
+	$urls = array();
+
+	foreach ( $value as $url ) {
+		$url = esc_url_raw( trim( (string) $url ) );
+
+		if ( ! $url ) {
+			continue;
+		}
+
+		$parts = wp_parse_url( $url );
+
+		if ( empty( $parts['scheme'] ) || 'https' !== strtolower( $parts['scheme'] ) ) {
+			continue;
+		}
+
+		if ( empty( $parts['host'] ) ) {
+			continue;
+		}
+
+		$host   = strtolower( $parts['host'] );
+		$domain = 'companycam.com';
+
+		$is_companycam = ( $host === $domain )
+			|| ( strlen( $host ) > strlen( $domain )
+				&& substr( $host, -( strlen( $domain ) + 1 ) ) === '.' . $domain );
+
+		if ( ! $is_companycam ) {
+			continue;
+		}
+
+		if ( ! in_array( $url, $urls, true ) ) {
+			$urls[] = $url;
+		}
+	}
+
+	// Same cap as the gallery. A runaway list is a runaway number of
+	// server-side fetches.
+	return array_slice( $urls, 0, 20 );
+}
+
 function skybird_projects_sanitize_gallery( $value ) {
 	if ( ! is_array( $value ) ) {
 		return array();

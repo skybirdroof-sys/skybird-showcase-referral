@@ -146,6 +146,31 @@ function wp_strip_all_tags_stub( $str ) {
 	return strip_tags( $str );
 }
 
+function esc_url_raw( $url ) {
+	// Core strips invalid characters and rejects disallowed protocols. The
+	// assertions that matter here are about the scheme and host checks in
+	// skybird_projects_sanitize_photo_urls(), so keep this faithful but plain.
+	$url = trim( (string) $url );
+	$url = preg_replace( '|[^a-z0-9-~+_.?#=!&;,/:%@$\|*\'()\[\]\\x80-\\xff]|i', '', $url );
+
+	if ( '' === $url ) {
+		return '';
+	}
+
+	$allowed = array( 'http', 'https', 'ftp', 'mailto' );
+	$scheme  = strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) );
+
+	if ( $scheme && ! in_array( $scheme, $allowed, true ) ) {
+		return '';
+	}
+
+	return $url;
+}
+
+function wp_parse_url( $url, $component = -1 ) {
+	return parse_url( $url, $component );
+}
+
 function sanitize_title( $str ) {
 	$str = strtolower( trim( (string) $str ) );
 	$str = preg_replace( '/[^a-z0-9_-]+/', '-', $str );

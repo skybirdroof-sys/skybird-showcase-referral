@@ -1655,3 +1655,104 @@ as good as the channel you checked.* The pin offset was verified twice, to six
 decimal places, on the field it governs. Nobody asked what else in the payload
 knew the same fact. Invisible on the page, stripped from the API, and sitting
 in the file.
+
+---
+
+## 17. The upload gate, built — 2026-10-14
+
+§16.4 recorded three options and said only one closed the hole. This is that
+one, with one change of mechanism.
+
+### 17.1 What was wrong
+
+Attachments are files on disk under `/wp-content/uploads/`, served directly.
+They have a public URL the moment the upload returns, and that URL does not
+care what status any post is in. The pipeline uploaded every curated photo and
+*then* created a draft for review — so the only irreversible step happened
+before anyone looked.
+
+It cost twice in two days, and neither was a filtering failure:
+
+| | |
+|---|---|
+| §16.1 | A photo of a signed checklist with the homeowner's name and street address, public ~2 hours |
+| §16.9 | A published photo carrying GPS **17.6 ft** from the front door, defeating the quarter-mile pin |
+
+Both were photos nobody had looked at. A gate placed after the upload cannot
+catch either.
+
+### 17.2 What it does now
+
+`Build Payload` sends **candidate URLs** instead of uploading. The draft is
+created with no `featured_media`, no `gallery`, and nothing on the server. A
+**Photos awaiting approval** box on the edit screen renders them *from
+CompanyCam*, and only what a human ticks is ever fetched.
+
+Looking at a photo no longer requires it to exist on our server first.
+
+Four n8n nodes are gone — `Prepare Photo Items`, `Download Photo`,
+`Upload Media`, `Collect Media`. 23 nodes down to 19, and `Curate` feeds
+`Build Payload` directly.
+
+### 17.3 Why the plugin imports, not a second workflow
+
+§16.4 proposed a second n8n workflow. Doing it inside the plugin means the
+import runs through WordPress's own sideload path — which is what triggers
+`wp_generate_attachment_metadata`, and therefore `includes/exif.php`. Every
+approved photo is EXIF-stripped automatically, by the same code that already
+guards the manual path.
+
+Handing approval back to n8n would have meant a second webhook, a second
+credential, and a second route by which a photo could reach the library
+without passing the stripper. The gate and the stripper now share one door.
+
+### 17.4 Two controls, and the one that is easy to miss
+
+**The host allowlist** (`skybird_projects_sanitize_photo_urls`). WordPress
+fetches these URLs server-side, so anything that can write the field can make
+the site issue a request. Without a host check that is server-side request
+forgery — write `http://169.254.169.254/…`, read the response out of the
+resulting attachment. HTTPS only, and the host must *be* `companycam.com` or
+sit under it. The suffix test is explicit because
+`str_ends_with( $host, 'companycam.com' )` accepts `evil-companycam.com`,
+which is somebody else's domain.
+
+**The intersection** (`skybird_projects_approved_photo_urls`). This is the one
+worth stating plainly: the reviewer's browser posts back the ticked photos,
+and *a POST body is attacker-controlled*. So the question is not "is this URL
+well-formed" but "**did we offer this URL**". Sanitising alone would still let
+someone post a different, perfectly valid CompanyCam URL and have the site
+fetch it. Only URLs already stored as candidates are importable.
+
+The waiting list is also re-sanitised on read rather than trusted from
+storage, because it is written over REST and the value that matters is the one
+at the moment we act on it.
+
+### 17.5 What the tests hold
+
+208 plugin assertions (194 → 208 for the gate), 35 workflow.
+
+- Lookalike domains, bare IPs, `file://`, plain HTTP, the AWS metadata
+  endpoint — all refused, and the metadata endpoint is refused twice over,
+  by scheme *and* host.
+- A valid CompanyCam URL that was never offered is refused.
+- Approval order follows the curated order, not the submission, so the gallery
+  stays oldest-first however the form serialises.
+- The import goes through `media_handle_sideload` and the gate never touches
+  `wp_upload_dir` or `file_put_contents` — asserted against the source,
+  because a hand-rolled download would silently skip the EXIF stripper.
+- The draft carries no `featured_media` and no `gallery`, and the cover is
+  first in the candidate list.
+
+Verified by reinstating each bug: dropping the intersection fails 3, swapping
+the sideload for a raw write fails 2, putting `featured_media` back fails 1,
+reordering the candidates fails 2.
+
+### 17.6 What this does not fix
+
+Approval is still a judgement made by a person looking at thumbnails. Nothing
+here detects a house number, a plate, a face, or writing on a clipboard — the
+box says to look for exactly those, and that instruction is the control.
+
+What changed is that the person now looks **before** the file exists, rather
+than after it has been public for two hours.

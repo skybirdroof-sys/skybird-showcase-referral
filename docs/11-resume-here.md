@@ -470,3 +470,60 @@ light-background H1 on skybirdroofing.net visible, not just ours.
 5. Whatever writes AI alt text onto uploads (`07` §16.5).
 6. Render `[skybird_project_map area="youngsville"]` — needs a published
    project, so it waits on the first real publish.
+
+
+---
+
+# 2026-10-14 — the upload gate is built
+
+**The biggest open item is closed.** Media is no longer uploaded before anyone
+looks at it. Full account in `07` §17.
+
+`Build Payload` now sends candidate photo URLs instead of uploading. The draft
+arrives with no featured image, no gallery, and nothing on the server. A
+**Photos awaiting approval** box on the project edit screen renders the
+candidates straight from CompanyCam; only what you tick is ever fetched, and
+it comes in through WordPress's own sideload path so the EXIF stripper runs on
+every one.
+
+Four n8n nodes deleted: `Prepare Photo Items`, `Download Photo`,
+`Upload Media`, `Collect Media`. 23 → 19.
+
+## To put it live
+
+1. **Upload `dist/skybird-projects.zip`** (Replace current with uploaded).
+2. **Re-import the workflow** from
+   `n8n/companycam-showcase-to-wordpress.json` into an empty workflow, re-attach
+   the credentials, set `Config.wpBase` to `https://www.skybirdroofing.net`.
+   Four nodes are gone, so pasting single node bodies will not do it this time.
+3. Delete draft 1183 and the leftover media, then re-fire the label.
+
+## Blocked, and not on us
+
+**n8n cannot read the Showcase Details checklist.** Advanced (conditional)
+checklists have no public API — no endpoint, no webhook scope. Legacy
+checklists have both, but the entire Core API they live on is deprecating in
+early 2027.
+
+A question is with CompanyCam (see the chat of 2026-10-14) asking whether
+advanced checklists are coming to the public API and what the migration path
+is. **Do not rebuild on legacy until they answer** — that would be building on
+a stated end-of-life to get a content enhancement, while the pipeline already
+works without it.
+
+What this blocks: `manufacturer`, `product_line`, `color`, `warranty`,
+`storm_date`, `package` and the checklist-derived copy. All the plugin-side
+fields, containment and reviewer UI for them are built and tested; only the
+read is missing.
+
+## Still open
+
+- Publish the first project. Phase 4 produced a correct draft on 2026-09-29
+  and nothing has ever been published, so the map shortcode has still never
+  rendered and the referral layer still has no page to live on.
+- Credential hygiene: swap n8n to the read-only CompanyCam key, delete
+  `webhook-setup`, revoke the `auth test` application password. **Also rotate
+  the key that appeared in a screenshot on 2026-10-09.**
+- Whatever writes AI alt text onto uploads (`07` §16.5) — likely Imagify.
+- Tell Euan about the site-wide white `h1` and the non-`www` → `http://`
+  redirect.

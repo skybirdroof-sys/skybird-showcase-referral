@@ -180,6 +180,7 @@ $expected_meta = array(
 	'completion_date',
 	'storm_date',
 	'package',
+	'pending_photos',
 	'field_notes',
 );
 
@@ -621,8 +622,8 @@ $private_fields = array_keys(
 sort( $private_fields );
 
 it(
-	'the private fields are exactly the two we mean',
-	array( 'field_notes', 'package' ) === $private_fields,
+	'the private fields are exactly the three we mean',
+	array( 'field_notes', 'package', 'pending_photos' ) === $private_fields,
 	'got: ' . implode( ', ', $private_fields ) . ' — a new private field needs its own containment tests'
 );
 
@@ -727,6 +728,182 @@ it(
 		"'readonly'     => 1"
 	),
 	'editing the snapshot here would not write back to CompanyCam'
+);
+
+// --- Candidate photo URLs (the upload gate) --------------------------------
+//
+// pending_photos holds CompanyCam URLs that WordPress will fetch SERVER-SIDE
+// when a reviewer approves them. That makes this sanitiser a security control,
+// not a tidiness one: anything that can write the field can make the site
+// issue a request, and without a host check that is server-side request
+// forgery.
+
+$urls = function ( $in ) {
+	return skybird_projects_sanitize_photo_urls( $in );
+};
+
+$good = 'https://static.companycam.com/lambda/projects/110848078/photos/abc.jpeg';
+
+it( 'a real CompanyCam photo URL is kept', array( $good ) === $urls( array( $good ) ) );
+
+it(
+	'a second CompanyCam host is kept',
+	array( 'https://img.companycam.com/x.jpeg' ) === $urls( array( 'https://img.companycam.com/x.jpeg' ) )
+);
+
+it( 'the bare domain is kept', array( 'https://companycam.com/a.jpg' ) === $urls( array( 'https://companycam.com/a.jpg' ) ) );
+
+// --- The SSRF cases --------------------------------------------------------
+
+it(
+	'the AWS metadata endpoint is refused',
+	array() === $urls( array( 'http://169.254.169.254/latest/meta-data/iam/security-credentials/' ) ),
+	'the classic server-side request forgery target'
+);
+
+it( 'localhost is refused', array() === $urls( array( 'https://127.0.0.1/admin' ) ) );
+it( 'an internal host is refused', array() === $urls( array( 'https://intranet.local/secrets' ) ) );
+it( 'file:// is refused', array() === $urls( array( 'file:///etc/passwd' ) ) );
+it( 'plain http is refused even on CompanyCam', array() === $urls( array( 'http://static.companycam.com/a.jpeg' ) ) );
+
+// The suffix trap. str_ends_with( $host, 'companycam.com' ) would accept this,
+// and it is somebody else's domain entirely.
+it(
+	'a lookalike domain is refused',
+	array() === $urls( array( 'https://evil-companycam.com/a.jpeg' ) ),
+	'suffix matching without the dot accepts an attacker-registered domain'
+);
+
+it(
+	'a subdomain-prefixed lookalike is refused',
+	array() === $urls( array( 'https://companycam.com.attacker.net/a.jpeg' ) )
+);
+
+it( 'case in the host does not defeat the check', array() === $urls( array( 'https://EVIL-COMPANYCAM.COM/a.jpeg' ) ) );
+
+it(
+	'an uppercase CompanyCam host is still accepted',
+	1 === count( $urls( array( 'https://STATIC.COMPANYCAM.COM/a.jpeg' ) ) )
+);
+
+// --- Shape -----------------------------------------------------------------
+
+it( 'a non-array is dropped', array() === $urls( 'https://static.companycam.com/a.jpeg' ) );
+it( 'duplicates collapse', 1 === count( $urls( array( $good, $good ) ) ) );
+
+$many = array();
+for ( $i = 0; $i < 40; $i++ ) {
+	$many[] = "https://static.companycam.com/p/$i.jpeg";
+}
+it( 'the list is capped at 20', 20 === count( $urls( $many ) ), 'a runaway list is a runaway number of server-side fetches' );
+
+it(
+	'a mixed list keeps only the safe entries',
+	array( $good ) === $urls( array( 'http://169.254.169.254/', $good, 'file:///etc/passwd', '' ) )
+);
+
+// And containment: the candidate set is unreviewed, so a visitor must not be
+// able to read the photos the reviewer is about to reject.
+it(
+	'pending_photos is private',
+	! empty( skybird_projects_meta_fields()['pending_photos']['private'] )
+);
+
+// --- The approval gate -----------------------------------------------------
+//
+// The intersection is the security control. A reviewer's browser posts back
+// the ticked photos, and a POST body is attacker-controlled — so the question
+// is not "is this URL well-formed", it is "did WE offer this URL". Sanitising
+// alone would still let somebody post a different CompanyCam URL and have the
+// site fetch it server-side.
+
+$offered = array(
+	'https://static.companycam.com/p/one.jpeg',
+	'https://static.companycam.com/p/two.jpeg',
+	'https://static.companycam.com/p/three.jpeg',
+);
+
+it(
+	'a ticked photo we offered is approved',
+	array( $offered[1] ) === skybird_projects_approved_photo_urls( array( $offered[1] ), $offered )
+);
+
+it(
+	'a CompanyCam URL we never offered is refused',
+	array() === skybird_projects_approved_photo_urls(
+		array( 'https://static.companycam.com/p/someone-elses-job.jpeg' ),
+		$offered
+	),
+	'passing the sanitiser is not the same as being a candidate'
+);
+
+it(
+	'an off-site URL is refused twice over',
+	array() === skybird_projects_approved_photo_urls( array( 'http://169.254.169.254/' ), $offered )
+);
+
+it(
+	'approval order follows the curated order, not the submission',
+	array( $offered[0], $offered[2] ) === skybird_projects_approved_photo_urls(
+		array( $offered[2], $offered[0] ),
+		$offered
+	),
+	'the gallery must stay oldest-first however the form serialises'
+);
+
+it(
+	'ticking nothing approves nothing',
+	array() === skybird_projects_approved_photo_urls( array(), $offered )
+);
+
+it( 'a non-array submission approves nothing', array() === skybird_projects_approved_photo_urls( 'everything', $offered ) );
+it( 'with no candidates, nothing can be approved', array() === skybird_projects_approved_photo_urls( $offered, array() ) );
+it( 'duplicates in the submission collapse', 1 === count( skybird_projects_approved_photo_urls( array( $offered[0], $offered[0] ), $offered ) ) );
+
+// Reading the waiting list re-sanitises rather than trusting storage: the
+// field is written over REST, and the value that matters is the one at the
+// moment we act on it.
+$GLOBALS['wp_fixture']['post_meta'] = array(
+	'pending_photos' => array( $offered[0], 'http://169.254.169.254/', 'file:///etc/passwd' ),
+);
+
+it(
+	'the waiting list is re-sanitised on read',
+	array( $offered[0] ) === skybird_projects_pending_photos( 1 ),
+	'a poisoned stored value must not become a server-side fetch'
+);
+
+$GLOBALS['wp_fixture']['post_meta'] = array();
+it( 'no stored value means nothing waiting', array() === skybird_projects_pending_photos( 1 ) );
+
+skybird_projects_add_photo_gate();
+
+it(
+	'the gate is registered on the project screen',
+	isset( $GLOBALS['wp_stub']['meta_boxes']['skybird-projects-photo-gate'] )
+);
+
+it(
+	'approval is an explicit action, not a side effect of saving',
+	isset( $GLOBALS['wp_stub']['actions']['admin_post_skybird_approve_photos'] ),
+	'importing on save_post would fire on an autosave'
+);
+
+// The import must go through WordPress's own sideload path, because that is
+// what runs wp_generate_attachment_metadata and therefore the EXIF stripper.
+// A hand-rolled download straight into uploads/ would put the coordinates back
+// (docs/07 §16.9).
+$gate_src = file_get_contents( dirname( __DIR__ ) . '/plugin/skybird-projects/includes/photo-gate.php' );
+
+it(
+	'photos are imported via media_handle_sideload',
+	false !== strpos( $gate_src, 'media_handle_sideload' ),
+	'anything else bypasses the EXIF stripper'
+);
+
+it(
+	'the gate never writes to uploads directly',
+	false === strpos( $gate_src, 'wp_upload_dir' ) && false === strpos( $gate_src, 'file_put_contents' )
 );
 
 // --- Location metadata in uploads ------------------------------------------
