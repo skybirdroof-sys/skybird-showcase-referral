@@ -1756,3 +1756,96 @@ box says to look for exactly those, and that instruction is the control.
 
 What changed is that the person now looks **before** the file exists, rather
 than after it has been public for two hours.
+
+---
+
+## 18. The back catalogue, and what counting it changed — 2026-10-14
+
+Jacob mentioned in passing that ~150 past customers could have pages. Reading
+the **Production HQ** sheet settled several things that had been assumed for
+a month, and three of them were wrong.
+
+### 18.1 The data was never missing
+
+`docs/07` §2.4.2 has said since September that `manufacturer`, `product_line`,
+`color` and `warranty` cannot be populated because there is no CompanyCam →
+ProLine bridge, and `docs/06` §3's locked SEO title format needs exactly those
+fields.
+
+There did not need to be a bridge. All of it is in a spreadsheet, per job,
+going back to January 2025 — along with a **`CompanyCam Project ID` column,
+already populated and already reconciled**. 192 of 201 rows carry one, all
+unique, no duplicates. The join we were going to build by fuzzy name matching
+is a column.
+
+### 18.2 A third of the company's work had nowhere to go
+
+201 completed roofs. The eight seeded service areas cover **133**. The other
+**68 cannot be published at all** — `Build Payload` throws when a town matches
+no area, by design, so nothing is ever filed into the wrong place.
+
+| | |
+|---|---|
+| Goldsboro | **54** — more than Wake Forest and Raleigh combined |
+| Pikeville | 13, and next door to Goldsboro |
+| Wilson | 8 |
+| La Grange | 7, also next door to Goldsboro |
+| Winterville / Durham | 5 each |
+
+The strongest market in the company was a single pin on a map that had no
+room for its neighbours. Five areas added, taking the taxonomy to thirteen:
+Pikeville, Wilson, La Grange, Winterville, Durham. Zebulon (3 jobs) stays out
+knowingly, and the suite asserts exactly that.
+
+### 18.3 Three things that would have published something false
+
+**Warranty cannot be derived from the package.** The plan was Essentials →
+Silver Pledge, Peace of Mind → Golden Pledge. The real data: 26 Peace of Mind
+jobs, **4** Golden Pledge warranties, and **89 of 201 with no extended
+warranty at all**. The warranty is read from the record or the page says
+nothing about one. It is never inferred from what the customer bought.
+
+**Not every roof is GAF.** 104 HDZ, 67 NS, 25 UHDZ — and CertainTeed Landmark,
+Grand Manor and Highland Slate, plus an IKO Cambridge. Deriving "GAF" from the
+presence of a shingle line would have named the wrong manufacturer on four
+pages, two of them large jobs, *next to a Master Elite certification claim*.
+An unrecognised line now names no manufacturer at all: an empty field is
+visible to the reviewer, a plausible wrong one is not.
+
+**`NS` is Natural Shadow** — confirmed by Jacob, not inferred from the
+initials. The same guess that produced "Ultra HDZ" for what GAF calls
+Timberline UHDZ.
+
+### 18.4 Normalising, and knowing when to stop
+
+*Pewter Gray* 15, *Pewter Grey* 10, one *Charoal*. These reach the page and
+the alt text behind every photo, so they are corrected — but the correction
+list is four entries and the suite asserts it stays under eight.
+
+The restraint is the point. The temptation is to check every colour against a
+manufacturer's catalogue and fix the odd ones. The reason not to: **a wrong
+correction is invisible.** "Golden Harvest" quietly becoming "Golden Amber"
+reads perfectly well and is false. An unfamiliar colour reaching the reviewer
+unchanged is the safer failure, and there is a test that fails if anyone adds
+a catalogue-guess to the map.
+
+Towns get the same treatment for a harder reason: `WF` is on 21 rows and the
+area lookup matches on slug, so an unexpanded abbreviation silently fails to
+file 21 jobs.
+
+### 18.5 What the sheet also contains, and must never leave it
+
+Contract prices, material costs, labour costs, margins, crew names, vehicle
+VINs and plate numbers. The import reads a **named narrow set of columns**,
+never a row. A page carrying a contract price would be considerably worse
+than one carrying a street address.
+
+Also 812 filler rows with `Squares Installed = 0`. Filtering on row count
+rather than real data would have produced 812 empty drafts.
+
+### 18.6 Open
+
+The warranty column is 29 rows blank and 89 "No Extended Warranty". Jacob is
+having the GAF portal cross-referenced to confirm Production HQ is the source
+of truth before any warranty claim is published. Until that comes back, a
+blank warranty means the page says nothing — which is correct either way.

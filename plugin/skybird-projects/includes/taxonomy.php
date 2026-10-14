@@ -19,6 +19,15 @@ defined( 'ABSPATH' ) || exit;
  * @return array[] Each entry: name, slug, page.
  */
 function skybird_projects_service_areas() {
+	// Thirteen, not the original eight. The five at the bottom were added
+	// 2026-10-14 after counting the real back catalogue: of 201 completed
+	// roofs in Production HQ, 68 were in towns with no service area to be
+	// filed under, so a third of the company's own work could not be
+	// published at all.
+	//
+	// Goldsboro alone is 54 jobs — more than Wake Forest and Raleigh
+	// combined — and Pikeville (13) and La Grange (7) are its neighbours.
+	// The map was missing the strongest market's cluster.
 	$areas = array(
 		'franklinton' => 'Franklinton',
 		'goldsboro'   => 'Goldsboro',
@@ -28,6 +37,11 @@ function skybird_projects_service_areas() {
 		'rolesville'  => 'Rolesville',
 		'wake-forest' => 'Wake Forest',
 		'youngsville' => 'Youngsville',
+		'pikeville'   => 'Pikeville',
+		'wilson'      => 'Wilson',
+		'la-grange'   => 'La Grange',
+		'winterville' => 'Winterville',
+		'durham'      => 'Durham',
 	);
 
 	$out = array();

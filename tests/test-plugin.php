@@ -139,14 +139,32 @@ if ( $tax ) {
 
 $areas = skybird_projects_service_areas();
 
-eq( 'eight service areas', 8, count( $areas ) );
+eq( 'thirteen service areas', 13, count( $areas ) );
 
 $slugs = wp_list_pluck_stub( $areas, 'slug' );
 sort( $slugs );
 
+// Five added 2026-10-14. Of 201 completed roofs in Production HQ, 68 were in
+// towns with no area to be filed under — a third of the company's own work,
+// unpublishable. Goldsboro is 54 jobs on its own and Pikeville and La Grange
+// are next door to it.
 eq(
-	'the eight expected slugs',
-	array( 'franklinton', 'goldsboro', 'greenville', 'knightdale', 'raleigh', 'rolesville', 'wake-forest', 'youngsville' ),
+	'the thirteen expected slugs',
+	array(
+		'durham',
+		'franklinton',
+		'goldsboro',
+		'greenville',
+		'knightdale',
+		'la-grange',
+		'pikeville',
+		'raleigh',
+		'rolesville',
+		'wake-forest',
+		'wilson',
+		'winterville',
+		'youngsville',
+	),
 	$slugs
 );
 
@@ -567,7 +585,9 @@ $GLOBALS['wp_fixture']['post_meta'] = array( 'approx_lat' => 36.069334, 'approx_
 it( 'a dropped minus sign is caught', 'out_of_bounds' === skybird_projects_pin_status( 1 )['status'] );
 
 // Every seeded service area must sit inside the bounds, or the check would
-// reject real jobs. Rough centres, good enough for a bounding box.
+// reject real jobs. Rough centres, good enough for a bounding box. The list
+// is asserted complete below, so adding an area without a centre fails here
+// rather than silently going unchecked.
 $area_centres = array(
 	'franklinton' => array( 36.1024, -78.4583 ),
 	'goldsboro'   => array( 35.3849, -77.9928 ),
@@ -577,6 +597,11 @@ $area_centres = array(
 	'rolesville'  => array( 35.9232, -78.4578 ),
 	'wake-forest' => array( 35.9799, -78.5097 ),
 	'youngsville' => array( 36.0263, -78.4767 ),
+	'pikeville'   => array( 35.4985, -77.9803 ),
+	'wilson'      => array( 35.7213, -77.9155 ),
+	'la-grange'   => array( 35.3085, -77.7889 ),
+	'winterville' => array( 35.5293, -77.4005 ),
+	'durham'      => array( 35.9940, -78.8986 ),
 );
 
 $outside = array();
@@ -588,9 +613,20 @@ foreach ( $area_centres as $slug => $point ) {
 }
 
 it(
-	'all eight service areas fall inside the bounds',
+	'all thirteen service areas fall inside the bounds',
 	array() === $outside,
 	implode( ', ', $outside )
+);
+
+$area_slugs = wp_list_pluck_stub( skybird_projects_service_areas(), 'slug' );
+sort( $area_slugs );
+$centre_slugs = array_keys( $area_centres );
+sort( $centre_slugs );
+
+it(
+	'every service area has a centre to check',
+	$area_slugs === $centre_slugs,
+	'a new area without one would go unchecked'
 );
 
 $GLOBALS['wp_fixture']['post_meta'] = array();
@@ -728,6 +764,94 @@ it(
 		"'readonly'     => 1"
 	),
 	'editing the snapshot here would not write back to CompanyCam'
+);
+
+// --- Product vocabulary ----------------------------------------------------
+//
+// Every value below is one that actually appears in Production HQ across 201
+// completed roofs. The point of this block is that guessing at any of it
+// would have published something false.
+
+// Not every roof is GAF. Four jobs are CertainTeed or IKO, and deriving the
+// manufacturer from "there is a shingle line" would have named GAF on all of
+// them — next to a Master Elite certification claim.
+$shingle = function ( $line ) {
+	return skybird_projects_resolve_shingle( $line );
+};
+
+it( 'HDZ resolves to GAF Timberline HDZ', array( 'manufacturer' => 'GAF', 'product_line' => 'Timberline HDZ' ) === $shingle( 'HDZ' ) );
+it( 'UHDZ resolves to GAF Timberline UHDZ', 'Timberline UHDZ' === $shingle( 'UHDZ' )['product_line'] );
+
+// NS is Natural Shadow. Confirmed by Jacob, not inferred from the initials.
+it( 'NS resolves to Timberline Natural Shadow', 'Timberline Natural Shadow' === $shingle( 'NS' )['product_line'] );
+
+it( 'CT Landmark is CertainTeed, not GAF', 'CertainTeed' === $shingle( 'CT Landmark' )['manufacturer'] );
+it( 'CT Grand Manor is CertainTeed', 'Grand Manor' === $shingle( 'CT Grand Manor' )['product_line'] );
+it( 'IKO Cambridge is IKO', 'IKO' === $shingle( 'IKO Cambridge' )['manufacturer'] );
+
+it( 'case and padding do not matter', 'GAF' === $shingle( '  hdz ' )['manufacturer'] );
+
+it(
+	'an unknown line names no manufacturer at all',
+	array( 'manufacturer' => '', 'product_line' => '' ) === $shingle( 'Owens Corning Duration' ),
+	'an empty field is visible to the reviewer; a plausible wrong one is not'
+);
+
+it( 'an empty line names nothing', '' === $shingle( '' )['manufacturer'] );
+
+// Colours. Normalise the certain cases, pass everything else through.
+it( 'the British spelling becomes the manufacturer\'s', 'Pewter Gray' === skybird_projects_normalize_color( 'Pewter Grey' ) );
+it( 'the typo in the sheet is fixed', 'Charcoal' === skybird_projects_normalize_color( 'Charoal' ) );
+it( 'a correct colour is untouched', 'Weathered Wood' === skybird_projects_normalize_color( 'Weathered Wood' ) );
+it( 'shouting is tidied', 'Charcoal' === skybird_projects_normalize_color( 'CHARCOAL' ) );
+it( 'lower case is tidied', 'Barkwood' === skybird_projects_normalize_color( 'barkwood' ) );
+it( 'whitespace is collapsed', 'Hunter Green' === skybird_projects_normalize_color( '  Hunter   Green ' ) );
+it( 'empty stays empty', '' === skybird_projects_normalize_color( '' ) );
+
+it(
+	'an unfamiliar colour is passed through, not corrected',
+	'Golden Harvest' === skybird_projects_normalize_color( 'Golden Harvest' ),
+	'a wrong correction reads perfectly well and is false'
+);
+
+it(
+	'the correction list stays short',
+	count( skybird_projects_color_corrections() ) <= 8,
+	'every entry is a judgement that the intended value is not in doubt'
+);
+
+// Towns. "WF" is on 21 rows and the service-area lookup matches on slug, so
+// an unexpanded abbreviation fails to file 21 jobs.
+it( 'WF expands to Wake Forest', 'Wake Forest' === skybird_projects_normalize_town( 'WF' ) );
+it( 'the Goldsboro typo is fixed', 'Goldsboro' === skybird_projects_normalize_town( 'Goldboro' ) );
+it( 'the Youngsville typo is fixed', 'Youngsville' === skybird_projects_normalize_town( 'Younsgville' ) );
+it( 'a normal town is untouched', 'Pikeville' === skybird_projects_normalize_town( 'Pikeville' ) );
+
+// And the thing that makes the backlog work: every normalised town that
+// appears more than twice in the real data must resolve to a seeded area.
+$area_lookup = array();
+foreach ( skybird_projects_service_areas() as $a ) {
+	$area_lookup[ $a['slug'] ] = true;
+}
+
+$real_towns = array(
+	'Goldsboro', 'WF', 'Raleigh', 'Pikeville', 'Wilson', 'Youngsville',
+	'Knightdale', 'La Grange', 'Wake Forest', 'Greenville', 'Winterville',
+	'Durham', 'Rolesville', 'Franklinton', 'Zebulon',
+);
+
+$unfiled = array();
+foreach ( $real_towns as $town ) {
+	$slug = sanitize_title( skybird_projects_normalize_town( $town ) );
+	if ( ! isset( $area_lookup[ $slug ] ) ) {
+		$unfiled[] = $town;
+	}
+}
+
+it(
+	'every town with real volume has somewhere to be filed',
+	array( 'Zebulon' ) === $unfiled,
+	'unfiled: ' . implode( ', ', $unfiled ) . ' (Zebulon, 3 jobs, is knowingly out)'
 );
 
 // --- Candidate photo URLs (the upload gate) --------------------------------
