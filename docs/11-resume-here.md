@@ -527,3 +527,54 @@ read is missing.
 - Whatever writes AI alt text onto uploads (`07` §16.5) — likely Imagify.
 - Tell Euan about the site-wide white `h1` and the non-`www` → `http://`
   redirect.
+
+---
+
+# 2026-10-15 — The North Star was corrected, and so was my definition of a page
+
+Two things happened in this session that change the order of the work.
+
+**1. `CLAUDE.md` now exists**, read automatically at the start of every
+session. It is one page, and it records four drifts — all mine — including
+that I wrote the North Star itself backwards in the first draft of that very
+file. Read it before anything else.
+
+**2. The referral layer is the goal.** Jacob:
+
+> "The map and the pages are scaffolding. The thing that makes money is a
+> past customer sharing a link and a lead arriving with a code attached."
+
+The map is #2 and the dead `/gallery/` page is #3. I had them as #1 and #3
+with the referral last.
+
+**3. There is now a definition of a page worth publishing** —
+`docs/13-page-definition.md`, with the external review it came from stored
+verbatim at `docs/vendor/reviews/grok-page-definition-2026-10-15.md`.
+
+The three things from it that matter most:
+
+- **The audience I had never designed for is the customer deciding whether
+  to put their name on it.** Everything else on the page serves that.
+- **One decision is open and waiting on Jacob: the storm date.** I built the
+  field on 2026-10-09 and argued claim framing was legitimate reporting. The
+  review says leave claim language out entirely, because a page the
+  homeowner shares with their own friends announces their insurance claim.
+  I think the review is right. Nothing renders the field yet, so it is still
+  cheap. `docs/13` §1.
+- **The referral code may not survive a Facebook share, and nobody has
+  tested it.** `og:url` must be undecorated, per Meta; `?ref=CODE` is
+  exactly what that rule strips. If it is dropped, the referral layer fails
+  silently while looking like it works. Build `/r/CODE` as a path instead,
+  and test one real share before any link goes to a customer. `docs/13` §3.
+
+## Next action
+
+Take draft 1183 through the `docs/13` §5 gate by hand, one line at a time,
+and publish it. It fails most of that gate today. Let what is painful about
+doing it manually decide what gets automated next — not the reverse.
+
+Still queued, agreed, not started: crawlable HTML links in the map
+shortcode; breadcrumbs + `BreadcrumbList`; the project back-link and the new
+"more nearby" cards falling through to a hub page that actually exists (six
+of the fourteen service areas almost certainly have no hub page, so those
+links 404 today).
