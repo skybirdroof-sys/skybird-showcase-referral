@@ -1731,6 +1731,129 @@ it(
 	)
 );
 
+
+// --- Breadcrumbs and BreadcrumbList ---------------------------------------
+//
+// docs/13 §6 item 1, and the place the flagged 404 gets closed:
+// skybird_projects_get_area_page() falls back to a guessed
+// /service-areas/{slug}-nc/, and six of the fourteen areas were added from the
+// Production HQ sheet without anyone checking a hub page exists.
+
+$GLOBALS['wp_fixture']['terms'] = array( (object) array( 'term_id' => 7, 'name' => 'Youngsville', 'slug' => 'youngsville' ) );
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = 'A new Charcoal roof for a two-story Youngsville home';
+
+// Nothing exists yet: no hub index, no area page.
+$GLOBALS['wp_fixture']['page_paths'] = array();
+
+eq( 'with no hub page there is no area URL', '', skybird_projects_area_page_url( 1183 ) );
+
+$crumbs = skybird_projects_breadcrumbs( 1183 );
+$labels = wp_list_pluck_stub( $crumbs, 'label' );
+
+eq(
+	'a missing hub drops the crumb rather than linking a 404',
+	array( 'Home', 'A new Charcoal roof for a two-story Youngsville home' ),
+	$labels
+);
+
+it(
+	'no crumb points at a page that does not exist',
+	! in_array( 'Youngsville', $labels, true ),
+	'got: ' . implode( ' > ', $labels )
+);
+
+// Now the area hub exists, but the /service-areas/ index does not.
+$GLOBALS['wp_fixture']['page_paths'] = array( 'service-areas/youngsville-nc' );
+
+eq(
+	'the area URL resolves once the hub exists',
+	'https://skybirdroofing.net/service-areas/youngsville-nc/',
+	skybird_projects_area_page_url( 1183 )
+);
+
+$labels = wp_list_pluck_stub( skybird_projects_breadcrumbs( 1183 ), 'label' );
+
+eq(
+	'the area crumb appears, the missing index does not',
+	array( 'Home', 'Youngsville', 'A new Charcoal roof for a two-story Youngsville home' ),
+	$labels
+);
+
+// And with both.
+$GLOBALS['wp_fixture']['page_paths'] = array( 'service-areas', 'service-areas/youngsville-nc' );
+
+$crumbs = skybird_projects_breadcrumbs( 1183 );
+$labels = wp_list_pluck_stub( $crumbs, 'label' );
+
+eq(
+	'the full trail',
+	array( 'Home', 'Service areas', 'Youngsville', 'A new Charcoal roof for a two-story Youngsville home' ),
+	$labels
+);
+
+eq( 'the last crumb carries no URL', '', $crumbs[ count( $crumbs ) - 1 ]['url'] );
+
+it(
+	'every other crumb carries one',
+	'' !== $crumbs[0]['url'] && '' !== $crumbs[1]['url'] && '' !== $crumbs[2]['url']
+);
+
+// The JSON-LD has to match the visible trail exactly -- the publish gate
+// requires it, and Google's spec only lets the LAST item omit `item` [G-BC],
+// so a middle crumb we could not resolve could not be expressed at all.
+$json = json_decode( skybird_projects_breadcrumb_jsonld( 1183 ), true );
+
+eq( 'the JSON-LD is a BreadcrumbList', 'BreadcrumbList', $json['@type'] );
+eq( 'schema.org is the context', 'https://schema.org', $json['@context'] );
+eq( 'it has one item per visible crumb', count( $crumbs ), count( $json['itemListElement'] ) );
+
+eq(
+	'the names match the visible labels',
+	$labels,
+	wp_list_pluck_stub( $json['itemListElement'], 'name' )
+);
+
+eq( 'positions are 1-based and in order', array( 1, 2, 3, 4 ), wp_list_pluck_stub( $json['itemListElement'], 'position' ) );
+
+it( 'every item but the last has an item URL', isset( $json['itemListElement'][0]['item'] ) && isset( $json['itemListElement'][2]['item'] ) );
+it( 'the last item omits its URL, as the spec allows', ! isset( $json['itemListElement'][3]['item'] ) );
+
+// A one-crumb trail is invalid structured data. Emitting none beats emitting
+// something Google rejects.
+$GLOBALS['wp_fixture']['page_paths'] = array();
+$GLOBALS['wp_fixture']['terms']      = array();
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = '';
+$GLOBALS['wp_fixture']['title']      = 'Roof Replacement in Youngsville, NC';
+
+$labels = wp_list_pluck_stub( skybird_projects_breadcrumbs( 1183 ), 'label' );
+eq( 'with no area at all the trail is Home plus this page', 2, count( $labels ) );
+
+// The visible HTML.
+$GLOBALS['wp_fixture']['terms']      = array( (object) array( 'term_id' => 7, 'name' => 'Youngsville', 'slug' => 'youngsville' ) );
+$GLOBALS['wp_fixture']['page_paths'] = array( 'service-areas', 'service-areas/youngsville-nc' );
+
+$html = skybird_projects_breadcrumb_html( 1183 );
+
+it( 'the trail is a nav with an accessible name', false !== strpos( $html, '<nav' ) && false !== strpos( $html, 'aria-label' ) );
+it( 'the current page is marked', false !== strpos( $html, 'aria-current="page"' ) );
+it( 'the current page is not a link', false === strpos( $html, '<a href="">' ) );
+it( 'the separators are hidden from screen readers', false !== strpos( $html, 'aria-hidden="true"' ) );
+it( 'the area hub is linked', false !== strpos( $html, 'service-areas/youngsville-nc' ) );
+
+// Never a bare guessed path in the rendered trail. This is the regression
+// that matters: the guess is still in get_area_page() for callers that want
+// the raw value, and it must not reach a visitor unchecked.
+$GLOBALS['wp_fixture']['page_paths'] = array();
+$html = skybird_projects_breadcrumb_html( 1183 );
+
+it(
+	'a guessed hub path never reaches the rendered trail',
+	false === strpos( $html, 'service-areas' ),
+	'got: ' . $html
+);
+
+$GLOBALS['wp_fixture']['page_paths'] = array( 'service-areas', 'service-areas/youngsville-nc' );
+
 /**
  * Tiny stand-in for wp_list_pluck.
  *

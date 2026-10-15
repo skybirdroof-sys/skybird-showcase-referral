@@ -23,7 +23,10 @@ defined( 'ABSPATH' ) || exit;
 skybird_projects_header();
 
 $project_id = get_the_ID();
-$area_page  = skybird_projects_get_area_page( $project_id );
+// Resolved, not guessed. The raw path falls back to /service-areas/{slug}-nc/
+// and six of the fourteen areas have no hub page, so the old back-link pointed
+// at a 404 (includes/breadcrumbs.php).
+$area_url   = skybird_projects_area_page_url( $project_id );
 $area_terms = get_the_terms( $project_id, SKYBIRD_PROJECTS_TAXONOMY );
 $area_name  = ( ! empty( $area_terms ) && ! is_wp_error( $area_terms ) ) ? reset( $area_terms )->name : '';
 $gallery    = get_post_meta( $project_id, 'gallery', true );
@@ -37,6 +40,12 @@ $warranty     = get_post_meta( $project_id, 'warranty', true );
 
 <main class="skybird-project" id="content">
 	<article <?php post_class( 'skybird-project__article' ); ?>>
+
+		<?php
+		// Item 1 of the docs/13 §6 outline, and the first thing a referred
+		// visitor needs: they have landed on a page about a stranger's house.
+		echo skybird_projects_breadcrumb_html( $project_id ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped per crumb.
+		?>
 
 		<header class="skybird-project__header">
 			<?php
@@ -152,8 +161,8 @@ $warranty     = get_post_meta( $project_id, 'warranty', true );
 		<?php endif; ?>
 
 		<footer class="skybird-project__footer">
-			<?php if ( $area_page && $area_name ) : ?>
-				<a class="skybird-project__back" href="<?php echo esc_url( home_url( $area_page ) ); ?>">
+			<?php if ( $area_url && $area_name ) : ?>
+				<a class="skybird-project__back" href="<?php echo esc_url( $area_url ); ?>">
 					<?php
 					printf(
 						/* translators: %s: service area name. */

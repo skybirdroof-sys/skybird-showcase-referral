@@ -17,6 +17,23 @@
 	padding: 1.5rem 1rem 3rem;
 }
 
+.skybird-project__breadcrumbs {
+	margin: 0 0 1rem;
+	font-size: 0.9em;
+	opacity: 0.8;
+	line-height: 1.5;
+}
+
+/* The trail can run long on a mobile screen, since the last crumb mirrors the
+ * H1. Wrapping beats a horizontal scrollbar at the top of the page. */
+.skybird-project__breadcrumbs a {
+	text-decoration: underline;
+}
+
+.skybird-project__breadcrumbs span[aria-current="page"] {
+	opacity: 0.75;
+}
+
 .skybird-project__title {
 	margin: 0 0 0.25rem;
 	line-height: 1.2;
@@ -63,6 +80,19 @@
 	width: 100%;
 	height: auto;
 	border-radius: 4px;
+}
+
+/* A figure wrapping each gallery photo, so the caption belongs to its image
+ * rather than floating after it. */
+.skybird-project__photo {
+	margin: 0;
+}
+
+.skybird-project__caption {
+	margin: 0.5rem 0 0;
+	font-size: 0.9em;
+	line-height: 1.45;
+	opacity: 0.85;
 }
 
 .skybird-project__body {
