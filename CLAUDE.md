@@ -13,25 +13,40 @@ share their project and earn a reward when it leads to a job.
 
 ## The North Star
 
-> *"Option 4 at a large scale — a working map on my website that leads to
-> pages that have been fully optimized for SEO purposes."* — Jacob, 2026-10-14
+> *"The map and the pages are scaffolding. The thing that makes money is a
+> past customer sharing a link and a lead arriving with a code attached —
+> build toward that and let the rest be good and in working order."*
+> — Jacob, 2026-10-15
 
-Unpacked, in the order he gave it:
+**The referral layer is the goal.** Everything else serves it.
 
-1. **A working, interactive map** — on the website and usable at the sales
-   table. Proof of where Skybird has worked. He has named this more than
-   anything else.
-2. **Pages worth landing on** — real detail, not one sentence with the town
-   swapped.
-3. **The referral layer working at scale** — a share traced to a lead.
-4. **Replacing the dead `/gallery/` page.**
+Corrected 2026-10-15. This file first listed the map as #1 and the referral
+as #3, on my reading of an earlier answer. That was wrong, and it is the
+kind of wrong that points confident work in the wrong direction for weeks.
+
+In service of it:
+
+1. **Pages a customer is proud to share.** Note the bar: not "will Google
+   rank this" but "would the homeowner post this with their name on it".
+   Those are different pages, and the second one is harder.
+2. **A single interactive map** — all areas, clickable pins, zoom and pan,
+   leading to those pages. Usable at the sales table and on the site.
+   (Supersedes `docs/03` §2's per-service-area widgets — confirmed
+   2026-10-15.)
+3. **Replacing the dead `/gallery/` page.**
 
 ## How to tell if we have drifted
 
-Ask: *does today's work get a page published, or a pin on the map?*
+Ask: *does today's work move a past customer closer to sharing a link that
+a lead arrives through?*
 
-If it doesn't, it had better be closing a hard-rule risk. Three recorded
-drifts, all mine:
+If it doesn't, it had better be closing a hard-rule risk.
+
+Four recorded drifts, all mine:
+
+- **Wrote the North Star itself backwards** (2026-10-15), putting the map
+  first and the referral third. Caught only because Jacob asked to go
+  through this file rather than trusting it.
 
 - Built checklist depth for two sessions while the map — named twice as the
   goal — had never been rendered.
