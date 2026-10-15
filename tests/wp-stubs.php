@@ -38,6 +38,16 @@ $GLOBALS['wp_fixture'] = array(
 	'terms'     => array(),
 	'permalink' => 'https://skybirdroofing.net/projects/test-project/',
 	'caps'      => true,
+
+	// Per-ID fixtures, for the code that reads several posts in one call --
+	// the caption and alt chain walks a project and each of its attachments,
+	// so a single flat meta array cannot express "this photo has a caption and
+	// that one does not", which is the case worth testing.
+	'post_meta_by_id'  => array(),
+	'post_fields'      => array(),
+	'thumbnail_id'     => 0,
+	'page_paths'       => array(),
+	'title'            => 'Roof Replacement in Youngsville, NC',
 );
 
 // --- Hooks -----------------------------------------------------------------
@@ -194,9 +204,41 @@ function get_option( $name, $default = false ) {
 }
 
 function get_post_meta( $post_id, $key, $single = false ) {
+	$by_id = $GLOBALS['wp_fixture']['post_meta_by_id'];
+
+	if ( isset( $by_id[ $post_id ] ) && array_key_exists( $key, $by_id[ $post_id ] ) ) {
+		return $by_id[ $post_id ][ $key ];
+	}
+
 	return isset( $GLOBALS['wp_fixture']['post_meta'][ $key ] )
 		? $GLOBALS['wp_fixture']['post_meta'][ $key ]
 		: '';
+}
+
+function get_post_field( $field, $post_id = 0 ) {
+	$fields = $GLOBALS['wp_fixture']['post_fields'];
+
+	return isset( $fields[ $post_id ][ $field ] ) ? $fields[ $post_id ][ $field ] : '';
+}
+
+function get_post_thumbnail_id( $post_id = 0 ) {
+	return $GLOBALS['wp_fixture']['thumbnail_id'];
+}
+
+function wp_strip_all_tags( $str, $remove_breaks = false ) {
+	return wp_strip_all_tags_stub( $str );
+}
+
+/**
+ * Stands in for get_page_by_path(), which the breadcrumbs use to decide
+ * whether the service-area hub it is about to link to actually exists.
+ */
+function get_page_by_path( $path, $output = 'OBJECT', $post_type = 'page' ) {
+	$path = trim( (string) $path, '/' );
+
+	return in_array( $path, $GLOBALS['wp_fixture']['page_paths'], true )
+		? (object) array( 'ID' => 900, 'post_title' => $path )
+		: null;
 }
 
 function get_the_terms( $post_id, $taxonomy ) {
@@ -276,6 +318,10 @@ function has_shortcode() {
 function get_posts() {
 	return array();
 }
+function esc_attr__( $text, $domain = null ) {
+	return esc_attr( $text );
+}
+
 function get_the_title( $post = 0 ) {
 	return isset( $GLOBALS['wp_fixture']['title'] )
 		? $GLOBALS['wp_fixture']['title']

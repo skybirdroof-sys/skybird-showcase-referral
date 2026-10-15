@@ -1198,6 +1198,248 @@ it(
 
 // --- Report ----------------------------------------------------------------
 
+
+// --- Photo captions and per-photo alt text ---------------------------------
+//
+// Before this existed the template called skybird_projects_image_alt( $post_id )
+// once per image, so every photo on the page carried one identical alt
+// attribute. Six photos, six identical announcements, no information.
+
+$GLOBALS['wp_fixture']['post_meta']       = array();
+$GLOBALS['wp_fixture']['post_meta_by_id'] = array();
+$GLOBALS['wp_fixture']['post_fields']     = array();
+$GLOBALS['wp_fixture']['thumbnail_id']    = 0;
+
+// Sanitiser.
+eq(
+	'a caption keeps its text',
+	'New ridge vent along the full ridge line',
+	skybird_projects_sanitize_caption( 'New ridge vent along the full ridge line' )
+);
+
+eq(
+	'a caption collapses whitespace',
+	'Step flashing at the dormer',
+	skybird_projects_sanitize_caption( "  Step flashing\n\n   at the dormer  " )
+);
+
+it(
+	'a caption strips markup',
+	false === strpos( skybird_projects_sanitize_caption( 'Ridge <script>alert(1)</script>vent' ), '<' )
+);
+
+eq(
+	'a caption is capped at 160 characters',
+	160,
+	strlen( skybird_projects_sanitize_caption( str_repeat( 'a', 300 ) ) )
+);
+
+eq( 'an empty caption stays empty', '', skybird_projects_sanitize_caption( '   ' ) );
+
+// The alt fallback chain, per photo.
+$GLOBALS['wp_fixture']['post_meta'] = array(
+	'manufacturer' => 'GAF',
+	'product_line' => 'Timberline HDZ',
+	'color'        => 'Charcoal',
+	'city'         => 'Youngsville',
+);
+
+$GLOBALS['wp_fixture']['post_fields'] = array(
+	501 => array( 'post_excerpt' => 'New ridge vent along the full ridge line' ),
+	502 => array( 'post_excerpt' => '' ),
+	503 => array( 'post_excerpt' => 'Step flashing where the roof meets the dormer' ),
+	504 => array( 'post_excerpt' => 'Copper accents over the bay window' ),
+);
+
+$GLOBALS['wp_fixture']['post_meta_by_id'] = array(
+	503 => array( '_wp_attachment_image_alt' => 'Freshly installed step flashing' ),
+);
+
+eq(
+	'a captioned photo uses its caption as alt text',
+	'New ridge vent along the full ridge line',
+	skybird_projects_photo_alt( 501, 1183 )
+);
+
+eq(
+	'an uncaptioned photo falls back to the generated project alt',
+	skybird_projects_image_alt( 1183 ),
+	skybird_projects_photo_alt( 502, 1183 )
+);
+
+eq(
+	'an explicit attachment alt wins over the caption',
+	'Freshly installed step flashing',
+	skybird_projects_photo_alt( 503, 1183 )
+);
+
+// 501 and 504 differ ONLY by caption -- neither has an explicit attachment
+// alt. Comparing 501 against 503 would pass even with the caption step ripped
+// out of the chain, because 503 has an explicit alt that would still differ.
+// Verified by removing that step and watching this fail.
+it(
+	'two captioned photos on one project get different alt text',
+	skybird_projects_photo_alt( 501, 1183 ) !== skybird_projects_photo_alt( 504, 1183 ),
+	'the whole point: identical alt on every image is what this replaced'
+);
+
+// Which photos belong to a project.
+$GLOBALS['wp_fixture']['thumbnail_id'] = 501;
+$GLOBALS['wp_fixture']['post_meta']['gallery'] = array( 502, 503 );
+
+eq(
+	'the cover comes first, then the gallery',
+	array( 501, 502, 503 ),
+	skybird_projects_project_photo_ids( 1183 )
+);
+
+// A cover that is also listed in the gallery would otherwise be captioned
+// twice in the box and scanned twice by the copy guard.
+$GLOBALS['wp_fixture']['post_meta']['gallery'] = array( 501, 502, 503 );
+
+eq(
+	'a cover duplicated in the gallery appears once',
+	array( 501, 502, 503 ),
+	skybird_projects_project_photo_ids( 1183 )
+);
+
+$GLOBALS['wp_fixture']['post_meta']['gallery'] = array( 502, 503 );
+
+// --- The copy guard --------------------------------------------------------
+//
+// docs/13-page-definition.md §5 guard 4. Claim language is a CLAUDE.md hard
+// rule, and the storm_date field being private closes only the automated
+// route -- this closes the hand-typed one.
+
+$claim_cases = array(
+	'hail'            => 'The hail damage was extensive.',
+	'insurance'       => 'We worked with the insurance company throughout.',
+	'claim'           => 'The claim was approved in two weeks.',
+	'adjuster'        => 'The adjuster met us on site.',
+	'deductible'      => 'The homeowner paid only their deductible.',
+	'storm season'    => 'Just in time for storm season.',
+	'storm damage'    => 'Significant storm damage to the north slope.',
+);
+
+foreach ( $claim_cases as $label => $sentence ) {
+	$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( $sentence ), 'label' );
+	it( "the copy guard flags `$label`", in_array( $label, $labels, true ), 'got: ' . implode( ', ', $labels ) );
+}
+
+// "hail" has to catch the forms a person actually types.
+foreach ( array( 'hailstorm', 'hailstones', 'Hail' ) as $variant ) {
+	$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( "Damage from $variant." ), 'label' );
+	it( "the copy guard flags `$variant`", in_array( 'hail', $labels, true ) );
+}
+
+// Boilerplate and urgency.
+$boiler_cases = array(
+	'stunning'          => 'A stunning result.',
+	'transformation'    => 'What a transformation.',
+	'peace of mind'     => 'Real peace of mind for the family.',
+	'#1'               => 'The #1 roofer in Wake County.',
+	'a dollar figure'   => 'The job came to $18,400.',
+	'years in business' => 'Over 40 years in business.',
+	'a star rating'     => 'Rated 5 stars by our customers.',
+	'free roof'        => 'Ask about a free roof.',
+);
+
+foreach ( $boiler_cases as $label => $sentence ) {
+	$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( $sentence ), 'label' );
+	it( "the copy guard flags `$label`", in_array( $label, $labels, true ), 'got: ' . implode( ', ', $labels ) );
+}
+
+// Curly apostrophes. WordPress runs wptexturize() on post content, so a typed
+// `don't` is stored and re-read as `don\xE2\x80\x99t`. A scan written against the
+// straight apostrophe passes every contraction in the list -- and passes for
+// the wrong reason, which is the exact failure mode this suite has had twice.
+$curly = "Don\xE2\x80\x99t wait \xE2\x80\x94 call us before it\xE2\x80\x99s too late.";
+$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( $curly ), 'label' );
+it( "the copy guard flags `don't wait` through a curly apostrophe", in_array( "don't wait", $labels, true ), 'got: ' . implode( ', ', $labels ) );
+it( "the copy guard flags `before it's too late` through a curly apostrophe", in_array( "before it's too late", $labels, true ) );
+
+// A phrase broken by markup still matches -- the editor emits <em> and <strong>
+// inside sentences, and a scan of the raw HTML would miss it.
+$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( 'A <em>stunning</em> job.' ), 'label' );
+it( 'the copy guard sees through inline markup', in_array( 'stunning', $labels, true ) );
+
+// Clean copy, and it has to be genuinely clean -- a guard that flags ordinary
+// roofing sentences gets switched off.
+$clean = array(
+	'We replaced the full roof deck on the north slope and matched the new drip edge to the existing gutters.',
+	'New ridge vent along the full ridge line.',
+	'Copper accents over the bay window, fabricated on site.',
+	'Charcoal Timberline HDZ, with the valleys rebuilt.',
+);
+
+foreach ( $clean as $i => $sentence ) {
+	$found = skybird_projects_copy_warnings( $sentence );
+	it(
+		"clean copy passes the guard (#$i)",
+		array() === $found,
+		'flagged: ' . implode( ', ', wp_list_pluck_stub( $found, 'label' ) )
+	);
+}
+
+eq( 'empty copy raises nothing', array(), skybird_projects_copy_warnings( '' ) );
+
+// Each warning carries the reason, because a warning that only says "banned
+// phrase" gets overridden and one that says why gets fixed.
+$warning = skybird_projects_copy_warnings( 'The hail damage was extensive.' );
+it( 'a warning explains itself', isset( $warning[0]['why'] ) && strlen( $warning[0]['why'] ) > 30 );
+
+// Repeats collapse: one mention of a phrase and five are the same fix.
+$labels = wp_list_pluck_stub( skybird_projects_copy_warnings( 'Hail, hail and more hail.' ), 'label' );
+eq( 'a phrase repeated is reported once', array( 'hail' ), $labels );
+
+// The guard scans what a human typed, and nothing read from the job record.
+// "Peace of Mind" is banned as copy AND is the real name of one of the three
+// packages. The package is private and never rendered, so there is no live
+// conflict -- this pins the boundary, because the moment the scan polices
+// record data, somebody edits the record to satisfy it.
+$GLOBALS['wp_fixture']['title'] = 'Roof Replacement in Youngsville, NC';
+$GLOBALS['wp_fixture']['post_fields'][1183] = array(
+	'post_content' => '<p>We rebuilt both valleys and matched the drip edge to the existing gutters.</p>',
+);
+$GLOBALS['wp_fixture']['post_meta']['warranty'] = 'Golden Pledge';
+$GLOBALS['wp_fixture']['post_meta']['package']  = 'Peace of Mind';
+
+$project_warnings = skybird_projects_project_copy_warnings( 1183 );
+
+eq(
+	'a clean project raises nothing, with a Peace of Mind package on file',
+	array(),
+	$project_warnings
+);
+
+// And it does scan the captions, which are the public free text this gate
+// newly accepts from a human.
+$GLOBALS['wp_fixture']['post_fields'][502] = array( 'post_excerpt' => 'Replaced after the hail claim was approved.' );
+
+$project_warnings = skybird_projects_project_copy_warnings( 1183 );
+$labels           = wp_list_pluck_stub( $project_warnings, 'label' );
+
+it( 'the project scan reaches photo captions', in_array( 'hail', $labels, true ), 'got: ' . implode( ', ', $labels ) );
+it( 'a caption warning says which photo', isset( $project_warnings[0]['where'] ) && false !== strpos( $project_warnings[0]['where'], '502' ), 'got: ' . ( isset( $project_warnings[0]['where'] ) ? $project_warnings[0]['where'] : 'nothing' ) );
+
+$GLOBALS['wp_fixture']['post_fields'][502] = array( 'post_excerpt' => '' );
+
+// --- The captions meta box -------------------------------------------------
+
+// Registered on add_meta_boxes, which the stub records but never fires.
+skybird_projects_add_captions_box();
+
+it(
+	'the captions box is registered on the project screen',
+	isset( $GLOBALS['wp_stub']['meta_boxes']['skybird-projects-captions'] )
+);
+
+eq(
+	'the captions box is registered against the project post type',
+	'project',
+	$GLOBALS['wp_stub']['meta_boxes']['skybird-projects-captions']['screen']
+);
+
 /**
  * Tiny stand-in for wp_list_pluck.
  *

@@ -61,7 +61,7 @@ $warranty     = get_post_meta( $project_id, 'warranty', true );
 				the_post_thumbnail(
 					'large',
 					array(
-						'alt'     => esc_attr( skybird_projects_image_alt( $project_id ) ),
+						'alt'     => esc_attr( skybird_projects_photo_alt( get_post_thumbnail_id( $project_id ), $project_id ) ),
 						'loading' => 'eager',
 					)
 				);
@@ -104,19 +104,31 @@ $warranty     = get_post_meta( $project_id, 'warranty', true );
 			<section class="skybird-project__gallery" aria-labelledby="skybird-gallery-heading">
 				<h2 id="skybird-gallery-heading"><?php esc_html_e( 'The work', 'skybird-projects' ); ?></h2>
 				<ul class="skybird-project__grid">
-					<?php foreach ( $gallery as $attachment_id ) : ?>
+					<?php
+					foreach ( $gallery as $attachment_id ) :
+						$attachment_id = (int) $attachment_id;
+						// Per photo, not per project. The same alt on every
+						// image announced itself six times to a screen reader
+						// and said nothing (includes/photo-captions.php).
+						$caption = skybird_projects_photo_caption( $attachment_id );
+						?>
 						<li>
-							<?php
-							echo wp_get_attachment_image(
-								(int) $attachment_id,
-								'large',
-								false,
-								array(
-									'alt'     => esc_attr( skybird_projects_image_alt( $project_id ) ),
-									'loading' => 'lazy',
-								)
-							);
-							?>
+							<figure class="skybird-project__photo">
+								<?php
+								echo wp_get_attachment_image(
+									$attachment_id,
+									'large',
+									false,
+									array(
+										'alt'     => esc_attr( skybird_projects_photo_alt( $attachment_id, $project_id ) ),
+										'loading' => 'lazy',
+									)
+								);
+								?>
+								<?php if ( '' !== $caption ) : ?>
+									<figcaption class="skybird-project__caption"><?php echo esc_html( $caption ); ?></figcaption>
+								<?php endif; ?>
+							</figure>
 						</li>
 					<?php endforeach; ?>
 				</ul>
