@@ -660,8 +660,8 @@ $private_fields = array_keys(
 sort( $private_fields );
 
 it(
-	'the private fields are exactly the three we mean',
-	array( 'field_notes', 'package', 'pending_photos' ) === $private_fields,
+	'the private fields are exactly the four we mean',
+	array( 'field_notes', 'package', 'pending_photos', 'storm_date' ) === $private_fields,
 	'got: ' . implode( ', ', $private_fields ) . ' — a new private field needs its own containment tests'
 );
 
@@ -675,9 +675,9 @@ it(
 );
 
 it(
-	'storm_date is NOT private',
-	empty( skybird_projects_meta_fields()['storm_date']['private'] ),
-	'the storm date is a published fact about the job'
+	'storm_date is private',
+	! empty( skybird_projects_meta_fields()['storm_date']['private'] ),
+	'a page the homeowner shares must not announce that they filed a claim (docs/13 §1)'
 );
 
 it(
@@ -732,7 +732,12 @@ $anon_data = $response_for( false );
 it( 'a visitor cannot read the notes over REST', ! isset( $anon_data['meta']['field_notes'] ) );
 it( 'a visitor cannot read the package tier over REST', ! isset( $anon_data['meta']['package'] ) );
 it( 'no trace of the tier name survives', false === strpos( wp_json_encode( $anon_data ), 'Bare Bones' ) );
-it( 'the storm date IS public', '2026-09-03' === $anon_data['meta']['storm_date'], 'it is a fact about the job, not about the household' );
+it( 'a visitor cannot read the storm date over REST', ! isset( $anon_data['meta']['storm_date'] ) );
+it(
+	'no trace of the storm date survives',
+	false === strpos( wp_json_encode( $anon_data ), '2026-09-03' ),
+	'the date itself identifies the claim even without the word "hail"'
+);
 it( 'stripping the notes leaves the public fields alone', 'Youngsville' === $anon_data['meta']['city'] );
 it(
 	'no trace of the notes survives anywhere in the public response',

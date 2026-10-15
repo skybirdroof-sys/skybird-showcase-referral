@@ -91,15 +91,18 @@ function skybird_projects_register_acf_fields() {
 		'first_day'     => 0,
 	);
 
+	// Internal, and private. A page the homeowner shares with their own
+	// friends must not announce that they filed a claim — the storm date is
+	// ours to file, not ours to publish (docs/13-page-definition.md §1).
 	$fields[] = array(
 		'key'           => 'field_skybird_storm_date',
-		'label'         => __( 'Storm date', 'skybird-projects' ),
+		'label'         => __( 'Storm date (internal, not published)', 'skybird-projects' ),
 		'name'          => 'storm_date',
 		'type'          => 'date_picker',
 		'display_format'=> 'F j, Y',
 		'return_format' => 'Y-m-d',
 		'first_day'     => 0,
-		'instructions'  => __( 'For a hail or storm claim, the date of the storm itself. Published as a fact about this job — never about a current storm, and never with a call to action.', 'skybird-projects' ),
+		'instructions'  => __( 'For a hail or storm claim, the date of the storm itself. Internal only: it is hidden from the public API and never rendered, and storm, hail and claim language stays off the page entirely.', 'skybird-projects' ),
 	);
 
 	// Read-only, and private. The page says what is on the roof and who

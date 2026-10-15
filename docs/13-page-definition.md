@@ -51,16 +51,25 @@ factually true does not make it theirs to publish.
 REST, but **nothing renders it** — `templates/single-project.php` never
 reads it. So nothing has leaked and the decision is still cheap.
 
-**My recommendation, for Jacob to accept or overrule:**
+**Settled 2026-10-15.** Jacob: *"Yes, lock the storm date to wp-admin and
+move on."* Done:
 
-- Keep the field. It is real record data and it is useful internally
-  (it is how we know which jobs trace to which storm).
-- Flip it to `private: true` so it stays in wp-admin and never leaves
-  through the REST API.
-- Never render it, and never put claim or storm language in visible copy.
-- Add it to the banned-phrase scan rather than to the page.
+- The field stays. It is real record data and it is how we know which jobs
+  trace to which storm.
+- `private: true` in `meta.php`, so `includes/rest.php` strips it for anyone
+  who cannot edit the post. No template reads it.
+- Relabelled "Storm date (internal)" in wp-admin, and the ACF instructions
+  now say so rather than describing it as publishable.
+- `CLAUDE.md` carries it as a hard rule and a closed decision, so the
+  argument does not get re-run in six weeks.
+- Guards: four assertions fail if the `private` flag is removed — the exact
+  set of private fields, the flag itself, REST containment, and a scan for
+  the date string anywhere in the public response. Verified by removing the
+  flag and watching all four fail.
 
-Not done yet. Waiting on Jacob.
+Still to build, when the gate becomes mechanical: "hail", "insurance claim"
+and "storm" on the banned-phrase list (review §5 guard 4), so the words
+cannot arrive through the hand-written copy either.
 
 ---
 

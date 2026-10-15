@@ -134,6 +134,12 @@ Consequence: the checks above have to be run by a person, or the environment cha
 
 ---
 
+## The plugin needs re-uploading
+
+`dist/skybird-projects.zip` was rebuilt after the storm-date lock. Upload it
+(Replace current with uploaded) before reviewing any project — until then
+wp-admin still labels the field as publishable and REST still hands it out.
+
 ## Next action, 2026-09-18 — Task 2: credentials and Config
 
 The workflow is imported and on the canvas. It was reworked that same day for
@@ -555,17 +561,24 @@ The three things from it that matter most:
 
 - **The audience I had never designed for is the customer deciding whether
   to put their name on it.** Everything else on the page serves that.
-- **One decision is open and waiting on Jacob: the storm date.** I built the
-  field on 2026-10-09 and argued claim framing was legitimate reporting. The
-  review says leave claim language out entirely, because a page the
-  homeowner shares with their own friends announces their insurance claim.
-  I think the review is right. Nothing renders the field yet, so it is still
-  cheap. `docs/13` §1.
+- **The storm date is now internal only.** I built the field on 2026-10-09
+  and argued claim framing was legitimate reporting. The review said leave
+  claim language out entirely, because a page the homeowner shares with
+  their own friends announces their insurance claim. Jacob agreed, and
+  `storm_date` is `private` as of this session: stored, visible in wp-admin,
+  stripped from REST, never rendered. Four assertions fail if that is
+  undone. `docs/13` §1.
 - **The referral code may not survive a Facebook share, and nobody has
   tested it.** `og:url` must be undecorated, per Meta; `?ref=CODE` is
   exactly what that rule strips. If it is dropped, the referral layer fails
   silently while looking like it works. Build `/r/CODE` as a path instead,
   and test one real share before any link goes to a customer. `docs/13` §3.
+
+## The plugin needs re-uploading
+
+`dist/skybird-projects.zip` was rebuilt after the storm-date lock. Upload it
+(Replace current with uploaded) before reviewing any project — until then
+wp-admin still labels the field as publishable and REST still hands it out.
 
 ## Next action
 

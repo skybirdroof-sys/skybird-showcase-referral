@@ -73,6 +73,10 @@ Four recorded drifts, all mine:
 - **`internal: true` photos never ship**, even if tagged `Showcase`.
 - **No invented specifics.** No prices, no "free roof", no storm-chasing, no
   manufacturer or product named unless it is in the record.
+- **No claim language on the page at all.** Not "hail", not "insurance claim",
+  not the storm date — even when the job was a claim and the date is a fact.
+  A page the homeowner shares announces it to their own friends, and their
+  claim is their private financial business (`docs/13` §1).
 - **Credentials live in the n8n credential store.** Never in this repo.
 
 ## Decisions that are closed — do not relitigate
@@ -85,11 +89,13 @@ Four recorded drifts, all mine:
 | Manufacturer | **Never assumed.** An unrecognised shingle line names no manufacturer at all |
 | Publishing pace | **No artificial staging.** Publish each page as soon as it is genuinely complete |
 | Nothing publishes automatically | A human reviews every page |
+| Storm / claim framing | **Off the page entirely.** `storm_date` is stored, private, never rendered — reversed 2026-10-15 |
+| What a page must be | **`docs/13-page-definition.md`.** Its §5 gate is binding; the audience is the customer deciding whether to put their name on it |
 
 ## The guards that do not depend on remembering
 
 ```
-php tests/test-plugin.php     # 232 assertions
+php tests/test-plugin.php     # 233 assertions
 node tests/test-workflow.js   #  35 assertions
 ```
 

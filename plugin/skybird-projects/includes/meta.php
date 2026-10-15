@@ -130,31 +130,30 @@ function skybird_projects_meta_fields() {
 			'reviewer' => true,
 			'label'    => 'Completion date',
 		),
-		// The project manager's own notes, mirrored from CompanyCam's Project
-		// Description so the reviewer has the specifics in front of them while
-		// writing the copy (docs/12-project-notes-path.md).
+		// The storm a hail claim traces back to.
 		//
-		// `private` is the important flag. Free-text job notes reliably carry
-		// the homeowner's name — "Bill made us sweet tea" is how a person
-		// writes that sentence — so this field is the one place PII is
-		// deliberately stored. It must never reach a visitor:
+		// PRIVATE, reversing the decision this field was built under on
+		// 2026-10-09. I argued then that naming the storm was reporting
+		// rather than the storm-chasing docs/06-trigger-design.md §3 forbids,
+		// and as a statement about Google that was true. It was the wrong
+		// question. The page exists to be shared by the homeowner, and a page
+		// they post to their own friends announcing that they filed a hail
+		// claim is a page they quietly decide not to post. The claim is their
+		// private financial business; that the date is a verifiable fact does
+		// not make it ours to publish (docs/13-page-definition.md §1).
 		//
-		// - No template prints it, and the suite asserts none does.
-		// - includes/rest.php strips it from the REST response for anyone who
-		//   cannot edit the post. WITHOUT THAT it would be world-readable the
-		//   moment the project is published, because every field here is
-		//   show_in_rest and a published post's meta is public. Invisible on
-		//   the page is not the same as unreachable (docs/07 §16.3).
-		// The storm a hail claim traces back to. Published as a plain fact about
-		// a finished job — "the claim traced back to hail on 3 September" —
-		// which is reporting, not the storm-chasing docs/06-trigger-design.md §3
-		// forbids. The line is tense: a date on work already done, never a
-		// current storm and never a call to action (docs/12 §10).
+		// Kept because it is real record data and it is how we know which
+		// jobs trace to which storm. Locked to wp-admin: `private` makes
+		// includes/rest.php strip it for anyone who cannot edit the post, and
+		// no template reads it. "hail" and "insurance claim" are also on the
+		// banned-phrase list the publish gate scans for, so the words cannot
+		// arrive by the other door either.
 		'storm_date'                => array(
 			'type'     => 'string',
 			'sanitize' => 'skybird_projects_sanitize_date',
+			'private'  => true,
 			'reviewer' => true,
-			'label'    => 'Storm date',
+			'label'    => 'Storm date (internal)',
 		),
 		// Which of the three packages the homeowner bought.
 		//
@@ -187,6 +186,21 @@ function skybird_projects_meta_fields() {
 			'reviewer' => true,
 			'label'    => 'Photos awaiting approval',
 		),
+		// The project manager's own notes, mirrored from CompanyCam's Project
+		// Description so the reviewer has the specifics in front of them while
+		// writing the copy (docs/12-project-notes-path.md).
+		//
+		// `private` is the important flag. Free-text job notes reliably carry
+		// the homeowner's name — "Bill made us sweet tea" is how a person
+		// writes that sentence — so this field is the one place PII is
+		// deliberately stored. It must never reach a visitor:
+		//
+		// - No template prints it, and the suite asserts none does.
+		// - includes/rest.php strips it from the REST response for anyone who
+		//   cannot edit the post. WITHOUT THAT it would be world-readable the
+		//   moment the project is published, because every field here is
+		//   show_in_rest and a published post's meta is public. Invisible on
+		//   the page is not the same as unreachable (docs/07 §16.3).
 		'field_notes'               => array(
 			'type'     => 'string',
 			'sanitize' => 'skybird_projects_sanitize_notes',
