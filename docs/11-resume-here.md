@@ -136,9 +136,9 @@ Consequence: the checks above have to be run by a person, or the environment cha
 
 ## The plugin needs re-uploading
 
-`dist/skybird-projects.zip` was rebuilt after the storm-date lock. Upload it
-(Replace current with uploaded) before reviewing any project — until then
-wp-admin still labels the field as publishable and REST still hands it out.
+`dist/skybird-projects.zip` carries the storm-date lock and the three
+page-definition items below. Upload it (Replace current with uploaded)
+before reviewing any project.
 
 ## Next action, 2026-09-18 — Task 2: credentials and Config
 
@@ -576,9 +576,9 @@ The three things from it that matter most:
 
 ## The plugin needs re-uploading
 
-`dist/skybird-projects.zip` was rebuilt after the storm-date lock. Upload it
-(Replace current with uploaded) before reviewing any project — until then
-wp-admin still labels the field as publishable and REST still hands it out.
+`dist/skybird-projects.zip` carries the storm-date lock and the three
+page-definition items below. Upload it (Replace current with uploaded)
+before reviewing any project.
 
 ## Next action
 
@@ -586,8 +586,37 @@ Take draft 1183 through the `docs/13` §5 gate by hand, one line at a time,
 and publish it. It fails most of that gate today. Let what is painful about
 doing it manually decide what gets automated next — not the reverse.
 
-Still queued, agreed, not started: crawlable HTML links in the map
-shortcode; breadcrumbs + `BreadcrumbList`; the project back-link and the new
-"more nearby" cards falling through to a hub page that actually exists (six
-of the fourteen service areas almost certainly have no hub page, so those
-links 404 today).
+### Built since, same day
+
+- **Per-photo captions and per-photo alt text** (`c5787df`). Every photo on
+  a page used to carry one identical alt attribute. Captions are editable
+  from the project screen and render under each photo.
+- **The banned-phrase scan** (`includes/copy-guard.php`, same commit). Warns,
+  never blocks; scans only what a human typed, never the job record.
+- **Open Graph tags and a 1200×630 share crop** (`8fa870a`). The admin box
+  shows the reviewer the actual crop, because that is what gets shared and
+  the crop is not the photo.
+- **Breadcrumbs + `BreadcrumbList`** (`2543f00`), which closed the flagged
+  404 — six of the fourteen areas have no hub page, and the crumb and the
+  footer back-link now both resolve against a real page first.
+
+### Still queued, agreed, not started
+
+- Crawlable HTML links in the map shortcode.
+- The "more roofs nearby" sibling cards from `docs/13` §6 item 13.
+- The six missing service-area hub pages. Nothing in code can fix this; the
+  links are now invisible rather than broken, which is containment, not a
+  fix. Euan's list.
+- The `/r/CODE` referral path, and the one real Facebook share that has to
+  be tested before any link goes to a customer (`docs/13` §3).
+
+### Waiting on Jacob
+
+1. **Does the human H1 become the default?** `docs/13` §3 says yes,
+   `docs/06` §3 says keyword-first. Currently opt-in per project, so
+   nothing changed for existing pages.
+2. **The credentials sentence**, which ships empty. One confirmed sentence
+   — generation count and programme name — and it goes live site-wide.
+3. **Which SEO plugin the site runs.** If Yoast, Rank Math or AIOSEO is
+   active, the plugin prints no preview tags at all rather than compete, so
+   the share image needs wiring into whichever one it is.

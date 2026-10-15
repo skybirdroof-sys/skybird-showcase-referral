@@ -147,8 +147,49 @@ destination page stays clean.
 | Crawlable HTML links in the map shortcode | No change. Still needed. |
 | Breadcrumbs + `BreadcrumbList` | No change — the review makes it item 1 of the outline. |
 | Back-link falls through to a hub that exists | **Reinforced.** The review adds "More roofs we've done in {town}" sibling cards alongside it, so this is now two links that must not 404. |
-| `storm_date` wired to the page | **Stop.** See §1. |
+| `storm_date` wired to the page | **Stop.** See §1. Settled — locked to wp-admin. |
 | Referral code in the URL as `?ref=` | **Re-plan as `/r/CODE`.** See §3. |
+
+### Built 2026-10-15
+
+All three of the items that blocked the first page from passing its own
+gate. Commits `c5787df`, `8fa870a`, `2543f00`.
+
+1. **Per-photo captions and per-photo alt text.** Captions live on the
+   attachment in WordPress's own caption field, editable from the project
+   screen. Alt resolves per photo: explicit attachment alt, then the
+   caption, then the generated project sentence. Before this, every photo
+   on a page carried one identical alt attribute.
+2. **Open Graph tags**, with a dedicated 1200×630 hard crop as its own
+   registered image size — so the declared dimensions match a real file,
+   and so `includes/exif.php` strips it alongside the original. The admin
+   box shows the reviewer *the crop*, not the photo they approved, because
+   a centred 1.91:1 crop pulls in what the original framing left at the
+   edge of the frame.
+3. **Breadcrumbs and `BreadcrumbList`**, which closed the flagged 404: six
+   of the fourteen service areas have no hub page, and both the crumb and
+   the footer back-link now resolve against a real page before rendering.
+
+Also landed with them: `includes/copy-guard.php`, the banned-phrase scan
+from §5 guard 4. It warns rather than blocks, and it scans only what a
+human typed — never fields read from the job record.
+
+### Two things now waiting on Jacob
+
+- **The H1.** §3 of this document wants it human; `docs/06` §3 locks the
+  post title keyword-first, and `docs/01`–`06` are ground truth unless
+  flagged. So the human share title is used as the H1 **only when someone
+  has written one** — a project without one renders exactly as before.
+  Whether the human H1 becomes the default is Jacob's call.
+- **The credentials sentence.** It ships *empty*. The review's example names
+  a generation count and a manufacturer programme, and "no invented
+  specifics" covers claims about ourselves too. One confirmed sentence and
+  it goes live site-wide.
+- **Which SEO plugin the site runs.** If it is Yoast, Rank Math or AIOSEO,
+  the plugin stands down and prints no preview tags at all, because two
+  sets of `og:title` is worse than one set we did not choose. Wiring the
+  1200×630 crop into whichever one is installed has to be written against
+  the real plugin.
 
 New work the review adds, not previously on the list:
 
