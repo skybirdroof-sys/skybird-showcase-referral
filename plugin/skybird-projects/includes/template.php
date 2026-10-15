@@ -149,7 +149,15 @@ function skybird_projects_meta_line( $post_id ) {
 
 	$bits = array();
 
-	if ( $area && false === stripos( (string) get_the_title( $post_id ), $area ) ) {
+	// Checked against the heading the page actually renders, which since
+	// docs/13 §3 may be the human share title rather than the post title.
+	// get_the_title() here was a third instance of the same bug: a share
+	// title of "A new Charcoal roof for a two-story home" carries no town,
+	// while the post title it was suppressed against carries one — so the
+	// town would have appeared nowhere in the header at all.
+	$heading = skybird_projects_og_title( $post_id );
+
+	if ( $area && false === stripos( $heading, $area ) ) {
 		$bits[] = $area . ', NC';
 	}
 

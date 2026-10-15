@@ -130,6 +130,29 @@ function skybird_projects_meta_fields() {
 			'reviewer' => true,
 			'label'    => 'Completion date',
 		),
+		// The two strings a person sees before they decide whether to share.
+		//
+		// PUBLIC, and separate from the post title and excerpt on purpose.
+		// The post title is the SEO title, locked keyword-first by
+		// docs/06-trigger-design.md §3 — "GAF Timberline HDZ Roof Replacement
+		// in Youngsville, NC". That is the right <title> tag and the wrong
+		// thing to put above a photo of somebody's own house.
+		// docs/13-page-definition.md §3 resolves it: these are human, the
+		// <title> stays keyword-first. Empty means the tag is omitted rather
+		// than generated, because the same two sentences on 200 pages is the
+		// failure docs/13 §5 is guarding against.
+		'share_title'               => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+			'reviewer' => true,
+			'label'    => 'Share title',
+		),
+		'share_description'         => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+			'reviewer' => true,
+			'label'    => 'Share description',
+		),
 		// The storm a hail claim traces back to.
 		//
 		// PRIVATE, reversing the decision this field was built under on

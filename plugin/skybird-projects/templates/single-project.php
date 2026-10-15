@@ -39,7 +39,23 @@ $warranty     = get_post_meta( $project_id, 'warranty', true );
 	<article <?php post_class( 'skybird-project__article' ); ?>>
 
 		<header class="skybird-project__header">
-			<h1 class="skybird-project__title"><?php the_title(); ?></h1>
+			<?php
+			// docs/13-page-definition.md §3 wants a human H1 ("A new Charcoal
+			// roof for a two-story Youngsville home") while the <title> tag
+			// stays keyword-first. docs/06-trigger-design.md §3 locks the
+			// post title to the keyword-first form, and docs/01–06 are ground
+			// truth unless something contradicts them — this does, so it is
+			// FLAGGED rather than overridden: the share title is used as the
+			// H1 only when a human has written one, and a project without one
+			// renders exactly as it does today. Jacob decides whether the
+			// human H1 becomes the default.
+			//
+			// the_title() is not used because this needs the same string
+			// og:title resolved to, and resolving it twice is how the eyebrow
+			// line shipped broken twice (includes/template.php).
+			$heading = skybird_projects_og_title( $project_id );
+			?>
+			<h1 class="skybird-project__title"><?php echo esc_html( $heading ); ?></h1>
 
 			<?php
 			// The eyebrow rule lives in includes/template.php so the suite can

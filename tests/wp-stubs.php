@@ -30,6 +30,7 @@ $GLOBALS['wp_stub'] = array(
 	'term_meta'   => array(),
 	'options'     => array(),
 	'meta_boxes'  => array(),
+	'image_sizes' => array(),
 );
 
 /** Test fixtures the stubs read from. */
@@ -46,6 +47,7 @@ $GLOBALS['wp_fixture'] = array(
 	'post_meta_by_id'  => array(),
 	'post_fields'      => array(),
 	'thumbnail_id'     => 0,
+	'image_src'        => array(),
 	'page_paths'       => array(),
 	'title'            => 'Roof Replacement in Youngsville, NC',
 );
@@ -353,6 +355,35 @@ function date_i18n( $format, $timestamp ) {
 }
 function wp_get_attachment_image() {
 	return '';
+}
+
+/**
+ * Records the registered image sizes so the suite can assert the 1200x630
+ * share crop exists -- Meta needs the declared dimensions to match the file.
+ */
+function add_image_size( $name, $width = 0, $height = 0, $crop = false ) {
+	$GLOBALS['wp_stub']['image_sizes'][ $name ] = array(
+		'width'  => $width,
+		'height' => $height,
+		'crop'   => $crop,
+	);
+}
+
+/**
+ * Returns the fixture's share-image source, as [ url, width, height, resized ].
+ */
+function wp_get_attachment_image_src( $attachment_id, $size = 'thumbnail' ) {
+	$sources = $GLOBALS['wp_fixture']['image_src'];
+
+	if ( isset( $sources[ $size ] ) ) {
+		return $sources[ $size ];
+	}
+
+	return false;
+}
+
+function mb_strlen_stub( $str ) {
+	return function_exists( 'mb_strlen' ) ? mb_strlen( $str ) : strlen( $str );
 }
 function the_post_thumbnail() {}
 function has_post_thumbnail() {

@@ -44,6 +44,7 @@ require_once SKYBIRD_PROJECTS_DIR . 'includes/photo-gate.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/template.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/photo-captions.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/copy-guard.php';
+require_once SKYBIRD_PROJECTS_DIR . 'includes/open-graph.php';
 require_once SKYBIRD_PROJECTS_DIR . 'includes/map-shortcode.php';
 
 /**

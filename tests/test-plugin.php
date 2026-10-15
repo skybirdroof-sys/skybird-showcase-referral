@@ -197,6 +197,8 @@ $expected_meta = array(
 	'color',
 	'warranty',
 	'completion_date',
+	'share_title',
+	'share_description',
 	'storm_date',
 	'package',
 	'pending_photos',
@@ -1438,6 +1440,295 @@ eq(
 	'the captions box is registered against the project post type',
 	'project',
 	$GLOBALS['wp_stub']['meta_boxes']['skybird-projects-captions']['screen']
+);
+
+
+// --- Open Graph / the link preview ----------------------------------------
+//
+// Without these tags Facebook "uses internal heuristics to make a best guess
+// about the title, description, and preview image" (Meta, via
+// docs/vendor/reviews/grok-page-definition-2026-10-15.md [M-WM]). On a page
+// full of photos of one house, that guess could be the photo with the house
+// number in it.
+
+// The crop has to exist, at the dimensions Meta is told about.
+$share_size = isset( $GLOBALS['wp_stub']['image_sizes']['skybird-share'] )
+	? $GLOBALS['wp_stub']['image_sizes']['skybird-share']
+	: null;
+
+it( 'the 1200x630 share crop is registered', null !== $share_size );
+
+if ( $share_size ) {
+	eq( 'the share crop is 1200 wide', 1200, $share_size['width'] );
+	eq( 'the share crop is 630 tall', 630, $share_size['height'] );
+	it(
+		'the share crop is a hard crop',
+		true === $share_size['crop'],
+		'a soft resize gives 1200x900 and lets Facebook choose its own crop'
+	);
+}
+
+// og:url must be undecorated. Meta: "without session variables, user
+// identifying parameters, or counters" [M-WM]. The referral code is a user
+// identifying parameter, and this is the tag it must never reach.
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/projects/youngsville-charcoal/?ref=ABC123&utm_source=fb#gallery';
+
+eq(
+	'og:url strips the referral code and everything else',
+	'https://skybirdroofing.net/projects/youngsville-charcoal/',
+	skybird_projects_canonical_url( 1183 )
+);
+
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/projects/youngsville-charcoal/';
+
+eq(
+	'a clean permalink passes through untouched',
+	'https://skybirdroofing.net/projects/youngsville-charcoal/',
+	skybird_projects_canonical_url( 1183 )
+);
+
+// Under WordPress's "Plain" permalink setting the query string IS the address.
+// Stripping it would point every project's og:url at the homepage, so every
+// page would share one preview and Meta would treat them as one resource
+// [M-CANON]. Found by breaking the stripper and reading what it actually does.
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/?post_type=project&p=1183';
+
+eq(
+	'plain permalinks keep the query string that identifies the post',
+	'https://skybirdroofing.net/?post_type=project&p=1183',
+	skybird_projects_canonical_url( 1183 )
+);
+
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/?post_type=project&p=1183#gallery';
+
+eq(
+	'and the fragment still goes',
+	'https://skybirdroofing.net/?post_type=project&p=1183',
+	skybird_projects_canonical_url( 1183 )
+);
+
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/projects/youngsville-charcoal/';
+
+// Titles.
+$GLOBALS['wp_fixture']['title'] = 'GAF Timberline HDZ Roof Replacement in Youngsville, NC';
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = '';
+
+eq(
+	'with no share title the SEO title is used',
+	'GAF Timberline HDZ Roof Replacement in Youngsville, NC',
+	skybird_projects_og_title( 1183 )
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = 'A new Charcoal roof for a two-story Youngsville home';
+
+eq(
+	'a human share title wins',
+	'A new Charcoal roof for a two-story Youngsville home',
+	skybird_projects_og_title( 1183 )
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = '   ';
+
+it(
+	'a share title of only whitespace does not win',
+	'GAF Timberline HDZ Roof Replacement in Youngsville, NC' === skybird_projects_og_title( 1183 ),
+	'an empty-looking field must not blank the preview title'
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = 'A new Charcoal roof for a two-story Youngsville home';
+
+// Descriptions. An absent one is omitted, NOT generated -- the same two
+// sentences on 200 pages is what docs/13 §5 guard 4 is for.
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = '';
+$GLOBALS['wp_stub']['options']['skybird_projects_credentials_line'] = '';
+
+eq( 'no share description means no description', '', skybird_projects_og_description( 1183 ) );
+
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = 'The original roof came off down to the deck and both valleys were rebuilt. Copper accents over the bay window were fabricated on site.';
+
+eq(
+	'a written description is used as written, with no credentials configured',
+	'The original roof came off down to the deck and both valleys were rebuilt. Copper accents over the bay window were fabricated on site.',
+	skybird_projects_og_description( 1183 )
+);
+
+// The credentials sentence ships EMPTY on purpose. "No invented specifics"
+// (CLAUDE.md) covers claims about us too, and the review's example sentence
+// names a generation count and a manufacturer programme that nobody has
+// confirmed in writing.
+$GLOBALS['wp_stub']['options']['skybird_projects_credentials_line'] = 'Installed by Skybird Roofing.';
+
+it(
+	'a configured credentials sentence is appended',
+	false !== strpos( skybird_projects_og_description( 1183 ), 'Installed by Skybird Roofing.' )
+);
+
+$GLOBALS['wp_stub']['options']['skybird_projects_credentials_line'] = '';
+
+// The image, with declared dimensions. Meta: without og:image:width and
+// og:image:height "the first person who shares a piece of content won't see a
+// rendered image" [M-IMG] -- and the first person to share it is the customer.
+$GLOBALS['wp_fixture']['thumbnail_id'] = 501;
+$GLOBALS['wp_fixture']['image_src']    = array(
+	'skybird-share' => array( 'https://skybirdroofing.net/wp-content/uploads/2026/09/skybird-roof-youngsville-110848078-1-1200x630.jpeg', 1200, 630, true ),
+);
+$GLOBALS['wp_fixture']['post_fields'][501]['post_modified_gmt'] = '2026-10-15 14:02:11';
+
+$image = skybird_projects_share_image( 1183 );
+
+eq( 'the share image is 1200 wide', 1200, $image['width'] );
+eq( 'the share image is 630 tall', 630, $image['height'] );
+it( 'the share image is the real crop, not a fallback', true === $image['cropped'] );
+
+// Meta caches images by URL and says to publish a changed image at a new URL
+// [M-IMG]. WordPress regenerates a crop over the top of the old file, so
+// without a version marker a re-crop keeps showing the old picture in every
+// feed that already scraped the page.
+it(
+	'the share image URL carries a version marker',
+	false !== strpos( $image['url'], '?v=' ),
+	'got: ' . $image['url']
+);
+
+$before = $image['url'];
+$GLOBALS['wp_fixture']['post_fields'][501]['post_modified_gmt'] = '2026-10-16 09:30:00';
+
+it(
+	're-cropping the photo changes the share image URL',
+	$before !== skybird_projects_share_image( 1183 )['url'],
+	'otherwise Facebook serves the cached old crop forever'
+);
+
+// A cover imported before the crop existed: WordPress hands back the
+// full-size file and we must not claim it is 1200x630.
+$GLOBALS['wp_fixture']['image_src'] = array(
+	'skybird-share' => array( 'https://skybirdroofing.net/wp-content/uploads/2026/09/old.jpeg', 2016, 1512, false ),
+);
+
+$fallback = skybird_projects_share_image( 1183 );
+
+it( 'an un-cropped fallback is flagged as such', empty( $fallback['cropped'] ) );
+eq( 'and its real dimensions are declared, not the ideal ones', 2016, $fallback['width'] );
+
+it(
+	'the reviewer is told the crop is missing',
+	(bool) array_filter(
+		skybird_projects_share_preview_problems( 1183 ),
+		function ( $p ) {
+			return false !== strpos( $p, 'Regenerate thumbnails' );
+		}
+	)
+);
+
+$GLOBALS['wp_fixture']['image_src'] = array(
+	'skybird-share' => array( 'https://skybirdroofing.net/wp-content/uploads/2026/09/skybird-roof-youngsville-110848078-1-1200x630.jpeg', 1200, 630, true ),
+);
+
+// No cover at all: no image tags, and the reviewer is told why.
+$GLOBALS['wp_fixture']['thumbnail_id'] = 0;
+
+eq( 'no cover means no share image', array(), skybird_projects_share_image( 1183 ) );
+
+it(
+	'no cover is reported as Facebook choosing the picture',
+	(bool) array_filter(
+		skybird_projects_share_preview_problems( 1183 ),
+		function ( $p ) {
+			return false !== strpos( $p, 'Facebook will choose' );
+		}
+	)
+);
+
+$GLOBALS['wp_fixture']['thumbnail_id'] = 501;
+
+// The whole tag set, first with nobody having written a description.
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = '';
+
+$tags = skybird_projects_og_tags( 1183 );
+
+foreach ( array( 'og:url', 'og:title', 'og:type', 'og:image', 'og:image:width', 'og:image:height', 'og:image:type' ) as $required ) {
+	it( "og tags include $required", isset( $tags[ $required ] ) );
+}
+
+it(
+	'og:description is omitted rather than invented',
+	! isset( $tags['og:description'] ),
+	'no human wrote one, and generating it is the 200-identical-pages failure'
+);
+
+it( 'og:image:alt describes the photo', isset( $tags['og:image:alt'] ) && '' !== $tags['og:image:alt'] );
+
+it(
+	'the referral code never reaches og:url',
+	false === strpos( $tags['og:url'], 'ref=' ),
+	'Meta requires og:url to be undecorated [M-WM]'
+);
+
+it( 'a wide card is declared for the other previews', isset( $tags['twitter:card'] ) );
+
+// The eyebrow prints the town only when the visible heading does not already.
+// Since the heading may now be the human share title, which carries no town,
+// checking the post title instead would leave the town nowhere in the header
+// -- the same bug as 2026-09-17 and 2026-09-18, a third time.
+$GLOBALS['wp_fixture']['terms'] = array( (object) array( 'term_id' => 7, 'name' => 'Youngsville', 'slug' => 'youngsville' ) );
+$GLOBALS['wp_fixture']['post_meta']['completion_date'] = '2026-09-10';
+$GLOBALS['wp_fixture']['title'] = 'GAF Timberline HDZ Roof Replacement in Youngsville, NC';
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = '';
+
+it(
+	'with the keyword-first title as the heading, the eyebrow drops the town',
+	false === strpos( skybird_projects_meta_line( 1183 ), 'Youngsville' ),
+	'got: ' . skybird_projects_meta_line( 1183 )
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = 'A new Charcoal roof for a two-story home';
+
+it(
+	'with a human heading that omits the town, the eyebrow puts it back',
+	false !== strpos( skybird_projects_meta_line( 1183 ), 'Youngsville, NC' ),
+	'got: ' . skybird_projects_meta_line( 1183 )
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_title'] = 'A new Charcoal roof for a Youngsville home';
+
+it(
+	'and leaves it out when the human heading already names it',
+	false === strpos( skybird_projects_meta_line( 1183 ), 'Youngsville, NC' ),
+	'got: ' . skybird_projects_meta_line( 1183 )
+);
+
+// And again with one written.
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = 'Both valleys were rebuilt and the copper accents over the bay window were fabricated on site.';
+
+$tags = skybird_projects_og_tags( 1183 );
+
+it(
+	'a written description does reach og:description',
+	isset( $tags['og:description'] ) && false !== strpos( $tags['og:description'], 'copper accents' )
+);
+
+// Two sets of og:title in one document is worse than one set we did not
+// choose, because Facebook picks between them and nothing on our side decides
+// which. Yoast and Rank Math both emit a full Open Graph block.
+it( 'tags are emitted when no SEO plugin is active', true === skybird_projects_should_emit_og() );
+
+define( 'WPSEO_VERSION', '24.0' );
+
+it(
+	'the plugin stands down when Yoast is active',
+	false === skybird_projects_should_emit_og(),
+	'duplicate og:title lets Facebook choose, and nothing on our side decides which'
+);
+
+it(
+	'and says so where the reviewer will see it',
+	(bool) array_filter(
+		skybird_projects_share_preview_problems( 1183 ),
+		function ( $p ) {
+			return false !== strpos( $p, 'SEO plugin is active' );
+		}
+	)
 );
 
 /**
