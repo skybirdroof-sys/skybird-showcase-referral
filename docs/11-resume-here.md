@@ -703,3 +703,82 @@ Two things worth Jacob's judgement:
    test better.
 2. It is 1280×720 — just wide enough for the 1200×630 share crop. Any photo
    narrower than 1200px cannot make that crop at all.
+
+---
+
+# 2026-10-16 (later) — Shipping ONE page: project 110848078
+
+Jacob: *"Stop building new backend features. Our next goal is to ship ONE
+real, live project page end to end, then fix bugs from there."*
+
+The job is **ProLine #2561**, Youngsville NC, CompanyCam project
+`110848078`. Referred to by those IDs only — the homeowner's name, street,
+phone and email are in the CompanyCam record and go nowhere near this repo,
+the page, or a filename.
+
+## The one blocker, and the one-line fix
+
+Re-tagging on 2026-10-16 created a **new** tag:
+
+| Tag | ID | Created |
+|---|---|---|
+| `Showcase` | 27372163 | 2026-09-14 |
+| `Showcase Cover` | 27372182 | 2026-09-14 |
+| **`Showcase Photos`** | **27817590** | **2026-10-16** |
+
+No tag named "Showcase Photos" existed, so tagging made one. The workflow
+was still querying 27372163, so the five correctly tagged photos would have
+come back as **zero**, the gallery would have been empty, and the run would
+have reported success. The silent-success shape again, arriving through a
+tag vocabulary instead of through n8n.
+
+`Get Showcase Photos` now queries **27817590**. One field. A test pins both
+IDs, because they are invisible in the URL and nothing else checked them.
+
+Querying only the new tag has a second effect worth keeping: the two photos
+Grok flagged for removal (`3547119850` tear-off with crew, `3421903489`
+inspection close-up) carry only the OLD `Showcase` tag, so they are excluded
+automatically. **Untagging them by hand is hygiene, not a blocker.**
+
+Note `3421903489` also carries true coordinates (36.0712, -78.55825) and is
+the project's feature image — almost certainly the 2026-09-29 GPS leak
+(`07` §16.9). Leaving it out matters.
+
+## The six photos, verified
+
+Pulled and looked at, not taken on trust. None shows a house number,
+mailbox, street sign, plate, person or paperwork.
+
+Gallery, in capture order (which is the order the page renders):
+
+| Photo ID | Caption |
+|---|---|
+| `3552989639` | Shingled dormer with white trim and a double window |
+| `3552991576` | Finished shingle roof planes and a white-trimmed gable |
+| `3552997063` | Ridge caps where two roof planes meet over a brick gable |
+| `3627107072` | Brick gable with a copper roof over the window below |
+| `3627107263` | Standing-seam copper roof over a bay window in a brick gable |
+
+Cover: `3553007383`, the overhead drone shot. Captured 2026-09-10 14:12,
+which is where `completion_date` comes from.
+
+**Correction to the tagger's report.** It said there is no ground-level
+cover. `3627107072` *is* ground level — brick gable, window, shutters, new
+copper, blue sky, 2048×1536. It is not a whole-house shot, but as a hero it
+beats the drone photo on every test that matters: it is at eye level, it
+shows the craftsmanship that makes this job distinctive, and it does not
+hand anyone an aerial outline to match against satellite view.
+
+Two judgement calls for Jacob, neither a blocker:
+
+- `3552989639`, the dormer, shows the room through the window — it reads as
+  a bathroom. Nothing identifying, but it is someone's interior.
+- The copper in `3627107072` and `3627107263` still has protective film on
+  some panels. Accurate to the day it was taken; slightly less than finished.
+
+## What I cannot do
+
+**I have no WordPress credentials, by design** — they live in the n8n
+credential store and never in this repo (CLAUDE.md). So I cannot create the
+draft, import the photos, or press Publish. Everything up to that point is
+done; the publish steps are Jacob's, and they are written out in chat.

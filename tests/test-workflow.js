@@ -223,6 +223,31 @@ function throwsMatching(fn, pattern, what) {
 // These four assertions are the ones that would have caught the live failure
 // before it happened. They check the graph, not the code.
 
+it('the photo fetches query the tag IDs that actually exist', () => {
+  // 2026-10-16: re-tagging created a NEW tag, "Showcase Photos" (27817590),
+  // because no tag by that name existed — the older photos carry a tag called
+  // just "Showcase" (27372163). The workflow was still querying the old ID, so
+  // five correctly tagged photos would have been fetched as zero, the gallery
+  // would have been empty, and the run would have reported success.
+  //
+  // That is the silent-success shape this whole file exists for, arriving
+  // through a tag vocabulary rather than through n8n. IDs are pinned here
+  // because they are invisible in the URL and nothing else checks them.
+  const node = (name) => workflow.nodes.find((n) => n.name === name);
+
+  eq(
+    /tag_ids=(\d+)/.exec(node('Get Showcase Photos').parameters.url)[1],
+    '27817590',
+    'gallery query should use the "Showcase Photos" tag'
+  );
+
+  eq(
+    /tag_ids=(\d+)/.exec(node('Get Cover Photo').parameters.url)[1],
+    '27372182',
+    'cover query should use the "Showcase Cover" tag'
+  );
+});
+
 it('Curate has exactly one node feeding it', () => {
   const feeders = [];
   for (const [from, conn] of Object.entries(workflow.connections)) {

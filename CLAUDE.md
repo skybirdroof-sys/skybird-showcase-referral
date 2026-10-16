@@ -96,7 +96,7 @@ Four recorded drifts, all mine:
 
 ```
 php tests/test-plugin.php     # 368 assertions
-node tests/test-workflow.js   #  35 assertions
+node tests/test-workflow.js   #  36 assertions
 ```
 
 Both must pass before any commit. They encode decisions, not just behaviour —
