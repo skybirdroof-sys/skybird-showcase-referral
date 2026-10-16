@@ -1726,7 +1726,7 @@ it(
 	(bool) array_filter(
 		skybird_projects_share_preview_problems( 1183 ),
 		function ( $p ) {
-			return false !== strpos( $p, 'SEO plugin is active' );
+			return false !== strpos( $p, 'Yoast or Rank Math is active' );
 		}
 	)
 );
@@ -1853,6 +1853,154 @@ it(
 );
 
 $GLOBALS['wp_fixture']['page_paths'] = array( 'service-areas', 'service-areas/youngsville-nc' );
+
+
+// --- The All in One SEO bridge --------------------------------------------
+//
+// skybirdroofing.net runs AIOSEO Pro, so open-graph.php stands down and the
+// share preview is AIOSEO's unless we hand it our values. The array shape
+// below is read from the plugin source (app/Common/Social/Output.php), not
+// guessed: a flat property => content map, run through array_filter AFTER the
+// filter, and printed through esc_attr() by the view.
+
+$GLOBALS['wp_fixture']['thumbnail_id'] = 501;
+$GLOBALS['wp_fixture']['image_src']    = array(
+	'skybird-share' => array( 'https://skybirdroofing.net/wp-content/uploads/2026/09/share-1200x630.jpeg', 1200, 630, true ),
+);
+$GLOBALS['wp_fixture']['post_fields'][501]['post_modified_gmt'] = '2026-10-15 14:02:11';
+$GLOBALS['wp_fixture']['post_meta']['share_title']       = 'A new Charcoal roof for a two-story Youngsville home';
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = 'Both valleys were rebuilt and the copper accents over the bay window were fabricated on site.';
+$GLOBALS['wp_fixture']['permalink'] = 'https://skybirdroofing.net/projects/youngsville-charcoal/';
+
+// What AIOSEO actually hands us, keys and all.
+$aioseo_input = array(
+	'og:locale'      => 'en_US',
+	'og:site_name'   => 'Skybird Roofing',
+	'og:type'        => 'article',
+	'og:title'       => 'GAF Timberline HDZ Roof Replacement in Youngsville, NC | Skybird Roofing',
+	'og:description' => 'Skybird Roofing completed a full roof replacement in Youngsville, North Carolina.',
+	'og:url'         => 'https://skybirdroofing.net/projects/youngsville-charcoal/',
+	'fb:app_id'      => '',
+	'og:image'       => 'https://skybirdroofing.net/wp-content/uploads/2026/09/full-size-2016x1512.jpeg',
+	'og:image:width' => 2016,
+	'og:image:height' => 1512,
+);
+
+$merged = skybird_projects_aioseo_merge( $aioseo_input, 1183, true );
+
+eq(
+	'our share title replaces AIOSEO\'s branded one',
+	'A new Charcoal roof for a two-story Youngsville home',
+	$merged['og:title']
+);
+
+it(
+	'and the site name suffix is gone',
+	false === strpos( $merged['og:title'], 'Skybird Roofing' ),
+	'Meta: og:title carries "no branding such as your site name"'
+);
+
+eq( 'our description replaces theirs', 'Both valleys were rebuilt and the copper accents over the bay window were fabricated on site.', $merged['og:description'] );
+
+eq( 'our 1200x630 crop replaces their full-size image', 'https://skybirdroofing.net/wp-content/uploads/2026/09/share-1200x630.jpeg?v=' . substr( md5( '2026-10-15 14:02:11' ), 0, 8 ), $merged['og:image'] );
+
+// AIOSEO builds its image block with += , which does not overwrite existing
+// keys, so stale dimensions from ITS image would otherwise survive next to
+// OUR image and describe a different file.
+eq( 'the width is corrected to ours', '1200', $merged['og:image:width'] );
+eq( 'the height is corrected to ours', '630', $merged['og:image:height'] );
+
+it( 'og:image:type is added -- AIOSEO has no such key', isset( $merged['og:image:type'] ) );
+it( 'og:image:alt is added -- AIOSEO has no such key', isset( $merged['og:image:alt'] ) && '' !== $merged['og:image:alt'] );
+
+eq( 'the secure URL matches on HTTPS', $merged['og:image'], $merged['og:image:secure_url'] );
+
+// array_filter() runs after the filter, so '' is how a tag is removed.
+$plain = skybird_projects_aioseo_merge( $aioseo_input, 1183, false );
+eq( 'on plain HTTP the secure URL is emptied, which drops the tag', '', $plain['og:image:secure_url'] );
+
+// Their keys we do not touch stay untouched.
+eq( 'og:locale is left alone', 'en_US', $merged['og:locale'] );
+eq( 'og:site_name is left alone', 'Skybird Roofing', $merged['og:site_name'] );
+eq( 'og:type is left alone', 'article', $merged['og:type'] );
+
+// og:url is always ours, because theirs is AIOSEO's canonical and a referral
+// code must never reach it.
+$dirty = $aioseo_input;
+$dirty['og:url'] = 'https://skybirdroofing.net/projects/youngsville-charcoal/?ref=ABC123';
+$merged_dirty    = skybird_projects_aioseo_merge( $dirty, 1183, true );
+
+it(
+	'a referral code in AIOSEO\'s canonical is overwritten',
+	false === strpos( $merged_dirty['og:url'], 'ref=' ),
+	'got: ' . $merged_dirty['og:url']
+);
+
+// With no human description, AIOSEO's own is better than nothing and is left.
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = '';
+$kept = skybird_projects_aioseo_merge( $aioseo_input, 1183, true );
+
+eq(
+	'with no share description, AIOSEO keeps its own',
+	'Skybird Roofing completed a full roof replacement in Youngsville, North Carolina.',
+	$kept['og:description']
+);
+
+$GLOBALS['wp_fixture']['post_meta']['share_description'] = 'Both valleys were rebuilt and the copper accents over the bay window were fabricated on site.';
+
+// With no cover there is no crop to offer, so AIOSEO's image stands.
+$GLOBALS['wp_fixture']['thumbnail_id'] = 0;
+$no_cover = skybird_projects_aioseo_merge( $aioseo_input, 1183, true );
+
+eq(
+	'with no cover, AIOSEO keeps its own image',
+	'https://skybirdroofing.net/wp-content/uploads/2026/09/full-size-2016x1512.jpeg',
+	$no_cover['og:image']
+);
+
+$GLOBALS['wp_fixture']['thumbnail_id'] = 501;
+
+// Twitter: a 1.91:1 crop on the default `summary` card renders as a small
+// square.
+$twitter = skybird_projects_aioseo_merge_twitter(
+	array( 'twitter:card' => 'summary', 'twitter:site' => '@skybird' ),
+	1183
+);
+
+eq( 'the card is widened', 'summary_large_image', $twitter['twitter:card'] );
+it( 'the crop is used for Twitter too', isset( $twitter['twitter:image'] ) );
+eq( 'twitter:site is left alone', '@skybird', $twitter['twitter:site'] );
+
+// A non-array from another filter must pass straight through rather than
+// fatal inside wp_head.
+eq( 'a non-array is returned untouched', null, skybird_projects_aioseo_merge( null, 1183, true ) );
+eq( 'a non-array twitter payload too', null, skybird_projects_aioseo_merge_twitter( null, 1183 ) );
+
+// The silent-nothing case. getFacebookMeta() returns early, BEFORE the
+// filter, when AIOSEO's Facebook module is switched off -- so AIOSEO prints
+// nothing, our filter never runs, and open-graph.php is standing down. That
+// is nobody emitting anything and nothing saying so, which is the shape of
+// the n8n empty-array bug (docs/07 §15.4).
+it(
+	'with AIOSEO active and the filter never run, we print our own',
+	true === skybird_projects_needs_og_fallback( false, true, true )
+);
+
+it(
+	'once the filter has run, we do not print a second set',
+	false === skybird_projects_needs_og_fallback( true, true, true )
+);
+
+it(
+	'the fallback never fires without AIOSEO -- Yoast would get duplicates',
+	false === skybird_projects_needs_og_fallback( false, false, true ),
+	'only AIOSEO has had its source read here'
+);
+
+it(
+	'and never off a project page',
+	false === skybird_projects_needs_og_fallback( false, true, false )
+);
 
 /**
  * Tiny stand-in for wp_list_pluck.

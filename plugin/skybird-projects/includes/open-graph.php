@@ -319,6 +319,20 @@ function skybird_projects_print_og_tags() {
 		return;
 	}
 
+	skybird_projects_echo_og_tags( $post_id );
+}
+add_action( 'wp_head', 'skybird_projects_print_og_tags', 5 );
+
+/**
+ * Emit the tags for one project, with no guards.
+ *
+ * Separated from the guard above so includes/aioseo.php can reuse it as a
+ * last-resort fallback when AIOSEO's social module is switched off and
+ * nothing at all has been printed.
+ *
+ * @param int $post_id Project post ID.
+ */
+function skybird_projects_echo_og_tags( $post_id ) {
 	foreach ( skybird_projects_og_tags( $post_id ) as $property => $content ) {
 		// Twitter uses name=, Open Graph uses property=. Printing twitter:card
 		// as a property is silently ignored.
@@ -334,7 +348,6 @@ function skybird_projects_print_og_tags() {
 
 	printf( "<link rel=\"canonical\" href=\"%s\">\n", esc_url( skybird_projects_canonical_url( $post_id ) ) );
 }
-add_action( 'wp_head', 'skybird_projects_print_og_tags', 5 );
 
 /**
  * What a reviewer needs to be told about the preview before publishing.
@@ -345,8 +358,12 @@ add_action( 'wp_head', 'skybird_projects_print_og_tags', 5 );
 function skybird_projects_share_preview_problems( $post_id ) {
 	$problems = array();
 
-	if ( ! skybird_projects_should_emit_og() ) {
-		$problems[] = __( 'An SEO plugin is active and is writing its own preview tags, so these are not being printed. Tell Claude which plugin it is so the share image can be wired into it.', 'skybird-projects' );
+	if ( skybird_projects_aioseo_active() ) {
+		// Handled: includes/aioseo.php hands these values to AIOSEO rather
+		// than competing with it, so there is nothing to warn about.
+		$problems[] = '';
+	} elseif ( ! skybird_projects_should_emit_og() ) {
+		$problems[] = __( 'Yoast or Rank Math is active and is writing its own preview tags, so these are not being printed. Tell Claude which one so the share image can be wired into it.', 'skybird-projects' );
 	}
 
 	$image = skybird_projects_share_image( $post_id );
@@ -375,7 +392,7 @@ function skybird_projects_share_preview_problems( $post_id ) {
 		$problems[] = __( 'No credentials sentence is configured site-wide, so the preview says nothing about who did the work.', 'skybird-projects' );
 	}
 
-	return $problems;
+	return array_values( array_filter( $problems ) );
 }
 
 /**

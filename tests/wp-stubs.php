@@ -431,3 +431,7 @@ function get_body_class( $class = '' ) {
 function wp_body_open() {}
 function wp_head() {}
 function wp_footer() {}
+
+function is_ssl() {
+	return true;
+}

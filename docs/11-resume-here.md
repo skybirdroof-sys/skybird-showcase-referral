@@ -634,9 +634,31 @@ designed — two competing sets of `og:title` would let Facebook pick between
 them — but the effect is that yesterday's Open Graph work is dead code on the
 live site until it is wired into AIOSEO.
 
-That is the next build item, and it is on the critical path: the link preview
-is the first thing a customer sees before deciding whether to share, which is
-the North Star's first gate.
+**Built the same day** — `includes/aioseo.php`. Instead of competing, the
+plugin hands AIOSEO our values through its own `aioseo_facebook_tags` and
+`aioseo_twitter_tags` filters and lets it print them.
+
+The array shape was read from the plugin source
+(`app/Common/Social/Output.php`), not guessed. Three things only the source
+tells you:
+
+- `array_filter()` runs **after** the filter, so setting a value to `''` is
+  how a tag gets removed.
+- The view prints every value through `esc_attr()`, so we pass raw strings;
+  pre-escaping would escape something about to be escaped.
+- AIOSEO builds its image block with `+=`, which does not overwrite existing
+  keys. Its `og:image:width`/`height` describe **its** image, so swapping in
+  our crop without correcting them would declare 2016x1512 next to a 1200x630
+  file. Meta reads those dimensions to render the first share.
+
+It also closed a silent-nothing hole: `getFacebookMeta()` returns early,
+before the filter, when AIOSEO's Facebook module is switched off. In that
+state AIOSEO prints nothing, our filter never runs, and `open-graph.php` is
+standing down — nobody emits anything and nothing says so. AIOSEO hooks
+`wp_head` at priority 1, so a check at 99 prints our own tags if the filter
+never fired. Deliberately narrow to AIOSEO: Yoast and Rank Math keep the
+plain stand-down, because a fallback that guessed wrong would print the
+duplicate tags the stand-down exists to prevent.
 
 WP Rocket is also active. Clear its cache after any plugin change.
 
