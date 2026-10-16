@@ -620,3 +620,64 @@ doing it manually decide what gets automated next — not the reverse.
 3. **Which SEO plugin the site runs.** If Yoast, Rank Math or AIOSEO is
    active, the plugin prints no preview tags at all rather than compete, so
    the share image needs wiring into whichever one it is.
+
+---
+
+# 2026-10-16 — What is actually on the live site
+
+Checked from outside the network, not assumed.
+
+## All in One SEO Pro is active
+
+So `includes/open-graph.php` prints **nothing**. The stand-down is working as
+designed — two competing sets of `og:title` would let Facebook pick between
+them — but the effect is that yesterday's Open Graph work is dead code on the
+live site until it is wired into AIOSEO.
+
+That is the next build item, and it is on the critical path: the link preview
+is the first thing a customer sees before deciding whether to share, which is
+the North Star's first gate.
+
+WP Rocket is also active. Clear its cache after any plugin change.
+
+## The four photos are two photos
+
+| File | Bytes | md5 (first 12) |
+|---|---|---|
+| `...-110848078-cover.jpeg` | 208,002 | `731dfc9d93dd` |
+| `...-110848078-cover-1.jpeg` | 208,398 | `10770bb5c24c` |
+| `...-110848078-2.jpeg` | 204,497 | `9069da074b87` |
+| `...-110848078-2-1.jpeg` | 204,497 | `9069da074b87` |
+
+`-2` and `-2-1` are **byte-identical**. `-cover` and `-cover-1` are the same
+picture re-encoded. Both pairs are duplicates from two runs of the old
+pre-gate pipeline — note the `-cover` suffix, which `photo-gate.php` never
+produces (it numbers files `-1`, `-2`, …).
+
+## They are clean
+
+No GPS, no XMP, no DJI maker-note in any of the four. Each carries a 34-byte
+Exif stub and nothing else. The 2026-09-29 GPS leak (`07` §16.9) is not
+repeated here.
+
+## Only one of the two is publishable
+
+- **The cover** is a top-down drone shot of the finished roof. No house
+  number, no people, no plates. Usable.
+- **The other** is mid-tear-off: a crew member on the roof, underlayment
+  exposed, debris across the lawn, tarps, a dumpster, torn-up planting, and a
+  Skybird banner. `docs/13` §2 lists mess and in-progress shame as the things
+  that make a homeowner quietly decide not to share. It should not go on the
+  page as it stands.
+
+So this project has **one** usable photo and the gate wants three to six
+captioned ones. It cannot pass on photos alone.
+
+Two things worth Jacob's judgement:
+
+1. The usable shot is straight down. It shows the roof well and the *house*
+   not at all, and an aerial outline plus a town name is findable on satellite
+   view. A ground-level finished shot would serve the "would they post this"
+   test better.
+2. It is 1280×720 — just wide enough for the 1200×630 share crop. Any photo
+   narrower than 1200px cannot make that crop at all.
