@@ -919,3 +919,78 @@ pages of flashing close-ups.
   corroborates GAF Timberline HDZ for this job and gives real caption
   detail. Confirm against Production HQ before it reaches a specs table —
   a phone screenshot is not the record.
+
+---
+
+# 2026-10-28 (later) — Third candidate: ProLine #2574, and a new rule
+
+CompanyCam project `111049681`, Youngsville, 601 photos. No
+`Website Showcase` label and no tagged photos yet.
+
+**This album has what the other two did not: real exterior photographs of
+the house.** Contact-sheeted the newest 42 frames. Alongside the usual
+documentation there is a short set of front-elevation shots taken from the
+driveway in good light, and a lot of copper work — valleys, bay roofs and
+gable caps over stone.
+
+`3627148981` is the first frame across three albums that passes the bar in
+`docs/13` §2: stone and siding, copper on three gables, bay window with
+columns, blue sky, mature planting. Nothing staged, nothing in progress.
+
+## The catch, and the rule it changes
+
+**That photograph has the homeowner's surname carved in stone in the front
+flowerbed.** A monogrammed marker, with the family name and what appears to
+be the street number beneath it, plus a security-company yard sign and a
+wheelie bin at the kerb.
+
+At contact-sheet size the marker is an unreadable grey blob. It took a
+2:1 zoom on the full-resolution file to see what it was.
+
+And here is the part that matters:
+
+> **The centred 1200×630 share crop removes it.** The Facebook preview is
+> clean. The gallery image is not.
+
+`docs/13` §4 warns that the crop can pull in what the original framing left
+out, and tells the reviewer to check the crop. This is the inverse, and it
+is worse: the thing the gate tells you to check looks fine, while the
+full-size image published beside it carries the name. A reviewer following
+the gate to the letter would have shipped it.
+
+**New rule, added to the gate: check the full frame AND the share crop.**
+Neither one clears the other.
+
+## Consequence for this job
+
+The front-elevation angle looks across that flowerbed, so the marker is
+likely in most shots from the driveway — `3625094498` is the same framing
+(and also carries a lens artefact). For this property a hero has to be
+either cropped above the bed or shot from an angle that excludes it.
+
+A crop to the top 1900px of 2880 keeps the house and loses the marker, the
+bin and the sign. It is still 2160px wide, so it clears the 1200×630 share
+crop comfortably.
+
+The cleanest route is to crop before upload and tag the cropped copy — it
+keeps the gate's semantics intact, where cropping inside WordPress after
+import would create derivative files that never passed the Exif stripper
+(harmless here, since the source is already stripped and WordPress
+re-encodes from it, but not a habit worth forming).
+
+## Also in this album
+
+- A run of walkthrough photos with **a hand and wrist in frame** giving a
+  thumbs-up (`3603490716`, `3603489792` and around a dozen more). Several
+  show the house beautifully and are unusable as they stand.
+- `3627148946` is the front door in close-up — no PII, but the most
+  recognisable frame of the lot.
+- A photographed **supplier order form**. Paperwork again, in a third
+  consecutive album.
+
+## Worth knowing
+
+This property is a few doors from ProLine #2561 on the same street, both
+Youngsville. Publishing both is fine — neither page names a street — but
+they should not run as "more nearby" cards pointing at each other, and the
+offset map pins must not be allowed to land on the same spot.
