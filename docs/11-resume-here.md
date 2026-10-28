@@ -1127,3 +1127,67 @@ box of Omni ridge pro vents, 2 rolls of felt-buster underlayment, 2 sheets
 of OSB. That gives **GAF Timberline HDZ** with Seal-A-Ridge ridge cap.
 Confirm against Production HQ before it reaches the specs table — a phone
 screenshot is not the record.
+
+## Jacob's own curation — the reference standard
+
+Jacob tagged #2601 himself and said: *"The first several of these showcases
+that we do, I can do all these by hand, and you can listen to my tone of
+voice and look at how I write."* So his selection is now the standard, not
+`docs/13` §2, wherever the two disagree. What he picked:
+
+**Cover** — `3647589715`, a wide aerial of the finished house. Exactly one
+cover tag, so `Curate` will accept it.
+
+**Gallery — eight photos, and they sort into a story.** The gallery renders
+oldest-first, and his set spans 4 Aug to 9 Oct, so it comes out as
+**before → tear-off → during → finished** with no extra work:
+
+| # | Photo | When | What |
+|---|---|---|---|
+| 1 | `3449794170` | 4 Aug | The old roof, wide aerial |
+| 2 | `3646458147` | 8 Oct 12:03 | Tear-off, decking exposed |
+| 3 | `3646461298` | 8 Oct 17:45 | Underlayment down, **Skybird tent in the yard** |
+| 4 | `3646461630` | 8 Oct 17:45 | Underlayment, tarps out |
+| 5 | `3646464851` | 8 Oct 21:50 | Crew finishing in the evening |
+| 6 | `3647592458` | 9 Oct 13:36 | Finished — gable and garage |
+| 7 | `3647595146` | 9 Oct 13:39 | Finished — planes and dormer |
+| 8 | `3647599128` | 9 Oct 13:43 | Finished — planes and shutters |
+
+`completion_date` reads from the cover's capture time → 2026-10-09, against
+an install of 10-08. Correct.
+
+### What this overrules in docs/13
+
+Three of the review's §2 rules are now amended by the owner's own choice.
+Recorded rather than argued:
+
+1. **Mess is allowed, and wanted.** Tarps, ladders, debris and materials on
+   the lawn appear in four of the eight. §2 listed those as reasons a
+   homeowner does not share. Jacob's view is that the work in progress is
+   the proof.
+2. **Skybird branding is wanted.** The green tent with the logo is in frame
+   deliberately, twice. §2 warned against the house as a prop for ad copy.
+3. **A "before" photo opens the gallery**, where §2 made it optional and
+   hedged. It is a neutral wide aerial, not a shaming close-up of rot, so
+   the spirit of the rule — never make the homeowner look negligent — still
+   holds.
+
+What has NOT changed: no homeowner name, address, phone or email; no house
+number; no paperwork. Checked across all nine — clean. Two items for Jacob
+rather than blockers: **crew members are identifiable** on the roof in
+`3646458147` and `3646464851` (employee consent is his call, not a
+homeowner-PII question), and the before photo has a **white pickup** at the
+kerb worth a look at full size for a plate.
+
+### The gap his captions will hit
+
+Jacob plans to write a description on each photo in CompanyCam. **The
+pipeline throws those away.** `Curate` reads `project.description` only —
+the notepad, which becomes the private `field_notes`. Per-photo
+`description` is never carried: `pick()` returns a URI and nothing else.
+
+For the first page this does not matter: the descriptions can be read back
+through the API and handed over to paste into the captions box. Worth
+automating once his wording has settled over a few pages, not before —
+carrying a field is easy, and guessing the format he wants before he has
+written any would be the same mistake as the tagger prompt.
