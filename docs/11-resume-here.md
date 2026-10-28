@@ -1321,3 +1321,61 @@ be work for its own sake.
 
 Use the checklist from the next job, once its claim-language options are
 fixed.
+
+---
+
+# 2026-10-28 — CompanyCam answered on 2026-10-14, and I had it wrong
+
+Jacob remembered they replied. They did, the same afternoon, and the thread
+sat unread while we worked around a blocker that had already been answered.
+Support closed it on 2026-10-16 for no response.
+
+## What they said
+
+1. **The sunset is the Legacy API only.** *"That September 1, 2027 sunset is
+   for our Legacy API only. The one documented at developers.companycam.com
+   is the one we're keeping and actively building on."* They asked for the
+   link to whatever said otherwise so they could fix it.
+2. **The 404 was never a bug.** `/v2/projects/{id}/checklists/{id}` is the
+   *classic* endpoint. Advanced checklists use **UUIDs, not numeric IDs**, so
+   an advanced ID can never resolve there.
+3. **Advanced checklist answers are readable today, through the MCP server
+   (beta)** — full field tree, every answer, who ticked what and when, and
+   links to media attached to a field. `list_checklists` with `updated_since`
+   covers most of what webhooks would have given us.
+
+Which is exactly what the read against #2561 did before the email was found.
+
+## The error was mine, and it is the one CLAUDE.md warns about
+
+`docs/01-api-audit.md` line 13 has been **correct since 2026-09-14**:
+
+> "The publicly documented CompanyCam API is legacy and sunsets September 1,
+> 2027. The current API lives at developers.companycam.com."
+
+That is the same thing support said, six weeks earlier, confirmed by John
+against the live page. On 2026-10-14 I wrote in this file:
+
+> "the entire Core API they live on is deprecating in early 2027"
+
+I compressed "the legacy API sunsets Sept 2027" into "the Core API deprecates
+early 2027", which is a different and wrong claim, and then recorded a
+decision on it: *do not rebuild on legacy until they answer.* `CLAUDE.md`
+says treat `docs/01`–`06` as ground truth and **flag** a contradiction rather
+than override it silently. I overrode it silently, in a summary, without
+noticing the two statements were different.
+
+Nothing shipped on the bad premise. It cost two weeks of treating a
+non-blocker as a blocker.
+
+The line at `docs/11` §"Blocked, and not on us" is superseded. There is
+nothing to send CompanyCam — our own file was the only thing that said it.
+
+## What this changes
+
+- The checklist read is **supported, not a workaround**.
+- Legacy checklists were never needed.
+- Change detection is available without webhooks.
+- n8n still cannot call MCP directly in our current setup, so the
+  checklist read stays manual for the first pages. Whether n8n's MCP client
+  node can do it is worth testing later — not before a page is live.
