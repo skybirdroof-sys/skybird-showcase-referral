@@ -865,3 +865,57 @@ One useful crumb from the materials list, to be confirmed against
 Production HQ rather than taken from a screenshot: the shingle is logged as
 "NS", which `includes/product.php` resolves to GAF Timberline Natural
 Shadow.
+
+## Why the selected photos look flat: the beauty shots do not exist
+
+Jacob, on the five curated photos: *"I just don't like the photos that the
+curation process selected."* Right instinct, wrong culprit.
+
+I pulled contact sheets of **70 photos** across both completion windows —
+the 2026-09-10 close-out run (40) and the 2026-10-01/02 copper and gutter
+run (30) — and looked at every frame. The album contains three kinds of
+photograph and no fourth:
+
+1. **Workmanship close-ups** — ridge caps, step flashing, drip edge, vents.
+2. **"No new damage" documentation** — windows, siding, the HVAC unit.
+3. **Eave and gutter inspection frames**, shot down from a drone.
+
+There is no shot of the house. Not one frame taken from the street, the
+driveway or the lawn with the building in it. The curation picked sensibly
+from what was there; what was there is a job file, not a portfolio.
+
+**This is a process gap, not a curation bug, and it applies to all ~200
+back-catalogue jobs.** Nobody has ever been asked to take a photograph for
+a homeowner to be proud of — only photographs that prove the work was done
+and nothing was broken. Those are different pictures.
+
+### Best of what exists
+
+| Photo | What it is | Verdict |
+|---|---|---|
+| `3553006512` | Gable peak and ridge cap against sunlit autumn trees | **Best frame in the album.** Clean, well-lit, nothing identifying |
+| `3627107477` | Front porch — brick, white columns, front door | The only "house" shot. No number, mailbox, plate or person — but a neighbour would know that porch at a glance |
+| `3553007383` | The drone overhead, currently the cover | Shows the roof, not the house |
+| `3627107072` | Ground-level brick gable with new copper | Already tagged; still the strongest of the five |
+
+### The 20-minute fix
+
+Send someone back with a phone. The roof is seven weeks old and still looks
+new. Three frames would change the page completely: the house from the
+street or driveway at three-quarters; the front elevation with the new roof
+in frame; the copper from the ground in good light. Late afternoon.
+
+Worth turning into a standing closeout step, because the alternative is 200
+pages of flashing close-ups.
+
+### Two other things found in this album
+
+- `3553086721` is a **photographed signed quality checklist** — homeowner
+  name and full street address, same vector as `07` §16.1 and the same as
+  the one found in #1983 yesterday. Untagged, so excluded, but the pattern
+  is clearly universal: every job file has one.
+- `3553086467` is a materials screenshot listing **1 bundle HDZ shingles,
+  1 bundle Seal-A-Ridge, 26 pieces F7 drip edge, 5 Omni ridge vents**. It
+  corroborates GAF Timberline HDZ for this job and gives real caption
+  detail. Confirm against Production HQ before it reaches a specs table —
+  a phone screenshot is not the record.
