@@ -1245,3 +1245,79 @@ silently mangled the best copy on the page.
 `{id, html_content, plain_text_content}` — or `null` when unset. Read
 `plain_text_content`. Carrying it through `Curate` is a small change, still
 deliberately not made: a few more pages of his writing first.
+
+## The checklist blocker is gone — and the checklist now has a different problem
+
+Jacob asked whether he also needs to fill in the Showcase Details checklist,
+or whether Production HQ covers it.
+
+### The blocker recorded on 2026-10-14 no longer holds
+
+`docs/11` has said since 2026-10-14 that **advanced (conditional) checklists
+have no public API**, that a question was with CompanyCam, and that we must
+not rebuild on legacy until they answered.
+
+Tested today against #2561: the connector lists the instance and returns all
+**13 of 13 answered fields** with values, who completed each and when. The
+read works.
+
+One qualification that matters: **n8n talks to the REST API, not to this
+connector.** So the automation still cannot read it. For the manual first
+pages that is irrelevant — the answers can be pulled the same way the
+captions were.
+
+### What each source is actually for
+
+| | |
+|---|---|
+| **Production HQ** | The record, and the authority: manufacturer, shingle line, colour, warranty, package, town, across 201 jobs. This is what fills the specs table |
+| **Showcase Details checklist** | What Production HQ does not hold: why they called, what was under the old roof, what was fixed, house type, days on site, and the neighbour line |
+
+So: both, for different fields. Where they disagree, Production HQ wins —
+it is the record (`CLAUDE.md`, warranty).
+
+### The checklist now collects answers we cannot publish
+
+It was designed and filled on 2026-10-02. **The claim-language hard rule was
+taken on 2026-10-15**, after. The checklist has not caught up, and three of
+#2561's thirteen answers are unusable as written:
+
+- *Why did they call us?* → "Active leak, **Storm damage or insurance
+  claim**" — a supplied option.
+- *Anything to add about what made it harder?* → "Slow **Insurance**
+  Communications"
+- *What would you tell a neighbour?* → "**Approved through insurance**,
+  clean work, great folks"
+
+Its own description warns against names, addresses, phones and emails, and
+that was followed. It says nothing about claim language, because on the day
+it was written there was nothing to say. The result is a form that invites
+answers which cannot reach a page — and the last of those three is the
+answer most likely to be lifted straight into page copy.
+
+Fix before the next job: drop or reword the "Storm damage or insurance
+claim" option, and add the claim rule to the checklist's own description
+alongside the PII one.
+
+### Two more things the read exposed
+
+1. **Two checklist instances on #2561** — one completed 2026-10-02, one
+   created 2026-09-29 and never filled. Anything reading checklists must
+   pick the completed instance, not the first returned.
+2. **The package option encodes a warranty**: "Essentials — GAF Timberline
+   HDZ, Silver Pledge". `CLAUDE.md` closes warranty as *read from the
+   record, never derived from the package*. Taking "Silver Pledge" off that
+   label would break a closed decision. The package field stays internal;
+   the warranty comes from Production HQ.
+
+### For #2601 specifically
+
+No checklist instance exists on it. **Do not create one for this page.** His
+nine captions already carry what the checklist would have collected — the
+plywood repair and how long it took, ice-and-water on a sub-4/12 pitch, the
+Cobra vent, F8 drip edge, the California cut. Production HQ covers the specs
+table. Adding a form to re-collect what he has already written by hand would
+be work for its own sake.
+
+Use the checklist from the next job, once its claim-language options are
+fixed.
