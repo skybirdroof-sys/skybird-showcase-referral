@@ -994,3 +994,64 @@ This property is a few doors from ProLine #2561 on the same street, both
 Youngsville. Publishing both is fine — neither page names a street — but
 they should not run as "more nearby" cards pointing at each other, and the
 offset map pins must not be allowed to land on the same spot.
+
+## Why every curation so far has looked wrong — the structural answer
+
+The tagger picked five close-up copper returns for #2574 and Jacob called it
+a terrible job. I assumed my prompt was at fault and went to curate by hand.
+The prompt was weak, but it was not the cause. **The cause is who takes
+which photographs, and when.**
+
+Capture dates and photographers for the 84 newest photos on `111049681`:
+
+| Date | Photographer | Count | What they are |
+|---|---|---|---|
+| 31 Aug | Jacob (22) + John (10) | 32 | **The estimate visit.** Wide, well-framed elevations of the whole house |
+| 16 Sep | John | 14 | Copper returns and bay roofs |
+| 25 Sep | John | 11 | Walkthrough — **hand and wrist in frame**, thumbs-up |
+| 1–2 Oct | Charly (19) + Jacob (2) | 21 | Siding, windows, garage, patio documentation; one front elevation |
+| 22 Oct | John | 6 | Copper close-ups |
+
+**The beautiful wide photographs of the house exist. They were taken on
+31 August, before the work.** Every frame I shortlisted as a hero from the
+second contact sheet — `3523690158`, `3523690039`, `3523690558`,
+`3536524399`, `3523692167` — is from that one burst at 19:27 on 31 August.
+Publishing any of them as finished work would put the **old roof** on a page
+celebrating the new one.
+
+Caught by checking capture dates before recommending them. Nothing in the
+photographs themselves says "before"; the roof is dark in both.
+
+### The pattern, and it is not about this job
+
+The salesperson photographs the house. The crew photographs the work.
+
+- Estimate visit → wide establishing shots, good light, whole elevations,
+  because the point is to show the property.
+- After the job → close-ups of flashing, copper, ridge caps, gutters,
+  because the point is to prove workmanship and that nothing was damaged.
+
+So **the pretty pictures are all "before" and the "after" pictures are all
+detail.** That is true of all three albums examined: #2561, #1983 and #2574.
+It explains the drone overhead being the only whole-house frame on #2561,
+and it explains the five copper returns here. The tagger was not choosing
+badly; it was choosing from what the post-install set contains.
+
+### Consequence for #2574
+
+Post-install, this album has no photograph of the shingle roof *as a roof* —
+only copper detail, siding documentation, and the one front elevation
+(`3627148981`, 2 Oct, which needs the crop for the yard marker). A gallery
+built strictly from finished-work photos will be copper-heavy, because that
+is what was photographed.
+
+### The fix, which is cheap and permanent
+
+At closeout, **retake the estimate angles**. Jacob already framed them well
+on 31 August; standing in the same places six weeks later costs twenty
+minutes and produces the hero every one of these pages needs. Add two
+roof-plane shots while there.
+
+Worth making a standing step. Without it, all ~200 back-catalogue pages
+inherit this, and every curation will keep looking wrong for a reason that
+has nothing to do with curation.
