@@ -823,3 +823,45 @@ hub pages still need building, and that is Euan's list, not code.
 
 **For the first page this is a non-issue** — Youngsville is one of the
 eight, so its breadcrumb and back-link will both resolve.
+
+## Second candidate assessed: ProLine #1983, Raleigh
+
+CompanyCam project `96150753`. Jacob asked to switch the first page to it.
+Checked before switching. **I would not use it as page one**, and the
+reasons are worth recording because they are a pattern, not a one-off.
+
+**It is uncurated.** No `Website Showcase` label. Zero photos carrying any
+of the three showcase tags, out of 205. Switching restarts the whole
+curation step that was already finished for the other project.
+
+**The job finished yesterday.** The signed post-installation checklist in
+the album gives an install date of 2026-10-27 and an inspection date of
+2026-10-28 — today. Two items are ticked **Needs Attn**: exposed nails to
+be caulked, and leftover materials still on site awaiting supplier pickup.
+A page for a job whose punch list is still open, photographed before the
+site is clear, is not a page a homeowner is proud to share.
+
+**The album contains the exact leak vector from `07` §16.1.** Three of the
+newest photos were sampled; two carried the homeowner's name and one of
+those also carried the full street address:
+
+- a photographed **signed quality checklist on a clipboard** — printed
+  homeowner name, full street address, install date, inspector signature;
+- a **phone screenshot of a Notes list** headed with the homeowner's name.
+
+Neither is tagged, so neither would reach the pipeline — the tag filter and
+the approval gate both hold. But it confirms the hard rule is live: an
+active job album is full of operational paperwork, and the newest photos on
+any job are the most likely to be it. The sample was biased toward
+paperwork by design (newest first, right after an inspection); it is not a
+claim that two thirds of the album is PII.
+
+**Recommendation.** Keep ProLine #2561 as page one — curated, captioned,
+six photos verified clean, and the job is six weeks settled. Use #1983 as
+page two once its punch list closes and someone goes back for finished
+photographs.
+
+One useful crumb from the materials list, to be confirmed against
+Production HQ rather than taken from a screenshot: the shingle is logged as
+"NS", which `includes/product.php` resolves to GAF Timberline Natural
+Shadow.
