@@ -55,11 +55,24 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Longest caption we store.
  *
- * A caption is one line under a photo. At some length it stops being a caption
- * and starts being body copy that happens to sit in the wrong field, and the
- * longer it runs the more likely it is to wander into who lives there.
+ * Was 160, on the review's "one line per photo" model — "New ridge vent along
+ * the full ridge line". Jacob then wrote the first real set by hand and five
+ * of his nine ran past it, the longest at 358 characters. The cap did not
+ * reject them, it truncated mid-word:
+ *
+ *     "...so that we can catch as much debris as possible and keep things
+ *      out of the ya"
+ *
+ * His captions are not labels. They carry the page's narrative — why the
+ * tarps are down, what ice-and-water is doing on a sub-4/12 pitch, that the
+ * plywood repair took half an hour. A cap tuned for labels would have
+ * silently mangled the most valuable copy on the page.
+ *
+ * 600 keeps a sanity bound — it stops a whole document being pasted into a
+ * caption field — without constraining how he writes. Raise it again rather
+ * than cut a sentence in half.
  */
-const SKYBIRD_PROJECTS_CAPTION_MAX = 160;
+const SKYBIRD_PROJECTS_CAPTION_MAX = 600;
 
 /**
  * Clean a caption on the way in.

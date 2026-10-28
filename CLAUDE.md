@@ -95,7 +95,7 @@ Four recorded drifts, all mine:
 ## The guards that do not depend on remembering
 
 ```
-php tests/test-plugin.php     # 368 assertions
+php tests/test-plugin.php     # 369 assertions
 node tests/test-workflow.js   #  36 assertions
 ```
 

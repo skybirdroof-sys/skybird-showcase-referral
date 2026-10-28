@@ -1231,9 +1231,20 @@ it(
 );
 
 eq(
-	'a caption is capped at 160 characters',
-	160,
-	strlen( skybird_projects_sanitize_caption( str_repeat( 'a', 300 ) ) )
+	'a caption is capped at 600 characters',
+	600,
+	strlen( skybird_projects_sanitize_caption( str_repeat( 'a', 900 ) ) )
+);
+
+// The cap was 160 until Jacob wrote the first real set by hand and five of
+// nine ran past it. It did not reject them, it cut them mid-word. His longest
+// is 358 characters, so anything at or below that must survive intact.
+$real_caption = "It's messy work, but it's a beautiful chaos. We make sure to have tarps spread out so that we can catch as much debris as possible and keep things out of the yard. Shingles are loaded onto the roof, and installation has begun on the backside. Ice and water got laid on this low slope, with it being lower than a 4/12 pitch. Those details are super important.";
+
+eq(
+	'a real 358-character caption survives intact',
+	$real_caption,
+	skybird_projects_sanitize_caption( $real_caption )
 );
 
 eq( 'an empty caption stays empty', '', skybird_projects_sanitize_caption( '   ' ) );

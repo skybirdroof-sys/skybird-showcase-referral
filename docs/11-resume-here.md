@@ -1191,3 +1191,57 @@ through the API and handed over to paste into the captions box. Worth
 automating once his wording has settled over a few pages, not before —
 carrying a field is easy, and guessing the format he wants before he has
 written any would be the same mistake as the tagger prompt.
+
+## His voice, from the first nine captions
+
+Pulled 2026-10-28 and recorded at `docs/captions/2601-goldsboro.md`. The
+point of writing this down is that the next caption written by anything
+other than Jacob should sound like it came from the same person.
+
+What is actually in them:
+
+1. **First person plural, present tense.** "We make sure to have tarps
+   spread out." The crew is the subject of the sentence, not the roof.
+2. **Conditions, not just objects.** "The sun's probably still coming up."
+   "These mornings are always a little chilly." Time of day and weather earn
+   their place; a label-style caption has nowhere to put them.
+3. **Product names used naturally and exactly** — Cobra ridge vent, F8 drip
+   edge, GAF HDZ, ice and water, 4/12 pitch, California cut, apron flashing.
+   Never a generic noun where a real one exists.
+4. **A brief why.** "Ice and water got laid on this low slope, with it being
+   lower than a 4/12 pitch. Those details are super important."
+5. **The mess is owned and reframed**, not hidden: "It's messy work, but
+   it's a beautiful chaos."
+6. **Small problems are volunteered with their fix.** "a little bit of
+   plywood repair… we had it done in about 30 minutes." Confidence rather
+   than defensiveness, and it is the most trust-building line in the set.
+7. **Craft words as praise**: "clean parallel lines", "all horizontal and
+   parallel", "nicely finished".
+8. **Contractions throughout.** Spoken register, two to four sentences.
+9. **The homeowner closes the thought** where one fits: "a nice finishing
+   touch for the homeowner."
+
+One line was flagged back to him — the inspection caption's "the opportunity
+that he has" and "where we build trust with the homeowner". It reads as the
+homeowner being sold to, it is the one sentence in nine about Skybird rather
+than the roof, and on a claim job it is the same shape as the framing that
+is off the page by hard rule, without containing a banned word. The scan
+cannot catch that; only a reader can. His call.
+
+### The cap was wrong, and it was mine
+
+`SKYBIRD_PROJECTS_CAPTION_MAX` was 160, taken from the review's "one line per
+photo" model. **Five of his nine ran past it**, the longest at 358. The cap
+did not reject them — it cut mid-word: *"…keep things out of the ya"*.
+
+Raised to 600, with his 358-character caption pinned in the suite as a
+regression test. The lesson is not about the number: a constant chosen from
+a style guide, before anyone had written in the real style, would have
+silently mangled the best copy on the page.
+
+### For the eventual automation
+
+`description` on a CompanyCam photo is **an object, not a string** —
+`{id, html_content, plain_text_content}` — or `null` when unset. Read
+`plain_text_content`. Carrying it through `Curate` is a small change, still
+deliberately not made: a few more pages of his writing first.
