@@ -782,3 +782,44 @@ Two judgement calls for Jacob, neither a blocker:
 credential store and never in this repo (CLAUDE.md). So I cannot create the
 draft, import the photos, or press Publish. Everything up to that point is
 done; the publish steps are Jacob's, and they are written out in chat.
+
+---
+
+# 2026-10-28 — Twelve days on, checked rather than remembered
+
+Nothing was committed between 2026-10-16 and today. Picking up where the
+publish steps were handed over.
+
+## Checked from outside the network
+
+| | |
+|---|---|
+| `/wp-json/wp/v2/projects` | returns `[]` — **zero published project pages** |
+| The four old media files | all 404 — deleted, so the cleanup step was done |
+| `/service-areas/youngsville-nc/` | **200** |
+| Both test suites | 368 + 36, green |
+
+So: the media cleanup happened and then the run stopped. Whether a draft
+exists cannot be seen from outside — an anonymous REST call returns only
+published posts.
+
+**Still nothing has ever been published.** Day 29 since the first correct
+draft existed. This remains the top item in `CLAUDE.md`.
+
+## The hub-page prediction, now verified
+
+The six areas added from the Production HQ sheet were predicted to have no
+hub page. Measured today:
+
+| Hub page | |
+|---|---|
+| youngsville, wake-forest, raleigh, rolesville, franklinton, knightdale, goldsboro, greenville | **200** |
+| pikeville, wilson, la-grange, winterville, durham, zebulon | **404** |
+
+Exactly the original eight against the six that were added later. The
+containment in `includes/breadcrumbs.php` holds: a project in one of those
+six renders no area crumb and no back-link rather than two dead links. Six
+hub pages still need building, and that is Euan's list, not code.
+
+**For the first page this is a non-issue** — Youngsville is one of the
+eight, so its breadcrumb and back-link will both resolve.
