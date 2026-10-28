@@ -1055,3 +1055,75 @@ roof-plane shots while there.
 Worth making a standing step. Without it, all ~200 back-catalogue pages
 inherit this, and every curation will keep looking wrong for a reason that
 has nothing to do with curation.
+
+---
+
+# 2026-10-28 — Fourth candidate, and the one to use: ProLine #2601
+
+CompanyCam project `111393392`, **Goldsboro** — one of the eight areas with
+a live hub page, so the breadcrumb and back-link both resolve. 350 photos,
+no label and no tags yet. The project record has **no primary contact**, so
+unlike the others it carries no name, email or phone.
+
+## Why this one works
+
+The 84 newest photos are **all post-install** — 9 and 14 October, every one
+by the crew, against an install date of 2026-10-08 from the job's own
+checklist. No before/after ambiguity to untangle, which is what nearly
+tripped us on #2574.
+
+And the photography is clean: no debris, no tarps, no dumpster, no crew in
+frame, no hands. Consistent light. The roof itself is handsome — crisp
+charcoal shingle with strong hip and ridge geometry.
+
+It still has no ground-level photograph of the house. **But for this album
+that stops mattering**, because the roof shots are good enough to lead with.
+
+### The tension this resolves
+
+"A page the homeowner is proud to share" has been pulling against "no
+recognisable house, no number, no neighbours" for four albums. A roof-led
+hero settles it: it is more private, more on-topic for a roofing page, and
+available today without another site visit. What it gives up is the
+"look at my house" quality. For page one that is the right trade.
+
+## The set
+
+Cover — `3647602938`. Gable peak and ridge cap against white trim. Reads as
+a house at thumbnail size, which the purely abstract frames do not.
+
+Gallery, in capture order:
+
+| Photo | Caption |
+|---|---|
+| `3647595681` | New shingles meeting the gable end above the shutters |
+| `3647596386` | Hip roof over the bay window, shingles run to the eave |
+| `3647599128` | Two roof planes meeting at the gable |
+| `3647600839` | Ridge cap running the full length of the hip |
+
+All six are 1280×720 — clear of the 1200×630 share crop, but with no margin.
+Anything narrower than 1200 cannot make that crop at all.
+
+Five photos is a five-minute job by hand. **No tagger needed**, which
+removes the failure mode that produced five copper returns on #2574.
+
+## Must not be tagged
+
+- **The house number "108" is legible on the siding in at least four
+  frames** — the ones looking at the front door and the bay window corner.
+  Fourth album, fourth distinct PII hazard: paperwork, a yard marker, a
+  bathroom window, and now a house number on the wall.
+- A photographed **signed quality checklist**, carrying the homeowner's name
+  and full street address. Fourth consecutive album.
+- A **materials screenshot**.
+- `3647600086` — a fine ridge photo that also shows **neighbouring houses**
+  clearly, including an identifiable porch and fence.
+- Air-conditioning units.
+
+## Record data from the job's own materials list
+
+4 bundles HDZ shingles, 2 bundles SAR ridge cap, 17 pieces F7 drip edge, one
+box of Omni ridge pro vents, 2 rolls of felt-buster underlayment, 2 sheets
+of OSB. That gives **GAF Timberline HDZ** with Seal-A-Ridge ridge cap.
+Confirm against Production HQ before it reaches the specs table — a phone
+screenshot is not the record.
