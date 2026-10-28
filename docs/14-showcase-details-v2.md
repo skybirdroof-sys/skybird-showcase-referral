@@ -112,3 +112,36 @@ every page already.
    current setup. The checklist read stays manual for the first pages.
    Whether n8n's MCP client node can do it is worth testing — after a page
    is live, not before.
+
+---
+
+## Built 2026-10-28
+
+Created as a **new template**, not a rewrite of v1. v1 has live instances on
+#2561, and mutating a template that instances were made from is not
+something to do to a system in use when a new one costs nothing.
+
+**Template:** `Showcase Details v2` — `6468025a-e0f9-4eea-ace4-afa61c34f0aa`
+
+| Field | Type | UUID |
+|---|---|---|
+| Tell me about something interesting that happened on this job | text | `c5e71d7d-c39d-48fe-8db2-5161b3866010` |
+| What kind of house? | select-one | `cce64896-732f-408c-8641-b813ebc36857` |
+| Days on site | select-one | `2a6c4912-76bc-4718-8de2-298a26d084b4` |
+| What did we find once we opened it up? | select-multiple | `043d2d1c-071c-43e6-b5a9-672127d4460e` |
+| What did we fix beyond a standard roof? | select-multiple | `01de1281-887e-4ac4-a907-f376ac11783b` |
+
+All five are optional, matching v1. A required field on a form filled at the
+end of a long day produces a tapped answer, not a true one — and the story
+box is the one field where a junk answer is worse than a blank.
+
+### Left for Jacob
+
+1. **Retire v1** (`b6cd2ffd-0d35-4cd3-b2c2-708d49926adf`) once v2 has been
+   used once in anger, and rename v2 to "Showcase Details". Two templates
+   with near-identical names is a worse trap than either one alone.
+2. **Delete the empty duplicate instance** on #2561
+   (`b58ea020-529c-45cb-8e60-277be7e3ea63`, created 2026-09-29, never
+   filled). The completed one is `63794641-2401-4a43-b357-ec2115484f68`.
+3. **Not instantiated on #2601.** Deliberate — his nine captions already
+   carry what it would collect. v2 starts with the next job.
