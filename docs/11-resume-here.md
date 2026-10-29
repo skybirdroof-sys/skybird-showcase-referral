@@ -1379,3 +1379,49 @@ nothing to send CompanyCam — our own file was the only thing that said it.
 - n8n still cannot call MCP directly in our current setup, so the
   checklist read stays manual for the first pages. Whether n8n's MCP client
   node can do it is worth testing later — not before a page is live.
+
+## 2026-10-29 — pre-flight before firing the label on #2601
+
+Checked against the live site rather than assumed, while the run was going
+out.
+
+**Clear for this job.** The `goldsboro` term exists (id 24) with
+`service_area_page` = `/service-areas/goldsboro-nc/`, and that page returns
+200. So `Get Area Term` resolves, `Curate` will not throw, and both the
+breadcrumb and the footer back-link will have somewhere real to point.
+
+Also clear: exactly one `Showcase Cover`, eight `Showcase Photos`, every one
+`internal: false` and `processing_status: processed`, cover captured
+2026-10-09 so `completion_date` lands right, and the project's
+`postal_code` is null — which the payload turns into an empty string rather
+than tripping anything.
+
+### But only 8 of the 14 service areas are actually in WordPress
+
+| | |
+|---|---|
+| Seeded | franklinton, goldsboro, greenville, knightdale, raleigh, rolesville, wake-forest, youngsville |
+| Missing | pikeville, wilson, la-grange, winterville, durham, zebulon |
+
+The six added on 2026-10-15 are in `includes/taxonomy.php` and in the zip,
+but never reached the database. Terms are seeded from
+`register_activation_hook`, and uploading a plugin with "Replace current
+with uploaded" does not re-run it.
+
+**No impact today** — Goldsboro is one of the eight. The loud failure is
+working as designed: a project in one of the six would throw in `Curate`
+("No service_area term for slug …") rather than file itself nowhere.
+
+Fix is a plugin deactivate-then-reactivate, which re-runs the seeder.
+**Not while a run is in flight** — after the first page is published.
+
+Those six still have no hub page either (`404`), so the containment in
+`includes/breadcrumbs.php` would hide the crumb and the back-link. Seeding
+the terms does not make the areas publishable; it only moves the failure
+from "throws" to "renders with no area link".
+
+### One thing checked and found fine
+
+`/resource/service_area/goldsboro/` returns 301 and lands on the homepage.
+The taxonomy is `public: false`, and there is no competing indexable term
+archive — which is what `docs/09` §3.5 required.
