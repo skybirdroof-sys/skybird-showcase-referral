@@ -224,6 +224,22 @@ function skybird_projects_meta_fields() {
 		//   moment the project is published, because every field here is
 		//   show_in_rest and a published post's meta is public. Invisible on
 		//   the page is not the same as unreachable (docs/07 §16.3).
+		// The captions typed on each photo in CompanyCam, in the same order as
+		// pending_photos. Written by the automation; applied to each
+		// attachment by includes/photo-gate.php when the reviewer approves it.
+		//
+		// PRIVATE for the same reason pending_photos is: this is unreviewed
+		// free text about an unreviewed set of pictures. Once a photo is
+		// approved its caption lives on the attachment, where it is public and
+		// has been looked at.
+		'pending_captions'          => array(
+			'type'     => 'array',
+			'items'    => 'string',
+			'sanitize' => 'skybird_projects_sanitize_captions',
+			'private'  => true,
+			'reviewer' => true,
+			'label'    => 'Captions awaiting approval',
+		),
 		'field_notes'               => array(
 			'type'     => 'string',
 			'sanitize' => 'skybird_projects_sanitize_notes',

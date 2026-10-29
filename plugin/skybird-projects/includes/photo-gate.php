@@ -164,12 +164,14 @@ function skybird_projects_render_photo_gate( $post ) {
 					<input type="radio" name="skybird_cover" value="%1$s"%3$s> %4$s
 				</span>
 				<a href="%1$s" target="_blank" rel="noopener noreferrer">%5$s</a>
+				<span style="display:block;margin-top:6px;color:#50575e;font-style:italic;">%6$s</span>
 			</label>',
 			esc_url( $url ),
 			esc_html__( 'Publish this one', 'skybird-projects' ),
 			0 === $i ? ' checked' : '',
 			esc_html__( 'Use as cover', 'skybird-projects' ),
-			esc_html__( 'View full size', 'skybird-projects' )
+			esc_html__( 'View full size', 'skybird-projects' ),
+			esc_html( skybird_projects_pending_caption_for( $post->ID, $url ) )
 		);
 	}
 
@@ -234,6 +236,25 @@ function skybird_projects_handle_photo_approval() {
 			continue;
 		}
 
+		// The caption the crew typed in CompanyCam, carried across by the
+		// automation and matched to this URL. Applied here rather than left
+		// for the reviewer to retype: the words already exist, and asking for
+		// them twice is how they stop getting written at all.
+		//
+		// Only set when there is something to set, so re-approving a photo
+		// whose caption a reviewer has since improved in wp-admin does not
+		// overwrite the better version with the original.
+		$caption = skybird_projects_pending_caption_for( $post_id, $url );
+
+		if ( '' !== $caption ) {
+			wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_excerpt' => $caption,
+				)
+			);
+		}
+
 		if ( $url === $cover_url ) {
 			$cover_id = $id;
 		} else {
@@ -252,8 +273,25 @@ function skybird_projects_handle_photo_approval() {
 	// Approved photos leave the waiting list. Anything the reviewer did not
 	// tick stays, so a rejected photo is still there to reconsider — and so a
 	// half-finished review can be picked up rather than restarted.
-	$remaining = array_values( array_diff( $pending, $approved ) );
+	// Both lists are positional, so they have to be pruned together. Dropping
+	// a URL without dropping its caption would slide every later caption onto
+	// the wrong photo on the next pass.
+	$captions  = get_post_meta( $post_id, 'pending_captions', true );
+	$captions  = is_array( $captions ) ? $captions : array();
+	$remaining = array();
+	$remaining_captions = array();
+
+	foreach ( $pending as $i => $url ) {
+		if ( in_array( $url, $approved, true ) ) {
+			continue;
+		}
+
+		$remaining[]          = $url;
+		$remaining_captions[] = isset( $captions[ $i ] ) ? $captions[ $i ] : '';
+	}
+
 	update_post_meta( $post_id, 'pending_photos', $remaining );
+	update_post_meta( $post_id, 'pending_captions', $remaining_captions );
 
 	wp_safe_redirect(
 		add_query_arg(

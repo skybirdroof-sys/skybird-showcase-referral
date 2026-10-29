@@ -202,6 +202,7 @@ $expected_meta = array(
 	'storm_date',
 	'package',
 	'pending_photos',
+	'pending_captions',
 	'field_notes',
 );
 
@@ -662,8 +663,8 @@ $private_fields = array_keys(
 sort( $private_fields );
 
 it(
-	'the private fields are exactly the four we mean',
-	array( 'field_notes', 'package', 'pending_photos', 'storm_date' ) === $private_fields,
+	'the private fields are exactly the five we mean',
+	array( 'field_notes', 'package', 'pending_captions', 'pending_photos', 'storm_date' ) === $private_fields,
 	'got: ' . implode( ', ', $private_fields ) . ' — a new private field needs its own containment tests'
 );
 
@@ -2012,6 +2013,107 @@ it(
 	'and never off a project page',
 	false === skybird_projects_needs_og_fallback( false, true, false )
 );
+
+
+// --- Captions carried from CompanyCam -------------------------------------
+//
+// Jacob, 2026-10-29, on the first draft: "all of that context, all of that
+// emotion, all of that feeling, all of those details never got placed on this
+// page." The captions existed in CompanyCam; nothing carried them across, and
+// the plan was for him to paste them by hand. He should not type anything
+// twice.
+
+$GLOBALS['wp_fixture']['post_meta'] = array(
+	'pending_photos'   => array(
+		'https://static.companycam.com/p/aaa.jpeg?d=4032x4032',
+		'https://static.companycam.com/p/bbb.jpeg?d=4032x4032',
+		'https://static.companycam.com/p/ccc.jpeg?d=4032x4032',
+	),
+	'pending_captions' => array(
+		'A beautiful final shot with the tent in the front yard.',
+		'',
+		"It's messy work, but it's a beautiful chaos.",
+	),
+);
+
+eq(
+	'a caption is found by its photo URL',
+	'A beautiful final shot with the tent in the front yard.',
+	skybird_projects_pending_caption_for( 1183, 'https://static.companycam.com/p/aaa.jpeg?d=4032x4032' )
+);
+
+// Looked up by URL, not by index, so approving photos out of order or only
+// some of them still puts the right words under the right picture.
+eq(
+	'the third photo gets the third caption, not the second',
+	"It's messy work, but it's a beautiful chaos.",
+	skybird_projects_pending_caption_for( 1183, 'https://static.companycam.com/p/ccc.jpeg?d=4032x4032' )
+);
+
+eq(
+	'a photo nobody captioned returns an empty string',
+	'',
+	skybird_projects_pending_caption_for( 1183, 'https://static.companycam.com/p/bbb.jpeg?d=4032x4032' )
+);
+
+eq(
+	'a URL that was never offered returns nothing',
+	'',
+	skybird_projects_pending_caption_for( 1183, 'https://evil.example.com/x.jpeg' )
+);
+
+// The sanitiser runs on the way out as well as in -- the value is written
+// over REST by the automation, and the one that matters is the one at the
+// moment we use it.
+$GLOBALS['wp_fixture']['post_meta']['pending_captions'] = array( 'Ridge <script>alert(1)</script>cap' );
+$GLOBALS['wp_fixture']['post_meta']['pending_photos']   = array( 'https://static.companycam.com/p/aaa.jpeg?d=4032x4032' );
+
+it(
+	'a caption from the automation is stripped of markup when read',
+	false === strpos( skybird_projects_pending_caption_for( 1183, 'https://static.companycam.com/p/aaa.jpeg?d=4032x4032' ), '<' )
+);
+
+// The list sanitiser is positional: nothing is dropped and nothing reordered,
+// because a shorter list slides every later caption onto the wrong picture.
+eq(
+	'blanks are preserved so the list stays aligned',
+	array( 'one', '', 'three' ),
+	skybird_projects_sanitize_captions( array( 'one', '   ', 'three' ) )
+);
+
+eq( 'a non-array of captions sanitises to an empty array', array(), skybird_projects_sanitize_captions( 'nope' ) );
+
+eq(
+	'captions are capped like any other caption',
+	600,
+	strlen( skybird_projects_sanitize_captions( array( str_repeat( 'a', 900 ) ) )[0] )
+);
+
+// Containment: pending_captions is unreviewed free text about unreviewed
+// pictures, so it must not reach a visitor before anyone has looked at it.
+$GLOBALS['wp_fixture']['caps'] = false;
+$resp = skybird_projects_hide_private_meta(
+	new WP_REST_Response(
+		array(
+			'id'   => 1183,
+			'meta' => array(
+				'pending_captions' => array( 'unreviewed words about an unreviewed photo' ),
+				'city'             => 'Goldsboro',
+			),
+		)
+	),
+	(object) array( 'ID' => 1183 )
+)->get_data();
+
+it( 'a visitor cannot read the pending captions over REST', ! isset( $resp['meta']['pending_captions'] ) );
+it(
+	'no trace of an unapproved caption survives',
+	false === strpos( wp_json_encode( $resp ), 'unreviewed words' )
+);
+eq( 'and the public fields are untouched', 'Goldsboro', $resp['meta']['city'] );
+
+$GLOBALS['wp_fixture']['caps']      = true;
+$GLOBALS['wp_fixture']['post_meta'] = array();
 
 /**
  * Tiny stand-in for wp_list_pluck.

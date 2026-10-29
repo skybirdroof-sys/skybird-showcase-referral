@@ -100,6 +100,52 @@ function skybird_projects_sanitize_caption( $text ) {
 }
 
 /**
+ * Clean a whole list of captions arriving from the automation.
+ *
+ * Positional: entry N belongs to pending_photos[N]. Nothing is dropped and
+ * nothing is reordered, because a shorter list would slide every later caption
+ * onto the wrong picture — a silent misattribution rather than a visible
+ * error. A blank stays a blank.
+ *
+ * @param mixed $captions Raw value from REST.
+ * @return array
+ */
+function skybird_projects_sanitize_captions( $captions ) {
+	if ( ! is_array( $captions ) ) {
+		return array();
+	}
+
+	return array_map( 'skybird_projects_sanitize_caption', $captions );
+}
+
+/**
+ * The caption the automation carried across for one candidate photo URL.
+ *
+ * Looked up by URL rather than by index, so a reviewer approving photos out of
+ * order, or approving only some of them, still gets the right text on each.
+ *
+ * @param int    $post_id Project post ID.
+ * @param string $url     Candidate photo URL.
+ * @return string
+ */
+function skybird_projects_pending_caption_for( $post_id, $url ) {
+	$urls     = get_post_meta( $post_id, 'pending_photos', true );
+	$captions = get_post_meta( $post_id, 'pending_captions', true );
+
+	if ( ! is_array( $urls ) || ! is_array( $captions ) ) {
+		return '';
+	}
+
+	$i = array_search( $url, $urls, true );
+
+	if ( false === $i || ! isset( $captions[ $i ] ) ) {
+		return '';
+	}
+
+	return skybird_projects_sanitize_caption( $captions[ $i ] );
+}
+
+/**
  * The stored caption for one photo.
  *
  * @param int $attachment_id Attachment ID.

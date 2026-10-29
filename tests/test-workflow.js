@@ -129,6 +129,19 @@ const PROJECT = {
 // A fixture in the wrong shape is worse than no fixture: it certifies the bug.
 const epoch = (iso) => Math.floor(Date.parse(iso) / 1000);
 
+// A photo's `description` is an object when someone has typed one and null
+// when they have not -- NOT a string. The Phase 1 audit saw only nulls and so
+// recorded nothing about the populated shape; the first real set, written by
+// hand on #2601, is what showed it.
+const described = (id, capturedAt, text) =>
+  Object.assign(photo(id, capturedAt), {
+    description: {
+      id: '55285500',
+      html_content: `<p>${text} </p>`,
+      plain_text_content: text,
+    },
+  });
+
 const photo = (id, capturedAt) => ({
   id,
   company_id: '798255',
@@ -329,6 +342,78 @@ it('Curate leaves the completion date empty rather than inventing one', () => {
     'Get Showcase Photos': split([undated].concat(SHOWCASE.slice(0, 1), SHOWCASE.slice(2)), true),
   }))[0].json;
   eq(c.completionDate, '', 'no date rather than 1970-01-01');
+});
+
+
+it('Curate carries each photo caption through, matched to its photo', () => {
+  // Jacob, 2026-10-29, on the first published draft: "all of that context,
+  // all of that emotion, all of that feeling, all of those details never got
+  // placed on this page." They were in CompanyCam; nothing carried them.
+  const cover = described('3553007383', '2026-09-10T14:12:05Z', 'A beautiful final shot with the tent in the front yard.');
+  const a = described('3553007048', '2026-09-10T14:11:43Z', 'Finished right side of roof. GAF HDZ looks very good in this light.');
+  const b = photo('3553006923', '2026-09-10T14:11:35Z'); // no description typed
+
+  const out = run('Curate', curateInputs({
+    'Get Cover Photo': split([cover], true),
+    'Get Showcase Photos': split([a, b, cover], true),
+  }))[0].json;
+
+  eq(out.coverCaption, 'A beautiful final shot with the tent in the front yard.', 'cover caption');
+  // Oldest first: b was captured 8 seconds before a, so its (empty) caption
+  // leads. Written the other way round first, and the suite caught it --
+  // which is the point, because a caption on the wrong photo is invisible.
+  same(out.galleryCaptions, ['', 'Finished right side of roof. GAF HDZ looks very good in this light.'], 'gallery captions, oldest first');
+  eq(out.galleryUrls.length, out.galleryCaptions.length, 'one caption per gallery photo');
+});
+
+it('a photo with no caption yields an empty string, not null or undefined', () => {
+  const out = run('Curate', curateInputs({}))[0].json;
+  same(out.galleryCaptions, out.galleryUrls.map(() => ''), 'all blank when nobody typed anything');
+  eq(out.coverCaption, '', 'blank cover caption');
+});
+
+it('Build Payload keeps every caption on its own photo', () => {
+  const cover = described('3553007383', '2026-09-10T14:12:05Z', 'COVER');
+  const a = described('3553007048', '2026-09-10T14:11:43Z', 'FIRST');
+  const b = described('3553006923', '2026-09-10T14:11:35Z', 'SECOND');
+
+  const curated = run('Curate', curateInputs({
+    'Get Cover Photo': split([cover], true),
+    'Get Showcase Photos': split([a, b, cover], true),
+  }));
+
+  const meta = run('Build Payload', {
+    Curate: curated,
+    'Get Area Term': split([AREA_TERM], true),
+  })[0].json.meta;
+
+  eq(meta.pending_photos.length, meta.pending_captions.length, 'the two arrays are the same length');
+  eq(meta.pending_captions[0], 'COVER', 'cover caption is first, with the cover');
+  // Oldest first after the cover: SECOND was captured before FIRST.
+  same(meta.pending_captions, ['COVER', 'SECOND', 'FIRST'], 'captions follow their photos');
+});
+
+it('a photo with no usable URI cannot shift the captions onto the wrong pictures', () => {
+  // The original line filtered the URL list by itself. Drop a URL from the
+  // middle and every later caption slides one picture up -- a silent,
+  // plausible-looking misattribution rather than a visible failure.
+  const cover = described('3553007383', '2026-09-10T14:12:05Z', 'COVER');
+  const broken = described('3553007048', '2026-09-10T14:11:43Z', 'BROKEN');
+  broken.uris = [];
+  const good = described('3553006923', '2026-09-10T14:11:35Z', 'GOOD');
+
+  const curated = run('Curate', curateInputs({
+    'Get Cover Photo': split([cover], true),
+    'Get Showcase Photos': split([broken, good, cover], true),
+  }));
+
+  const meta = run('Build Payload', {
+    Curate: curated,
+    'Get Area Term': split([AREA_TERM], true),
+  })[0].json.meta;
+
+  eq(meta.pending_photos.length, 2, 'the unusable photo is dropped');
+  same(meta.pending_captions, ['COVER', 'GOOD'], 'and it takes its own caption with it');
 });
 
 it('Curate carries the project description through for the reviewer', () => {

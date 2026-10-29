@@ -1425,3 +1425,80 @@ from "throws" to "renders with no area link".
 `/resource/service_area/goldsboro/` returns 301 and lands on the homepage.
 The taxonomy is `public: false`, and there is no competing indexable term
 archive — which is what `docs/09` §3.5 required.
+
+---
+
+# 2026-10-29 — "There's no meat on the bone"
+
+Jacob, on the first rendered page:
+
+> "The descriptions of the photos that I wrote in CompanyCam did not get
+> placed on this web page. All of that context, all of that emotion, all of
+> that feeling, all of those details never got placed on this page. […] I
+> don't want to have to type all this out twice."
+
+He is right, and the plan I gave him — pull the captions through the API and
+hand them over to paste — was the wrong answer to a question he had already
+asked. Two sessions ago I found that the pipeline discards photo descriptions
+and decided to wait before automating it, on the grounds that his wording had
+not settled. It had settled: he wrote nine of them by hand. Waiting longer
+only meant him typing them twice.
+
+## Captions now carry themselves
+
+`description` on a CompanyCam photo is an **object** —
+`{ id, html_content, plain_text_content }` — or `null`. The Phase 1 audit saw
+only nulls and so recorded nothing about the populated shape.
+
+- **`Curate`** reads `plain_text_content` per photo into `coverCaption` and
+  `galleryCaptions`, handling a bare string in case REST and MCP differ.
+- **`Build Payload`** zips URLs and captions into pairs **before** filtering,
+  then splits them again. The old line filtered the URL list on its own: one
+  photo with no usable URI would drop out of the middle and every later
+  caption would slide onto the wrong picture. That is a silent,
+  plausible-looking misattribution, not a visible failure.
+- **`pending_captions`** is a new private meta field, positional against
+  `pending_photos`.
+- **The photo gate** looks a caption up **by URL, not by index**, so
+  approving photos out of order or only some of them still puts the right
+  words under the right picture. It applies the caption on import, and only
+  when non-empty, so re-approving never overwrites a caption a reviewer has
+  since improved. Approved photos and their captions are pruned together.
+- The gate now **shows each caption under its thumbnail**, so the reviewer
+  reads the words before the photo exists on the server.
+
+Broken both ways afterwards: looking up by index (three assertions fail) and
+filtering the URLs alone (the misalignment test fails).
+
+## #2601 from Production HQ
+
+Pulled from the sheet rather than asked for. Row matched on CompanyCam ID
+`111393392` / ProLine `2601`:
+
+| | |
+|---|---|
+| Package | Essentials *(internal — never published)* |
+| Shingle line | **HDZ** → GAF Timberline HDZ |
+| Colour | **Charcoal** |
+| **Warranty Filed** | **blank** |
+| Date | 10/8/2026 |
+| Squares | 33.67 |
+| OSB repairs performed | **1** |
+| Crew | Jose Olivarez |
+
+**The warranty row must not appear on the page.** The record is empty, and
+`CLAUDE.md` closes warranty as read from the record and never derived from
+the package. The sheet's own guide explains the blank: the latest GAF
+registration in the portal is dated 8/24/26, so an October job is not
+registered yet. Blank is correct, not missing.
+
+**OSB repairs = 1** corroborates his caption about plywood repair at the bay
+window, and settles the checklist inconsistency: decking *was* replaced, so
+"Nothing beyond standard" was the mis-tap.
+
+## What is still typed by hand, and why
+
+The **checklist answers** are readable only through the MCP server, which n8n
+cannot call in the current setup. So the body copy and the specs are still
+mine to assemble and his to paste — once, not nine times. Whether n8n's MCP
+client node closes that gap is worth testing after this page is live.
