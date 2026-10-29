@@ -145,3 +145,61 @@ box is the one field where a junk answer is worse than a blank.
    filled). The completed one is `63794641-2401-4a43-b357-ec2115484f68`.
 3. **Not instantiated on #2601.** Deliberate — his nine captions already
    carry what it would collect. v2 starts with the next job.
+
+---
+
+## First use, 2026-10-29 — the warning did not work
+
+#2601, all five answered, instance `94daddbd-c6e5-4fcd-933b-0b231c27046b`.
+The template was renamed, so v2 is now the live "Showcase Details".
+
+The story answer:
+
+> "Homeowner needed a professional team to oversee this project and help him
+> through the **insurance process**. We had done multiple projects on this
+> street and the homeowner had seen our previous work."
+
+The copy guard flags sentence one and passes sentence two.
+
+**The description told him not to, in bold, at the top of the form, and the
+very first answer did it anyway.** That is worth taking seriously rather
+than treating as carelessness, because it is not carelessness: *helping a
+homeowner through the insurance process is the service Jacob is proudest
+of.* The rule asks him to leave out the part he thinks is most valuable. A
+warning does not beat that, and repeating the warning louder will not
+either.
+
+**Proposed change to the story field's description** — tell the writer what
+to aim at, not only what to avoid:
+
+> One or two lines about the roof, the house, the crew, or the day. The part
+> a neighbour would find interesting — not how the job was paid for.
+
+Same rule, stated as a target. Untested; worth trying on the next job before
+assuming it works any better than the warning did.
+
+## And sentence two is the best line anyone has written here
+
+> "We had done multiple projects on this street and the homeowner had seen
+> our previous work."
+
+That is the North Star, described from the field, by accident. A neighbour
+saw the work and called. It is clean, it is publishable as written, and it
+is the strongest argument on file for why the referral layer is worth
+building — this already happens without any of it.
+
+It also dates well against #2574 and #2561, both a few doors apart on
+Silverleaf Drive in Youngsville. Same pattern, different street.
+
+## One inconsistency to check
+
+*What did we find once we opened it up?* → **Rotten decking, Failed
+flashing**
+*What did we fix beyond a standard roof?* → **Nothing beyond standard**
+
+His own photo caption for this job says *"We had a little bit of plywood
+repair to do on the front bay window and the small roof above the front
+door."* So decking was replaced. Either "Decking replaced" was a missed tap,
+or small plywood repairs count as standard to him — which is a reasonable
+position and worth knowing, because it decides whether that option ever gets
+used.
