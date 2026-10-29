@@ -31,6 +31,7 @@ GABLE_X = 25.3                                       # where the rake (gable edg
 SQ_X1 = GABLE_X - 0.9                                # keep just inside the rake
 SQ_X0, SQ_Y0 = SQ_X1 - 10, 0.55                      # top edge just below the ridge cap
 SQ_X1, SQ_Y1 = SQ_X0 + 10, SQ_Y0 + 10
+ROTATE_DEG = 1.0                                     # turn the whole graphic clockwise on screen
 
 # Plane canvas: D px per foot, covering the square plus room for dimension labels.
 D = 100
@@ -39,6 +40,10 @@ CW, CH = int(14.0 * D), int(13.6 * D)
 def cpt(x, y):                                       # roof feet -> canvas px
     return ((x - CX0) * D, (y - CY0) * D)
 canvas_from_feet = np.array([[D, 0, -CX0 * D], [0, D, -CY0 * D], [0, 0, 1.0]])
+# Rotation on the roof about the square's centre (x right, y down-slope, so + is clockwise).
+_c, _s = np.cos(np.radians(ROTATE_DEG)), np.sin(np.radians(ROTATE_DEG))
+_mx, _my = (SQ_X0 + SQ_X1) / 2, (SQ_Y0 + SQ_Y1) / 2
+turn = np.array([[_c, -_s, _mx - _c * _mx + _s * _my], [_s, _c, _my - _s * _mx - _c * _my], [0, 0, 1.0]])
 
 CYAN = np.array([255, 232, 140]) / 255               # BGR of #8CE8FF, holographic light blue
 WHITE = np.array([255, 250, 235]) / 255
@@ -274,7 +279,7 @@ for i, f in enumerate(frames):
     t = i / FPS
     bg = cv2.resize(cv2.imread(str(f)), (OUT_W, OUT_H), interpolation=cv2.INTER_LANCZOS4).astype(np.float32) / 255
     rgb, a, corners = draw_roof(t)
-    M = scale @ Hs[i] @ np.linalg.inv(P) @ np.linalg.inv(canvas_from_feet)
+    M = scale @ Hs[i] @ np.linalg.inv(P) @ turn @ np.linalg.inv(canvas_from_feet)
     wr = cv2.warpPerspective(rgb, M, (OUT_W, OUT_H), flags=cv2.INTER_LINEAR)
     wa = cv2.warpPerspective(a, M, (OUT_W, OUT_H), flags=cv2.INTER_LINEAR)
     br = cv2.perspectiveTransform(np.float32([[corners[2]]]), M)[0, 0]
