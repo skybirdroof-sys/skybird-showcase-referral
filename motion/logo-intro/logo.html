@@ -51,11 +51,21 @@
 <script type="module">
 const params = new URLSearchParams(location.search);
 const MODE = params.get("mode") || "intro";
-const THEME = params.get("theme") === "dark" ? "dark" : "light";
+const THEME = ["dark", "clear"].includes(params.get("theme")) ? params.get("theme") : "light";
+// theme=clear is the transparent version: solid-colour layers, rendered once over a black matte
+// and once over a white one (matte=black|white) so the recorder can recover true alpha.
+// variant=brand (black script, for light footage) or reverse (white script, for dark footage).
+const VARIANT = params.get("variant") === "reverse" ? "reverse" : "brand";
+const MATTE = params.get("matte") === "white" ? "white" : "black";
 const DURATION = { intro: 3.8, outro: 3.0, cta: 7.0 }[MODE];
 document.documentElement.dataset.theme = THEME;
+if (THEME === "clear") document.documentElement.style.setProperty("--bg", MATTE === "white" ? "#ffffff" : "#000000");
 // The dark theme swaps in recoloured script, letters and hawk body (see split_layers.py).
-const themed = name => THEME === "dark" && /^(script|roofing_\d|hawk_body)$/.test(name) ? `layers/dark/${name}.png` : `layers/${name}.png`;
+const themed = name => {
+  if (!/^(script|roofing_\d|hawk_body)$/.test(name) || THEME === "light") return `layers/${name}.png`;
+  if (THEME === "dark") return `layers/dark/${name}.png`;
+  return `layers/clear-${VARIANT}/${name === "hawk_body" ? `hawk_body-${MATTE}` : name}.png`;
+};
 
 // Visible ink of the whole logo, used to centre and size it on screen.
 const INK = { x0: 67, x1: 1243, y0: 417, y1: 893 };

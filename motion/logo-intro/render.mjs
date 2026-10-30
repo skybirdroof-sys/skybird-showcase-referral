@@ -1,5 +1,7 @@
 // Record logo.html to MP4, one exact frame at a time (no screen-capture timing drift).
 // Usage: [THEME=dark] node render.mjs [intro|outro|cta] [WIDTHxHEIGHT] [fps] [blur subframes]
+// Transparent passes: THEME=clear VARIANT=brand|reverse MATTE=black|white FRAMES_OUT=dir writes a
+// lossless PNG sequence instead of an MP4; make_alpha.py turns a black + white pair into alpha.
 // Each output frame averages `blur` sub-frames spread across it, for natural motion blur.
 import { createRequire } from "node:module";
 import { execSync, spawn } from "node:child_process";
@@ -19,6 +21,9 @@ const fps = Number(fpsArg), blur = Number(blurArg);
 const ffmpeg = process.env.FFMPEG || "ffmpeg";
 mkdirSync(path.join(here, "out"), { recursive: true });
 const theme = process.env.THEME || "light";
+const variant = process.env.VARIANT || "brand", matte = process.env.MATTE || "black";
+const framesOut = process.env.FRAMES_OUT;
+if (framesOut) mkdirSync(framesOut, { recursive: true });
 const out = path.join(here, "out", `skybird-${mode}${theme === "dark" ? "-dark" : ""}-${w}x${h}.mp4`);
 
 const root = path.dirname(here);   // serve motion/ so the page can reach ../fonts
@@ -35,7 +40,7 @@ await new Promise(r => server.once("listening", r));
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: w, height: h } });
 page.on("pageerror", e => { console.error(e); process.exit(1); });
-await page.goto(`http://127.0.0.1:${server.address().port}/logo-intro/logo.html?mode=${mode}&theme=${theme}&record=1`);
+await page.goto(`http://127.0.0.1:${server.address().port}/logo-intro/logo.html?mode=${mode}&theme=${theme}&variant=${variant}&matte=${matte}&record=1`);
 await page.waitForFunction(() => window.ready === true);
 const duration = await page.evaluate(() => window.DURATION);
 const frames = Math.round(duration * fps);
@@ -43,7 +48,8 @@ const frames = Math.round(duration * fps);
 // Sub-frames go in at fps*blur; tmix averages each group and framestep keeps one per group.
 const enc = spawn(ffmpeg, ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps * blur), "-i", "-",
   "-vf", `tmix=frames=${blur},framestep=${blur}`, "-r", String(fps),
-  "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "16", "-preset", "slow", "-movflags", "+faststart", out],
+  ...(framesOut ? ["-pix_fmt", "rgb24", path.join(framesOut, "%04d.png")]
+    : ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "16", "-preset", "slow", "-movflags", "+faststart", out])],
   { stdio: ["pipe", "inherit", "inherit"] });
 for (let i = 0; i < frames; i++) {
   for (let j = 0; j < blur; j++) {
@@ -58,4 +64,4 @@ enc.stdin.end();
 await new Promise(r => enc.on("close", r));
 await browser.close();
 server.close();
-console.log(`${out}  (${frames} frames @ ${fps}fps, ${blur}x motion blur)`);
+console.log(`${framesOut || out}  (${frames} frames @ ${fps}fps, ${blur}x motion blur)`);

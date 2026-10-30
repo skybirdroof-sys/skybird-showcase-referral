@@ -140,3 +140,22 @@ for p in parts:
 save_solid("hawk_body", [(paint, ones, BG), (body & light, a_l, LIGHT), (dark & body, a_d, DARK), (root, ones, DARK)],
            (740, 405, 1250, 640), "layers/dark")
 print("dark theme layers written")
+
+# ---- Transparent versions (layers/clear-brand/, layers/clear-reverse/) ----
+# For a sign-off over any footage every layer is a solid colour with soft edges. The hawk's
+# white rim and eye must be see-through yet still hide the far wing behind the head, so the
+# body comes in two copies, rim painted black and rim painted white: the recorder renders
+# over black and over white and works out true transparency from the difference.
+BLACK_INK = np.array([5, 7, 8.])
+for variant, ink_col, roof_col in [("brand", BLACK_INK, DARK), ("reverse", INK_ON_DARK, LIGHT)]:
+    folder = f"layers/clear-{variant}"
+    save_solid("script", [(script, a_k, ink_col)], (60, 440, 1150, 900), folder)
+    for p in parts:
+        if p["name"].startswith("roofing_"):
+            box = (p["x"], p["y"], p["x"] + p["w"], p["y"] + p["h"])
+            m = letters & (cols >= box[0]) & (cols < box[2])
+            save_solid(p["name"], [(m, a_d, roof_col)], box, folder)
+    for matte, col in [("black", np.zeros(3)), ("white", WHITE)]:
+        save_solid(f"hawk_body-{matte}", [(paint, ones, col), (body & light, a_l, LIGHT), (dark & body, a_d, DARK), (root, ones, DARK)],
+                   (740, 405, 1250, 640), folder)
+print("transparent-version layers written")
